@@ -2,7 +2,7 @@
 import { computed, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import type { FormInstance, FormRules } from 'element-plus'
-import { DataBoard, Connection, User } from '@element-plus/icons-vue'
+import { DataBoard, Connection, User, Lock, OfficeBuilding, ArrowRight } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { save } from '../api/client'
 import { passwordError } from '../api/format.mjs'
@@ -11,20 +11,610 @@ import { clearSession } from '../router'
 import logo from '../assets/brand/herbmoda-logo-dark.png'
 const route = useRoute(), router = useRouter(), auth = useAuth(), form = ref<FormInstance>(), busy = ref(false), error = ref('')
 const forced = computed(() => route.path === '/force-change-password')
-const values = reactive({ username:'', password:'', oldPassword:'', newPassword:'', confirm:'' })
-const rules: FormRules = { username:[{required:true,message:'请输入账号',trigger:'blur'}],password:[{required:true,message:'请输入密码',trigger:'blur'}],oldPassword:[{required:true,message:'请输入原密码',trigger:'blur'}],newPassword:[{validator:(_r,v,cb)=>{const message=passwordError(v);cb(message ? new Error(message) : undefined)},trigger:'blur'}],confirm:[{validator:(_r,v,cb)=>cb(v && v===values.newPassword ? undefined : new Error('两次输入的密码不一致')),trigger:'blur'}] }
-async function submit() { if (!await form.value?.validate().catch(()=>false)) return; busy.value=true;error.value='';try { if(forced.value){await save('/auth/change-password',{oldPassword:values.oldPassword,newPassword:values.newPassword});clearSession();ElMessage.success('密码已更新，请重新登录');await router.replace('/login')}else{await save('/auth/login',{username:values.username,password:values.password});await auth.load();const redirect=String(route.query.redirect??'');const target=auth.allMenus.some(menu=>menu.routePath===redirect)?redirect:'/dashboard';await router.replace(target)} } catch(e){error.value=(e as Error).message}finally{busy.value=false;values.password=''} }
+const values = reactive({ username: '', password: '', oldPassword: '', newPassword: '', confirm: '' })
+const rules: FormRules = { username: [{ required: true, message: '请输入账号', trigger: 'blur' }], password: [{ required: true, message: '请输入密码', trigger: 'blur' }], oldPassword: [{ required: true, message: '请输入原密码', trigger: 'blur' }], newPassword: [{ validator: (_r, v, cb) => { const message = passwordError(v); cb(message ? new Error(message) : undefined) }, trigger: 'blur' }], confirm: [{ validator: (_r, v, cb) => cb(v && v === values.newPassword ? undefined : new Error('两次输入的密码不一致')), trigger: 'blur' }] }
+async function submit() { if (!await form.value?.validate().catch(() => false)) return; busy.value = true; error.value = ''; try { if (forced.value) { await save('/auth/change-password', { oldPassword: values.oldPassword, newPassword: values.newPassword }); clearSession(); ElMessage.success('密码已更新，请重新登录'); await router.replace('/login') } else { await save('/auth/login', { username: values.username, password: values.password }); await auth.load(); const redirect = String(route.query.redirect ?? ''); const target = auth.allMenus.some(menu => menu.routePath === redirect) ? redirect : '/dashboard'; await router.replace(target) } } catch (e) { error.value = (e as Error).message } finally { busy.value = false; values.password = '' } }
 </script>
-<template><main class="auth-page"><div class="auth-copy" aria-hidden="true"><div class="copy-brand"><img :src="logo" alt=""/><span><strong>HERBMODA</strong><small>COMMERCE INTELLIGENCE</small></span></div><small class="copy-kicker">DATA DRIVES<br/>A MORE RADIANT TOMORROW</small><div class="copy-message"><h2>Insight for<br/>a More Radiant World</h2><p>Unify data. Empower decisions.<br/>Grow a more beautiful tomorrow.</p></div><div class="copy-traits"><span><i><el-icon><DataBoard/></el-icon></i>DEEPER<br/>INSIGHTS</span><span><i><el-icon><Connection/></el-icon></i>SMARTER<br/>OPERATIONS</span><span><i><el-icon><User/></el-icon></i>BRIGHTER<br/>GROWTH</span></div></div><div class="auth-card surface"><div class="auth-brand"><img :src="logo" alt="HERBMODA"/><span><strong>HERBMODA</strong><small>Commerce Intelligence</small></span></div><h1>{{ forced ? '设置您的新密码' : '账号登录' }}</h1><p v-if="forced" class="muted">首次登录需要修改临时密码，完成后即可使用系统。</p><el-alert v-if="error" :title="error" type="error" show-icon :closable="false" role="alert"/><el-form ref="form" :model="values" :rules="rules" label-position="top" @submit.prevent="submit"><template v-if="!forced"><el-form-item label="账号" prop="username"><el-input v-model="values.username" autocomplete="username" placeholder="请输入账号" size="large"/></el-form-item><el-form-item label="密码" prop="password"><el-input v-model="values.password" type="password" show-password autocomplete="current-password" placeholder="请输入密码" size="large"/></el-form-item></template><template v-else><el-form-item label="原密码" prop="oldPassword"><el-input v-model="values.oldPassword" type="password" show-password autocomplete="current-password"/></el-form-item><el-form-item label="新密码" prop="newPassword"><el-input v-model="values.newPassword" type="password" show-password autocomplete="new-password"/><small class="muted">至少 10 位，包含字母、数字、符号中的两类</small></el-form-item><el-form-item label="确认新密码" prop="confirm"><el-input v-model="values.confirm" type="password" show-password autocomplete="new-password"/></el-form-item></template><el-button class="submit" type="primary" native-type="submit" size="large" :loading="busy">{{ forced ? '保存并重新登录' : '登录' }}</el-button></el-form></div></main></template>
+<template>
+    <main class="auth-page">
+        <div class="auth-backdrop">
+            <div class="backdrop-brand"><img :src="logo" alt="HERBMODA" /><span
+                    class="wordmark">HERBMODA<small>LONDON</small></span><i></i><span
+                    class="brand-meta">COMMERCE<br />INTELLIGENCE</span></div><small class="backdrop-kicker">DATA
+                DRIVES<br />A MORE RADIANT TOMORROW</small>
+            <div class="hero-copy">
+                <h2>Insight for<br />a More Radiant World</h2>
+                <p>Unify data. Empower decisions.<br />Grow a more beautiful tomorrow.</p>
+            </div>
+            <div class="hero-traits"><span><i><el-icon>
+                            <DataBoard />
+                        </el-icon></i>DEEPER<br />INSIGHTS</span><span><i><el-icon>
+                            <Connection />
+                        </el-icon></i>SMARTER<br />OPERATIONS</span><span><i><el-icon>
+                            <User />
+                        </el-icon></i>BRIGHTER<br />GROWTH</span></div>
+            <div class="hero-media"><img class="oil" src="../assets/brand/radiant-oil-capsules-main.png" alt="" /><img
+                    class="mask" src="../assets/brand/glowing-tomato-mask.png" alt="" /></div>
+            <div class="backdrop-note">BRAND<br />PEOPLE<br />PRODUCT<br />DATA<br />GROWTH<i></i></div>
+        </div>
+        <div class="auth-card surface"><template v-if="!forced">
+                <div class="auth-welcome"><span>Welcome to</span><strong>HERBMODA Commerce
+                        Intelligence</strong><small>Sign in to access your workspace</small></div>
+            </template><template v-else>
+                <div class="auth-brand"><img :src="logo" alt="HERBMODA" /><span><strong>HERBMODA</strong><small>Commerce
+                            Intelligence</small></span></div>
+                <h1>设置您的新密码</h1>
+                <p class="muted">首次登录需要修改临时密码，完成后即可使用系统。</p>
+            </template><el-alert v-if="error" :title="error" type="error" show-icon :closable="false"
+                role="alert" /><el-form ref="form" :model="values" :rules="rules" label-position="top"
+                @submit.prevent="submit"><template v-if="!forced"><el-form-item label="Email or username"
+                        prop="username"><el-input v-model="values.username" autocomplete="username"
+                            placeholder="Email or username" size="large"><template #prefix><el-icon>
+                                    <User />
+                                </el-icon></template></el-input></el-form-item><el-form-item label="Password"
+                        prop="password"><el-input v-model="values.password" type="password" show-password
+                            autocomplete="current-password" placeholder="Password" size="large"><template
+                                #prefix><el-icon>
+                                    <Lock />
+                                </el-icon></template></el-input></el-form-item>
+                    <div class="login-options"><el-checkbox>Keep me signed in</el-checkbox><span>Forgot password?</span>
+                    </div><el-button class="submit" type="primary" native-type="submit" size="large"
+                        :loading="busy">Sign in <el-icon>
+                            <ArrowRight />
+                        </el-icon></el-button>
+                    <div class="or-divider"><span>or</span></div>
+                    <div class="sso-button"><el-icon>
+                            <OfficeBuilding />
+                        </el-icon><span>Sign in with SSO</span></div><small class="auth-footnote">A smarter, more
+                        radiant
+                        tomorrow.</small>
+                </template><template v-else><el-form-item label="原密码" prop="oldPassword"><el-input
+                            v-model="values.oldPassword" type="password" show-password
+                            autocomplete="current-password" /></el-form-item><el-form-item label="新密码"
+                        prop="newPassword"><el-input v-model="values.newPassword" type="password" show-password
+                            autocomplete="new-password" /><small class="muted">至少 10
+                            位，包含字母、数字、符号中的两类</small></el-form-item><el-form-item label="确认新密码" prop="confirm"><el-input
+                            v-model="values.confirm" type="password" show-password
+                            autocomplete="new-password" /></el-form-item><el-button class="submit" type="primary"
+                        native-type="submit" size="large" :loading="busy">保存并重新登录</el-button></template>
+            </el-form></div>
+    </main>
+</template>
 <style scoped>
-.auth-page{min-height:100vh;display:grid;grid-template-columns:minmax(240px,.72fr) minmax(360px,1.25fr) minmax(380px,.78fr);align-items:center;gap:24px;padding:clamp(24px,3vw,56px);position:relative;isolation:isolate;overflow:hidden;background:radial-gradient(circle at 18% 18%,rgba(255,255,255,.95),transparent 34%),radial-gradient(circle at 74% 10%,rgba(181,207,233,.4),transparent 34%),linear-gradient(135deg,#F8FBFD 0%,#EAF1F7 46%,#F7FAFC 100%)}
-.auth-page::before{content:'';position:absolute;z-index:-2;left:clamp(260px,23vw,340px);top:50%;transform:translateY(-50%);width:min(62vw,940px);height:min(82vh,800px);background:url('../assets/brand/radiant-oil-capsules-main.png') center/contain no-repeat;filter:saturate(.84) contrast(.98);mix-blend-mode:multiply;opacity:.98;pointer-events:none}
-.auth-page::after{content:'';position:absolute;z-index:-3;left:clamp(70px,30vw,480px);bottom:-7vh;width:min(34vw,460px);height:min(52vh,560px);background:url('../assets/brand/glowing-tomato-mask.png') center bottom/contain no-repeat;filter:grayscale(.14) saturate(.7);opacity:.22;pointer-events:none}
-.auth-card{grid-column:3;width:min(420px,100%);max-width:100%;padding:36px;background:rgba(255,255,255,.86);border:1px solid #E5EAF0;border-radius:18px;box-shadow:0 22px 60px rgba(26,39,55,.14);backdrop-filter:blur(22px) saturate(125%);justify-self:end;position:relative;z-index:1}
-.auth-copy{grid-column:1;align-self:stretch;display:flex;flex-direction:column;justify-content:space-between;padding:2vh 0 7vh;position:relative;z-index:1;color:var(--hm-text)}.copy-brand{display:flex;align-items:center;gap:10px}.copy-brand img{width:34px;height:38px;object-fit:contain}.copy-brand strong{font-size:24px;letter-spacing:.16em;font-weight:650}.copy-brand small{display:block;margin-top:5px;color:var(--hm-text-secondary);font-size:9px;letter-spacing:.18em}.copy-kicker{font-size:10px;line-height:1.45;letter-spacing:.18em;color:#7A8796;margin-top:7vh}.copy-message h2{font-size:clamp(26px,2.2vw,42px);line-height:1.12;letter-spacing:-.035em;font-weight:650}.copy-message p{margin-top:16px;color:#667085;font-size:16px;line-height:1.45}.copy-traits{display:flex;gap:22px;color:#7A8796;font-size:9px;letter-spacing:.13em;line-height:1.35}.copy-traits span{display:grid;gap:8px}.copy-traits i{width:34px;height:34px;border:1px solid #D9E2EB;border-radius:50%;display:grid;place-items:center;color:#5F8FBE;font-size:20px;font-style:normal;line-height:1;background:rgba(255,255,255,.58)}
-.auth-brand{display:flex;align-items:center;gap:10px;color:var(--hm-text);margin-bottom:32px}.auth-brand img{width:32px;height:34px;object-fit:contain}.auth-brand strong{display:block;font-size:16px;letter-spacing:.12em;font-weight:650}.auth-brand small{display:block;margin-top:2px;color:var(--hm-text-secondary);font-size:9px;letter-spacing:.04em}
-.auth-card h1{font-size:22px;margin-bottom:24px;font-weight:650;color:var(--hm-text)}.auth-card p{font-size:13px;line-height:1.7;margin:-12px 0 20px}.submit{width:100%;height:48px;margin-top:12px;border-radius:10px}
-.auth-card :deep(.el-input__wrapper){min-height:48px;border-radius:10px}.auth-card :deep(.el-form-item){margin-bottom:18px}.auth-card :deep(.el-alert){margin-bottom:20px}
-@media(max-width:1100px){.auth-page{grid-template-columns:minmax(180px,.8fr) minmax(360px,1fr);padding:24px}.auth-copy{grid-column:1}.auth-card{grid-column:2;justify-self:center}.auth-page::before{left:-12vw;width:72vw;opacity:.8}.auth-page::after{left:16vw;width:42vw;opacity:.14}.copy-message h2{font-size:30px}.copy-message p{font-size:14px}}
-@media(max-width:767px){.auth-page{display:flex;width:100%;max-width:100vw;justify-content:center;padding:20px}.auth-copy{display:none}.auth-page::before{left:-28vw;width:110vw;height:72vh;opacity:.13}.auth-page::after{left:auto;right:-30vw;bottom:-12vh;width:72vw;opacity:.06}.auth-card{width:calc(100vw - 40px);min-width:0;padding:28px 24px;box-shadow:0 18px 48px rgba(26,39,55,.12)}.auth-card :deep(.el-form),.auth-card :deep(.el-form-item),.auth-card :deep(.el-input){min-width:0}.auth-brand{margin-bottom:26px}}
+.auth-page {
+    min-height: 100vh;
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    background: #F4F8FC url('../assets/brand/herbmoda-login-background.png') center/cover no-repeat
+}
+
+.auth-backdrop {
+    position: absolute;
+    inset: 0;
+    color: #17202B
+}
+
+.backdrop-brand {
+    position: absolute;
+    left: clamp(24px, 2.9vw, 88px);
+    top: 12vh;
+    display: flex;
+    align-items: center;
+    gap: 16px
+}
+
+.backdrop-brand img {
+    width: 62px;
+    height: 70px;
+    object-fit: contain
+}
+
+.wordmark {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 32px;
+    letter-spacing: .08em;
+    line-height: .86
+}
+
+.wordmark small {
+    display: block;
+    text-align: center;
+    font: 16px/1.3 Georgia, 'Times New Roman', serif;
+    letter-spacing: .22em
+}
+
+.backdrop-brand>i {
+    height: 52px;
+    width: 1px;
+    background: #AAB7C5;
+    margin: 0 6px
+}
+
+.brand-meta {
+    font-size: 12px;
+    line-height: 1.55;
+    letter-spacing: .19em;
+    color: #7D8B9B
+}
+
+.backdrop-kicker {
+    position: absolute;
+    left: clamp(110px, 7.4vw, 150px);
+    top: 28vh;
+    font-size: 12px;
+    line-height: 1.45;
+    letter-spacing: .2em;
+    color: #8795A5
+}
+
+.hero-copy {
+    position: absolute;
+    left: clamp(32px, 3.4vw, 68px);
+    top: 39%;
+    max-width: 520px
+}
+
+.hero-copy h2 {
+    font-size: clamp(30px, 2.8vw, 56px);
+    line-height: 1.08;
+    letter-spacing: -.045em;
+    font-weight: 500;
+    color: #101820
+}
+
+.hero-copy p {
+    margin-top: 24px;
+    color: #8190A1;
+    font-size: clamp(14px, 1.35vw, 27px);
+    line-height: 1.28
+}
+
+.hero-traits {
+    position: absolute;
+    left: clamp(36px, 3.5vw, 72px);
+    bottom: 16%;
+    display: flex;
+    gap: clamp(24px, 3vw, 64px);
+    color: #7D8B9B;
+    font-size: 11px;
+    letter-spacing: .15em;
+    line-height: 1.35
+}
+
+.hero-traits span {
+    display: grid;
+    gap: 10px
+}
+
+.hero-traits i {
+    width: 48px;
+    height: 48px;
+    border: 1px solid #D8E3EC;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    color: #7189A0;
+    font-size: 22px;
+    font-style: normal;
+    line-height: 1;
+    background: rgba(255, 255, 255, .62)
+}
+
+.hero-media {
+    display: none
+}
+
+.backdrop-note {
+    position: absolute;
+    right: 3%;
+    top: 6%;
+    color: #8795A5;
+    font-size: 11px;
+    line-height: 1.55;
+    letter-spacing: .18em
+}
+
+.backdrop-note i {
+    display: block;
+    width: 42px;
+    height: 1px;
+    background: #AAB7C5;
+    margin-top: 18px
+}
+
+.auth-card {
+    position: absolute;
+    z-index: 2;
+    right: clamp(24px, 6.7vw, 134px);
+    top: 50%;
+    transform: translateY(-50%);
+    width: min(19.5vw, 680px);
+    min-width: 320px;
+    padding: clamp(28px, 2.3vw, 48px);
+    background: rgba(255, 255, 255, .82);
+    border: 1px solid rgba(255, 255, 255, .96);
+    border-radius: 22px;
+    box-shadow: 0 18px 48px rgba(56, 80, 102, .13);
+    backdrop-filter: blur(18px) saturate(115%)
+}
+
+.auth-welcome {
+    display: grid;
+    gap: 5px;
+    margin-bottom: 36px;
+    color: #111A25
+}
+
+.auth-welcome span {
+    font-size: 16px
+}
+
+.auth-welcome strong {
+    font-size: 18px;
+    line-height: 1.15;
+    white-space: nowrap;
+    letter-spacing: -.02em
+}
+
+.auth-welcome small {
+    color: #7F8D9D;
+    font-size: 14px;
+    margin-top: 3px
+}
+
+.auth-card :deep(.el-form-item) {
+    margin-bottom: 18px
+}
+
+.auth-card :deep(.el-form-item__label) {
+    display: none
+}
+
+.auth-card :deep(.el-input__wrapper) {
+    min-height: 48px;
+    border-radius: 9px;
+    box-shadow: 0 0 0 1px #D9E1E8 inset !important;
+    background: rgba(255, 255, 255, .54)
+}
+
+.auth-card :deep(.el-input__wrapper.is-focus) {
+    box-shadow: 0 0 0 1px #6D9FD3 inset, 0 0 0 3px rgba(109, 159, 211, .18) !important
+}
+
+.auth-card :deep(.el-input__inner) {
+    font-size: 14px;
+    color: #516274
+}
+
+.auth-card :deep(.el-input__inner)::placeholder {
+    color: #9BA8B6
+}
+
+.auth-card :deep(.el-input__prefix) {
+    color: #7C8D9F;
+    font-size: 19px
+}
+
+.login-options {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 4px 0 24px;
+    color: #8090A1;
+    font-size: 13px
+}
+
+.login-options>span {
+    color: #3E72AD
+}
+
+.login-options :deep(.el-checkbox__label) {
+    color: #8090A1;
+    font-size: 13px;
+    padding-left: 7px
+}
+
+.login-options :deep(.el-checkbox__inner) {
+    border-color: #D6E0E9;
+    border-radius: 4px
+}
+
+.submit {
+    width: 100%;
+    height: 48px;
+    margin-top: 0;
+    border-radius: 8px;
+    font-size: 14px;
+    background: #394755 !important;
+    border-color: #394755 !important
+}
+
+.submit .el-icon {
+    margin-left: 7px
+}
+
+.or-divider {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin: 27px 0 19px;
+    color: #92A0AE;
+    font-size: 12px
+}
+
+.or-divider::before,
+.or-divider::after {
+    content: '';
+    height: 1px;
+    background: #DCE4EB;
+    flex: 1
+}
+
+.sso-button {
+    height: 48px;
+    border: 1px solid #D9E2EA;
+    border-radius: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    color: #5F7285;
+    font-size: 14px;
+    background: rgba(255, 255, 255, .38)
+}
+
+.sso-button .el-icon {
+    font-size: 19px;
+    color: #557895
+}
+
+.auth-footnote {
+    display: block;
+    margin-top: 34px;
+    text-align: center;
+    color: #9BA8B6;
+    font-size: 12px
+}
+
+.auth-card :deep(.el-alert) {
+    margin-bottom: 20px
+}
+
+.auth-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--hm-text);
+    margin-bottom: 32px
+}
+
+.auth-brand img {
+    width: 32px;
+    height: 34px;
+    object-fit: contain
+}
+
+.auth-brand strong {
+    display: block;
+    font-size: 16px;
+    letter-spacing: .12em;
+    font-weight: 650
+}
+
+.auth-brand small {
+    display: block;
+    margin-top: 2px;
+    color: var(--hm-text-secondary);
+    font-size: 9px;
+    letter-spacing: .04em
+}
+
+.auth-card h1 {
+    font-size: 22px;
+    margin-bottom: 24px;
+    font-weight: 650;
+    color: var(--hm-text)
+}
+
+.auth-card p {
+    font-size: 13px;
+    line-height: 1.7;
+    margin: -12px 0 20px
+}
+
+@media(max-width:1200px) {
+    .auth-page {
+        background-position: 8% center
+    }
+
+    .hero-copy {
+        max-width: 28%
+    }
+
+    .hero-media {
+        left: 26%;
+        width: 70%;
+    }
+
+    .hero-copy h2 {
+        font-size: 36px
+    }
+
+    .hero-copy p {
+        font-size: 15px
+    }
+
+    .auth-card {
+        right: 3%;
+        width: 340px;
+        min-width: 0;
+        padding: 32px
+    }
+
+    .backdrop-brand {
+        left: 28px
+    }
+
+    .backdrop-brand img {
+        width: 48px;
+        height: 54px
+    }
+
+    .wordmark {
+        font-size: 25px
+    }
+
+    .wordmark small {
+        font-size: 13px
+    }
+
+    .brand-meta {
+        font-size: 10px
+    }
+}
+
+@media(min-width:1201px) and (min-aspect-ratio:1/2.5) and (max-aspect-ratio:2.5/1) {
+    .auth-page {
+        background-position: 8% center
+    }
+}
+
+@media(max-height:700px) and (min-width:768px) {
+    .hero-copy {
+        top: 40%;
+        max-width: 560px
+    }
+
+    .hero-copy h2 {
+        font-size: 44px
+    }
+
+    .hero-copy p {
+        margin-top: 14px
+    }
+
+    .auth-card {
+        top: 54.5%;
+        padding: 28px 34px
+    }
+
+    .auth-welcome {
+        margin-bottom: 24px
+    }
+
+    .auth-card :deep(.el-form-item) {
+        margin-bottom: 14px
+    }
+
+    .login-options {
+        margin: 0 0 18px
+    }
+
+    .or-divider {
+        margin: 18px 0 14px
+    }
+
+    .auth-footnote {
+        margin-top: 24px
+    }
+}
+
+@media(max-width:767px) {
+    .auth-page {
+        min-height: 100svh
+    }
+
+    .auth-backdrop {
+        position: relative;
+        min-height: 100svh
+    }
+
+    .hero-media {
+        left: -27%;
+        top: 9%;
+        width: 120%;
+        height: 62%;
+        opacity: .18
+    }
+
+    .hero-media .oil {
+        width: 62%
+    }
+
+    .hero-media .mask {
+        width: 52%;
+    }
+
+    .backdrop-brand {
+        left: 22px;
+        top: 26px;
+        gap: 9px
+    }
+
+    .backdrop-brand img {
+        width: 34px;
+        height: 38px
+    }
+
+    .wordmark {
+        font-size: 19px
+    }
+
+    .wordmark small {
+        font-size: 9px
+    }
+
+    .backdrop-brand>i {
+        height: 30px;
+        margin: 0 2px
+    }
+
+    .brand-meta {
+        font-size: 8px;
+        letter-spacing: .12em
+    }
+
+    .backdrop-kicker,
+    .hero-copy,
+    .hero-traits,
+    .backdrop-note {
+        display: none
+    }
+
+    .auth-card {
+        right: 20px;
+        left: 20px;
+        top: 52%;
+        transform: translateY(-50%);
+        width: auto;
+        padding: 28px 24px;
+        border-radius: 18px
+    }
+
+    .auth-welcome {
+        margin-bottom: 28px
+    }
+
+    .auth-welcome strong {
+        font-size: 19px;
+        white-space: normal
+    }
+
+    .auth-welcome small {
+        font-size: 12px
+    }
+
+    .login-options {
+        font-size: 12px
+    }
+
+    .login-options :deep(.el-checkbox__label) {
+        font-size: 12px
+    }
+
+    .auth-footnote {
+        margin-top: 26px
+    }
+}
 </style>

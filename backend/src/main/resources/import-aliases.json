@@ -1,0 +1,218 @@
+{
+  "biz_date": [
+    "业务日期",
+    "日期",
+    "Date",
+    "Day",
+    "Stat date",
+    "按天",
+    "统计日期"
+  ],
+  "currency_code": [
+    "币种",
+    "货币",
+    "Currency",
+    "Currency code"
+  ],
+  "shop_id": [
+    "店铺ID",
+    "Shop ID",
+    "Seller ID"
+  ],
+  "market_code": [
+    "市场",
+    "Market",
+    "Market code"
+  ],
+  "gmv": [
+    "GMV",
+    "成交总额",
+    "Gross merchandise value",
+    "Gross merchandise value (GMV)"
+  ],
+  "order_count": [
+    "订单数",
+    "Orders",
+    "Order count",
+    "成交订单数"
+  ],
+  "sold_qty": [
+    "商品成交件数",
+    "商品销量",
+    "成交件数",
+    "售出件数",
+    "订单商品件数",
+    "Items sold",
+    "Units sold",
+    "Product units sold"
+  ],
+  "sku_order_count": [
+    "SKU 订单数",
+    "SKU订单数",
+    "SKU 销量",
+    "SKU销量",
+    "SKU orders",
+    "SKU order count",
+    "SKU orders count"
+  ],
+  "visitor_count": [
+    "商品访客数",
+    "访客数",
+    "Visitors",
+    "Product visitors"
+  ],
+  "conversion_rate_src": [
+    "店铺转化率",
+    "转化率",
+    "Conversion rate",
+    "Shop conversion rate"
+  ],
+  "product_id": [
+    "商品 ID",
+    "商品ID",
+    "Product ID",
+    "Product id"
+  ],
+  "estimated_customer_count": [
+    "预计客户数",
+    "下单客户数",
+    "Estimated customers",
+    "Customers"
+  ],
+  "impressions": [
+    "商品曝光次数",
+    "曝光次数",
+    "Impressions",
+    "Product impressions"
+  ],
+  "clicks": [
+    "商品点击量",
+    "商品点击次数",
+    "Clicks",
+    "Product clicks"
+  ],
+  "add_to_cart_count": [
+    "加购次数",
+    "加入购物车次数",
+    "Add to cart",
+    "Add-to-cart count"
+  ],
+  "ctr_src": [
+    "商品点击率",
+    "CTR"
+  ],
+  "add_to_cart_rate_src": [
+    "加购率",
+    "Add-to-cart rate"
+  ],
+  "ctor_src": [
+    "CTOR（SKU 订单）",
+    "CTOR (SKU orders)"
+  ],
+  "unique_impressions": [
+    "去重商品曝光次数",
+    "Unique impressions"
+  ],
+  "unique_clicks": [
+    "去重点击次数",
+    "Unique clicks"
+  ],
+  "added_user_count": [
+    "已加购用户数",
+    "已加购的用户数",
+    "加购用户数",
+    "Add-to-cart users"
+  ],
+  "refund_amount": [
+    "退款金额",
+    "Refund amount"
+  ],
+  "refunded_qty": [
+    "已退款商品件数",
+    "已退款的商品件数",
+    "退款商品件数",
+    "Refunded items"
+  ],
+  "refund_customer_count": [
+    "退款客户数",
+    "Refund customers"
+  ],
+  "order_id": [
+    "订单 ID",
+    "Order ID"
+  ],
+  "source_status": [
+    "订单状态",
+    "Status",
+    "Order status"
+  ],
+  "order_amount": [
+    "订单金额",
+    "Order amount",
+    "Order total"
+  ],
+  "item_qty": [
+    "件数",
+    "Quantity",
+    "Item quantity"
+  ],
+  "order_created_at": [
+    "订单创建时间",
+    "Created time",
+    "Order created time"
+  ],
+  "ad_account_key": [
+    "广告账户",
+    "Ad account ID"
+  ],
+  "campaign_id": [
+    "Campaign ID",
+    "广告系列 ID"
+  ],
+  "campaign_name": [
+    "Campaign name",
+    "广告系列名称"
+  ],
+  "spend": [
+    "消耗",
+    "成本",
+    "广告花费",
+    "Cost",
+    "Spend"
+  ],
+  "attributed_revenue": [
+    "广告归因收入",
+    "Gross revenue",
+    "Gross revenue (Current shop)",
+    "Attributed revenue"
+  ],
+  "attributed_order_count": [
+    "归因订单",
+    "广告订单数",
+    "Orders (SKU)",
+    "SKU orders (Current shop)",
+    "Attributed orders"
+  ],
+  "customer_count": [
+    "客户数",
+    "Customer count",
+    "Shop customers"
+  ],
+  "page_view_count": [
+    "页面浏览次数",
+    "Page views",
+    "Page view count"
+  ],
+  "returned_qty": [
+    "Sku Quantity of return",
+    "SKU Quantity of Return",
+    "SKU returned quantity",
+    "退货商品件数",
+    "退货数量"
+  ],
+  "order_refund_amount": [
+    "Order Refund Amount",
+    "订单退款金额",
+    "Order refund amount"
+  ]
+}

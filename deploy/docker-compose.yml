@@ -1,0 +1,62 @@
+name: shop-operations
+services:
+  postgres:
+    image: postgres:16-alpine
+    ports:
+      - "127.0.0.1:5432:5432"
+    environment:
+      POSTGRES_DB: shop_operations
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${DB_ADMIN_PASSWORD:?Set DB_ADMIN_PASSWORD in .env}
+      APP_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
+      TZ: Asia/Shanghai
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db.sh:/docker-entrypoint-initdb.d/10-app-user.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U shop_app -d shop_operations"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+  app:
+    build: ../backend
+    environment:
+      DB_HOST: postgres
+      DB_PASSWORD: ${DB_PASSWORD}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Set ADMIN_PASSWORD in .env}
+      INITIAL_SHOP_KEY: ${INITIAL_SHOP_KEY:-MY_MAIN}
+      INITIAL_SHOP_NAME: ${INITIAL_SHOP_NAME:-马来西亚主店}
+      SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-true}
+      FILE_ROOT: /data/files
+      TZ: Asia/Shanghai
+    volumes:
+      - excel_raw:/data/files/raw
+      - exports:/data/files/export
+      - app_logs:/data/files/logs
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8080/api/v1/system/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+    restart: unless-stopped
+  nginx:
+    build: ../frontend
+    ports:
+      - "${BIND_IP:-127.0.0.1}:${HTTP_PORT:-80}:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      app:
+        condition: service_healthy
+    restart: unless-stopped
+volumes:
+  postgres_data:
+  excel_raw:
+  exports:
+  app_logs:

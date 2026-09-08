@@ -1,0 +1,22 @@
+export interface Menu { id: string; name: string; menuCode: string; routePath?: string; componentKey?: string; moduleCode?: string; permissionCode?: string; icon?: string; sortOrder: number; enabled: boolean; children?: Menu[] }
+export interface User { id: string; username: string; displayName: string; roles: { id: string; roleCode: string; roleName: string }[]; permissions?: string[]; mustChangePassword: boolean; orgUnitId?: string; orgUnitName?: string; status: string; lastLoginAt?: string }
+export interface Page<T> { items: T[]; total: number }
+export type CompareStatus = 'OK'|'NO_HISTORY'|'ZERO_BASELINE'|'CURRENT_MISSING'|'CURRENT_PARTIAL'|'HISTORY_PARTIAL'|'VALUE_UNAVAILABLE'|'NOT_APPLICABLE'|'PERIOD_TOTAL'
+export interface Metric { value: number | null; comparePrevious?: number | null; comparePreviousStatus?: CompareStatus; compare7dAvg?: number | null; compare7dAvgStatus?: CompareStatus; trend?: { date: string; value: number | null }[] }
+export interface DataCoverageItem { rowsInRange: number; daysInRange: number; firstBizDate: string|null; lastBizDate: string|null; latestBizDate: string|null }
+export interface ProductDataQuality { source?: string; productRows: number; soldQty: number|null; skuOrderCount: number|null; soldQtyNonZeroRows: number; skuOrderCountNonZeroRows: number }
+export interface Overview { currencyCode: string; comparisonLabel?: string; productDataAvailable: boolean; productDataSource?: string; gmv: Metric; orderCount: Metric; soldQty: Metric; skuOrderCount: Metric; aov: Metric; refundAmount: Metric; visitorCount?: Metric; conversionRate?: Metric; dataFreshness: { latestBizDate: string | null; latestImportAt: string | null }; dataCoverage?: { shopAnalytics: DataCoverageItem; productDaily: DataCoverageItem; productPeriod?: DataCoverageItem; orderDetail: DataCoverageItem; ads: DataCoverageItem }; productDataQuality?: ProductDataQuality }
+export interface Trend { date: string; gmv: number; orderCount: number }
+export interface Funnel { source: 'PRODUCT_PERIOD'|'PRODUCT_DAILY'|'SHOP_ANALYTICS_PARTIAL'|'NONE'; complete: boolean; impressions: number|null; clicks: number|null; addToCartCount: number|null; orderCount: number|null; skuOrderCount: number|null; ctr: number|null; addToCartRate: number|null; ctor: number|null; uniqueImpressions?: number|null; uniqueClicks?: number|null; addedUserCount?: number|null; estimatedCustomerCount?: number|null }
+export interface Ads { currencyCode: string; spend: Metric; attributedRevenue: Metric; roi: Metric; cpo: Metric; trend: { date: string; spend: number; attributedRevenue: number }[] }
+export interface OrderStatus { status: string; count: number; ratio: number }
+export interface AfterSales { refundAmount: Metric; refundedQty: Metric; refundCustomerCount: Metric; cancelOrderCount: Metric; productDataRange?: { dateFrom: string; dateTo: string } }
+export interface ImportTask { id: string; sourceType: string; marketCode: string; shopId: string; shopName?: string; bizDateFrom: string; bizDateTo: string; originalFilename: string; status: string; totalRows: number; successRows: number; failedRows: number; createdBy: string; startedAt: string; finishedAt?: string; errorMessage?: string }
+export interface ImportError { rowNo: number; fieldName: string; rawValue: string; errorCode: string; message: string }
+export interface Role { systemRole?: boolean; id: string; roleCode: string; roleName: string; description: string; enabled: boolean; menuIds: string[] }
+export interface Market { marketCode: string; marketName: string; currencyCode: string }
+export interface Shop { id: string; marketCode: string; shopName: string }
+export interface Org { id: string; name: string; children?: Org[] }
+export interface DailyTask { id?: string; sortOrder?: number; workModule: string; workDetail: string; planDelivery: string; actualResult: string; completionStatus: '未开始'|'进行中'|'已完成'|'已阻塞'; issueNextStep: string; resultLink: string }
+export interface DailyReport { reportDate: string; groupName: string; roleMarket: string; todayFocus: string; keyResult: string; needBossSupport: string; tomorrowFocus: string; submissionStatus: 'DRAFT'|'SUBMITTED'; reporterName: string; createdBy?: string; tasks: DailyTask[] }
+export interface DailyReportRow extends Omit<DailyTask,'id'|'sortOrder'> { reportDate: string; groupName: string; roleMarket: string; todayFocus: string; keyResult: string; needBossSupport: string; tomorrowFocus: string; submissionStatus: 'DRAFT'|'SUBMITTED'; reporterName: string; createdBy: string; taskId: string; sortOrder: number }

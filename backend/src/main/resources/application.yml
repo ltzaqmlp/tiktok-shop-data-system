@@ -1,0 +1,44 @@
+server:
+  port: 8080
+  forward-headers-strategy: framework
+  servlet:
+    session:
+      timeout: 4h
+      cookie:
+        http-only: true
+        same-site: lax
+        secure: ${SESSION_COOKIE_SECURE:true}
+spring:
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:shop_operations}
+    username: ${DB_USER:shop_app}
+    password: ${DB_PASSWORD}
+    hikari:
+      maximum-pool-size: 10
+  servlet:
+    multipart:
+      max-file-size: 100MB
+      max-request-size: 101MB
+  jackson:
+    time-zone: Asia/Shanghai
+mybatis:
+  configuration:
+    call-setters-on-nulls: true
+    return-instance-for-empty-row: true
+logging:
+  file:
+    name: ${FILE_ROOT:./data}/logs/app.log
+  logback:
+    rollingpolicy:
+      max-history: 30
+      max-file-size: 20MB
+      total-size-cap: 1GB
+app:
+  file-root: ${FILE_ROOT:./data}
+  admin-username: ${ADMIN_USERNAME:admin}
+  admin-password: ${ADMIN_PASSWORD:}
+  shop-name: ${INITIAL_SHOP_NAME:马来西亚主店}
+  shop-key: ${INITIAL_SHOP_KEY:MY_MAIN}
+  login-max-failures: ${LOGIN_MAX_FAILURES:5}
+  lock-minutes: ${LOCK_MINUTES:15}
+  export-max-rows: ${EXPORT_MAX_ROWS:50000}

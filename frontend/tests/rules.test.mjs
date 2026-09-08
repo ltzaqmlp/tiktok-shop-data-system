@@ -1,0 +1,12 @@
+import test from 'node:test'
+import assert from 'node:assert/strict'
+import { changeTone, comparisonLabel, dateRangeError, presetRange, number, validateFile, passwordError, flattenMenus, navigationMenus } from '../src/api/format.mjs'
+test('业务颜色与退款方向，不将广告消耗上涨标为正向',()=>{assert.equal(changeTone(.2),'positive');assert.equal(changeTone(-.2,'lower'),'positive');assert.equal(changeTone(.2,'lower'),'negative');assert.equal(changeTone(.2,'neutral'),'neutral');assert.equal(changeTone(null),'neutral')})
+test('日期范围包含首尾，最大366天',()=>{assert.equal(dateRangeError('2024-01-01','2024-12-31'),'');assert.ok(dateRangeError('2024-01-01','2025-01-01'));assert.ok(dateRangeError('2024-02-02','2024-02-01'));assert.ok(dateRangeError('',''))})
+test('业务日期快捷范围按今日、昨日、本周、本月顺序对应自然日',()=>{const now=new Date(2026,8,7,15);assert.deepEqual(presetRange('today',now),['2026-09-07','2026-09-07']);assert.deepEqual(presetRange('yesterday',now),['2026-09-06','2026-09-06']);assert.deepEqual(presetRange('week',now),['2026-09-07','2026-09-07']);assert.deepEqual(presetRange('month',now),['2026-09-01','2026-09-07'])})
+test('跨周时本周从周一开始',()=>{const now=new Date(2026,8,10,9);assert.deepEqual(presetRange('week',now),['2026-09-07','2026-09-10'])})
+test('快捷周期文案与比较语义一致',()=>{assert.equal(comparisonLabel('today'),'较昨日');assert.equal(comparisonLabel('yesterday'),'较前日');assert.equal(comparisonLabel('week'),'较上周同期');assert.equal(comparisonLabel('month'),'较上月同期');assert.equal(comparisonLabel('custom'),'较上一周期')})
+test('缺失值不伪装为零、长数字格式化',()=>{assert.equal(number(null),'—');assert.equal(number(0),'0');assert.equal(number(12560,2),'12,560.00')})
+test('上传只接受规定格式、非空、大小上限',()=>{assert.equal(validateFile({name:'日数据.xlsx',size:1024}),'');assert.ok(validateFile({name:'宏.xlsm',size:1024}));assert.ok(validateFile({name:'空.xls',size:0}));assert.ok(validateFile({name:'大.xls',size:100*1024*1024+1}))})
+test('改密规则与菜单递归',()=>{assert.ok(passwordError('1234567890'));assert.equal(passwordError('Temporary123'),'');assert.deepEqual(flattenMenus([{id:'1',children:[{id:'2'}]}]).map(m=>m.id),['1','2'])})
+test('直接刷新时菜单不依赖尚未注册的路由，并排除未授权管理页面',()=>{const menus=[{routePath:'/dashboard',enabled:true},{routePath:'/admin/users',enabled:true},{routePath:'/data-import',enabled:false},{routePath:'/unregistered',enabled:true}];const paths=['/dashboard','/admin/users','/data-import'];assert.deepEqual(navigationMenus(menus,paths,false).map(m=>m.routePath),['/dashboard']);assert.equal(navigationMenus(menus,paths,true).length,2)})

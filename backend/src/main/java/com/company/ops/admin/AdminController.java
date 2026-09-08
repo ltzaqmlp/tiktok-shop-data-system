@@ -1,0 +1,64 @@
+package com.company.ops.admin;
+
+import com.company.ops.auth.*;
+import com.company.ops.common.*;
+import static com.company.ops.common.Db.p;
+import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.transaction.support.TransactionTemplate;
+import java.security.SecureRandom;
+import java.util.*;
+
+@RestController @RequestMapping("/api/v1")
+public class AdminController {
+    private final Db db;private final Identity identity;private final PasswordEncoder passwords;private final TransactionTemplate tx;
+    public AdminController(Db db,Identity identity,PasswordEncoder passwords,org.springframework.transaction.PlatformTransactionManager manager){this.db=db;this.identity=identity;this.passwords=passwords;tx=new TransactionTemplate(manager);}
+    public static String temporary(){byte[] bytes=new byte[18];new SecureRandom().nextBytes(bytes);return "T9!"+Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);}
+    @GetMapping("/system/health")public Object health(HttpServletRequest req){db.rows("select 1");return Api.ok(req,Map.of("status","UP","buildVersion","2026.09.07-product-period-v3"));}
+    @GetMapping("/system/markets")public Object markets(HttpServletRequest req){return Api.ok(req,db.rows("select market_code,market_name,currency_code from dim_market where enabled order by market_code"));}
+    @GetMapping("/system/shops")public Object shops(@RequestParam String marketCode,HttpServletRequest req){return Api.ok(req,db.rows("select id,market_code,shop_name from dim_shop where enabled and market_code=#{p.market} order by id",p("market",marketCode)));}
+    @GetMapping("/admin/org-units")public Object orgs(HttpServletRequest req){return Api.ok(req,tree(db.rows("select * from sys_org_unit where enabled order by sort_order,id")));}
+    public static List<Map<String,Object>> tree(List<Map<String,Object>> rows){var result=new ArrayList<Map<String,Object>>();var index=new HashMap<Object,Map<String,Object>>();for(var row:rows){row.put("children",new ArrayList<>());index.put(row.get("id"),row);}for(var row:rows){var parent=index.get(row.get("parentId"));if(parent==null)result.add(row);else{ @SuppressWarnings("unchecked") var children=(List<Map<String,Object>>)parent.get("children");children.add(row);}}return result;}
+    @GetMapping("/admin/users")public Object users(@RequestParam(defaultValue="")String keyword,@RequestParam(defaultValue="")String status,@RequestParam(defaultValue="1")int page,@RequestParam(defaultValue="20")int pageSize,HttpServletRequest req){
+        var args=paging(page,pageSize);args.put("keyword","%"+keyword+"%");args.put("status",status);
+        String where=" where (username ilike #{p.keyword} or display_name ilike #{p.keyword}) and (#{p.status}='' or status=#{p.status})";
+        var rows=db.rows("select id from sys_user"+where+" order by id limit #{p.limit} offset #{p.offset}",args).stream().map(r->{var u=identity.user(Long.parseLong(r.get("id").toString()));u.remove("sessionVersion");return u;}).toList();
+        return Api.ok(req,p("items",rows,"total",db.count("select count(*) from sys_user"+where,args)));
+    }
+    @PostMapping("/admin/users")public Object createUser(@RequestBody Map<String,Object> body,HttpServletRequest req){
+        String username=Api.text(body,"username",64,true),name=Api.text(body,"displayName",100,true),password=temporary();
+        var result=tx.execute(s->{String id=db.insert("insert into sys_user(username,display_name,password_hash,org_unit_id) values(#{p.username},#{p.name},#{p.hash},#{p.org})",p("username",username,"name",name,"hash",passwords.encode(password),"org",optionalId(body.get("orgUnitId"))));setRoles(Long.parseLong(id),body.get("roleIds"));return p("id",id,"temporaryPassword",password);});
+        req.setAttribute("auditAction","USER_CREATE");req.setAttribute("auditAfter",p("username",username,"displayName",name));return Api.ok(req,result);
+    }
+    @PutMapping("/admin/users/{id}")public Object updateUser(@PathVariable long id,@RequestBody Map<String,Object> body,HttpServletRequest req){
+        tx.executeWithoutResult(s->{lockAdmins();var old=identity.user(id);Api.require(!old.isEmpty(),"用户不存在");req.setAttribute("auditBefore",old);
+            String status=body.containsKey("status")?Api.text(body,"status",20,true):old.get("status").toString();Api.require(Set.of("ACTIVE","DISABLED","LOCKED").contains(status),"状态无效");
+            db.exec("update sys_user set display_name=#{p.name},org_unit_id=#{p.org},status=#{p.status},failed_login_count=0,locked_until=null,session_version=session_version+1,updated_at=now() where id=#{p.id}",p("name",body.containsKey("displayName")?Api.text(body,"displayName",100,true):old.get("displayName"),"org",body.containsKey("orgUnitId")?optionalId(body.get("orgUnitId")):optionalId(old.get("orgUnitId")),"status",status,"id",id));
+            if(body.containsKey("roleIds"))setRoles(id,body.get("roleIds"));ensureAdmin();req.setAttribute("auditAfter",identity.user(id));});req.setAttribute("auditAction","USER_UPDATE");return Api.ok(req,Map.of());
+    }
+    @DeleteMapping("/admin/users/{id}")public Object deleteUser(@PathVariable long id,HttpServletRequest req){return updateUser(id,p("status","DISABLED"),req);}
+    @PostMapping("/admin/users/{id}/reset-password")public Object reset(@PathVariable long id,HttpServletRequest req){String password=temporary();Api.require(db.exec("update sys_user set password_hash=#{p.hash},must_change_password=true,session_version=session_version+1,failed_login_count=0,locked_until=null,status=case when status='LOCKED' then 'ACTIVE' else status end where id=#{p.id}",p("id",id,"hash",passwords.encode(password)))==1,"用户不存在");req.setAttribute("auditAction","PASSWORD_RESET");req.setAttribute("targetId",id);return Api.ok(req,Map.of("temporaryPassword",password));}
+    private void setRoles(long user,Object raw){Api.require(raw instanceof List<?>,"请至少选择一个角色");var ids=(List<?>)raw;Api.require(!ids.isEmpty()&&ids.size()<=100,"角色数量无效");db.exec("delete from sys_user_role where user_id=#{p.id}",p("id",user));for(var id:new HashSet<>(ids)){long role=Api.idValue(id);Api.require(db.count("select count(*) from sys_role where id=#{p.id} and enabled",p("id",role))==1,"角色不存在或已停用");db.exec("insert into sys_user_role(user_id,role_id) values(#{p.user},#{p.role})",p("user",user,"role",role));}}
+    private static Long optionalId(Object v){return v==null||v.toString().isBlank()?null:Api.idValue(v);}
+    private void lockAdmins(){db.rows("select pg_advisory_xact_lock(71301)");}
+    private void ensureAdmin(){Api.require(db.count("select count(*) from sys_user u join sys_user_role ur on ur.user_id=u.id join sys_role r on r.id=ur.role_id where r.role_code='ADMIN' and r.enabled and u.status='ACTIVE'",Map.of())>0,"至少保留一个启用的管理员");}
+    @GetMapping("/admin/roles")public Object roles(HttpServletRequest req){var rows=db.rows("select * from sys_role order by id");for(var r:rows)r.put("menuIds",db.rows("select menu_id from sys_role_menu where role_id=#{p.id}",p("id",Long.valueOf(r.get("id").toString()))).stream().map(m->m.get("menuId")).toList());return Api.ok(req,rows);}
+    @PostMapping("/admin/roles")public Object createRole(@RequestBody Map<String,Object> body,HttpServletRequest req){String code=Api.text(body,"roleCode",64,true);Api.require(code.matches("[A-Z][A-Z0-9_]*"),"角色代码须使用大写字母、数字和下划线");String id=db.insert("insert into sys_role(role_code,role_name,description,enabled) values(#{p.code},#{p.name},#{p.description},#{p.enabled})",p("code",code,"name",Api.text(body,"roleName",100,true),"description",Api.text(body,"description",255,false),"enabled",!Boolean.FALSE.equals(body.get("enabled"))));req.setAttribute("auditAction","ROLE_CREATE");return Api.ok(req,p("id",id));}
+    @PutMapping("/admin/roles/{id}")public Object updateRole(@PathVariable long id,@RequestBody Map<String,Object> body,HttpServletRequest req){tx.executeWithoutResult(s->{lockAdmins();var old=db.one("select * from sys_role where id=#{p.id} for update",p("id",id));Api.require(!old.isEmpty(),"角色不存在");boolean enabled=!Boolean.FALSE.equals(body.get("enabled"));Api.require(!"ADMIN".equals(old.get("roleCode"))||enabled,"管理员角色不能停用");db.exec("update sys_role set role_name=#{p.name},description=#{p.description},enabled=#{p.enabled},updated_at=now() where id=#{p.id}",p("id",id,"name",Api.text(body,"roleName",100,true),"description",Api.text(body,"description",255,false),"enabled",enabled));ensureAdmin();req.setAttribute("auditBefore",old);req.setAttribute("auditAfter",body);});req.setAttribute("auditAction","ROLE_UPDATE");return Api.ok(req,Map.of());}
+    @DeleteMapping("/admin/roles/{id}")public Object deleteRole(@PathVariable long id,HttpServletRequest req){tx.executeWithoutResult(s->{lockAdmins();Api.require(db.count("select count(*) from sys_role where id=#{p.id} and not system_role",p("id",id))==1,"内置角色不能删除");Api.require(db.count("select count(*) from sys_user_role where role_id=#{p.id}",p("id",id))==0,"角色仍有用户使用，请先调整用户角色");db.exec("delete from sys_role where id=#{p.id}",p("id",id));ensureAdmin();});req.setAttribute("auditAction","ROLE_DELETE");return Api.ok(req,Map.of());}
+    @PutMapping("/admin/roles/{id}/menus")public Object grant(@PathVariable long id,@RequestBody Map<String,Object> body,HttpServletRequest req){tx.executeWithoutResult(s->{Api.require(db.count("select count(*) from sys_role where id=#{p.id}",p("id",id))==1,"角色不存在");Api.require(body.get("menuIds") instanceof List<?>,"菜单列表无效");req.setAttribute("auditBefore",db.rows("select menu_id from sys_role_menu where role_id=#{p.id}",p("id",id)));db.exec("delete from sys_role_menu where role_id=#{p.id}",p("id",id));for(Object menu:new HashSet<>((List<?>)body.get("menuIds")))db.exec("insert into sys_role_menu(role_id,menu_id) values(#{p.role},#{p.menu})",p("role",id,"menu",Api.idValue(menu)));req.setAttribute("auditAfter",body);});req.setAttribute("auditAction","ROLE_MENU_UPDATE");return Api.ok(req,Map.of());}
+    @GetMapping("/admin/menus")public Object menus(HttpServletRequest req){return Api.ok(req,tree(db.rows("select m.*,md.module_code from sys_menu m join sys_module md on md.id=m.module_id order by m.sort_order,m.id")));}
+    @PutMapping("/admin/menus/{id}")public Object updateMenu(@PathVariable long id,@RequestBody Map<String,Object> body,HttpServletRequest req){
+        Api.require(Set.of("name","icon","sortOrder","enabled").containsAll(body.keySet()),"技术字段只读，不允许修改");String icon=Api.text(body,"icon",64,false);Api.require(Set.of("","DataBoard","Upload","User","Key","Menu","Document","Connection").contains(icon),"图标无效");String rawOrder=Objects.toString(body.get("sortOrder"),"");Api.require(rawOrder.matches("\\d{1,9}"),"排序必须为非负整数");int order=Integer.parseInt(rawOrder);
+        req.setAttribute("auditBefore",db.one("select * from sys_menu where id=#{p.id}",p("id",id)));Api.require(db.exec("update sys_menu set name=#{p.name},icon=#{p.icon},sort_order=#{p.sort},enabled=#{p.enabled},updated_at=now() where id=#{p.id}",p("id",id,"name",Api.text(body,"name",100,true),"icon",icon,"sort",order,"enabled",Boolean.TRUE.equals(body.get("enabled"))))==1,"菜单不存在");req.setAttribute("auditAfter",body);req.setAttribute("auditAction","MENU_UPDATE");return Api.ok(req,Map.of());
+    }
+    public static Map<String,Object> paging(int page,int size){Api.require(page>=1&&page<=1000000&&size>=1&&size<=100,"分页参数无效");return p("limit",size,"offset",(page-1)*size);}
+    @GetMapping({"/admin/audit-logs","/admin/login-logs"})public Object logs(@RequestParam Map<String,String> filters,HttpServletRequest req){
+        boolean login=req.getRequestURI().endsWith("login-logs");var args=paging(Integer.parseInt(filters.getOrDefault("page","1")),Integer.parseInt(filters.getOrDefault("pageSize","20")));String table=login?"sys_login_log":"sys_audit_log";StringBuilder where=new StringBuilder(" where 1=1");
+        for(var f:Map.of("username","u.username","success","l.success::text","module","l.module","action","l.action","ip","l.ip").entrySet()){if(login&&Set.of("module","action").contains(f.getKey()))continue;String v=filters.get(f.getKey());if(v!=null&&!v.isBlank()){where.append(" and ").append(f.getValue()).append(" ilike #{p.").append(f.getKey()).append("}");args.put(f.getKey(),"%"+v+"%");}}
+        for(String key:List.of("dateFrom","dateTo")){String v=filters.get(key);if(v!=null&&!v.isBlank()){args.put(key,java.time.OffsetDateTime.parse(v));where.append(" and l.created_at ").append(key.equals("dateFrom")?">=":"<=").append(" #{p.").append(key).append("}");}}
+        String join=" from "+table+" l left join sys_user u on u.id=l.user_id";
+        return Api.ok(req,p("items",db.rows("select l.*,"+(login?"l.username":"u.username")+join+where+" order by l.id desc limit #{p.limit} offset #{p.offset}",args),"total",db.count("select count(*)"+join+where,args)));
+    }
+}

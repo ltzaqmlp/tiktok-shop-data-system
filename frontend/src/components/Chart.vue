@@ -11,8 +11,8 @@ function render(){
   chart?.setOption({
     animation:!matchMedia('(prefers-reduced-motion: reduce)').matches,
     animationDuration:320,
-    color:['#344B40','#AEB6B1','#D9DEDA','#748078','#939C96','#C4CAC6'],
-    textStyle:{fontFamily:"'Noto Sans CJK SC','Microsoft YaHei','Segoe UI',sans-serif",fontSize:11,color:'#7A827D'},
+    color:['#5F8FBE','#AAB7C5','#D9E2EB','#355D86','#7E9FBE','#C7D3DF'],
+    textStyle:{fontFamily:"-apple-system,BlinkMacSystemFont,'SF Pro Text','PingFang SC','Microsoft YaHei',sans-serif",fontSize:11,color:'#667085'},
     aria:{enabled:true},
     ...props.option
   },true)

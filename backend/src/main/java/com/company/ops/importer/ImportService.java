@@ -40,6 +40,9 @@ public class ImportService {
     @PreDestroy void stop(){worker.shutdown();}
 
     public String submit(String source,String market,long shop,String bizDate,MultipartFile file,long user,boolean force)throws Exception{
+        return submit(source,market,shop,bizDate,file,user,force,false);
+    }
+    public String submit(String source,String market,long shop,String bizDate,MultipartFile file,long user,boolean force,boolean batch)throws Exception{
         Api.require(ImportMapping.TABLES.containsKey(source),"数据源不支持，退款明细尚未启用");
         String filename=Objects.toString(file.getOriginalFilename(),"");
         Api.require(filename.length()<=255&&filename.toLowerCase().matches(".*\\.(xlsx|xls)$"),"只接受 XLSX / XLS 文件");
@@ -65,7 +68,7 @@ public class ImportService {
             }
             String id=tx.execute(s->{
                 db.rows("select pg_advisory_xact_lock(#{p.shop})",p("shop",shop));
-                if(db.count("select count(*) from sys_import_task where shop_id=#{p.shop} and source_type=#{p.source} and status in ('CREATED','VALIDATING','IMPORTING','AGGREGATING')",p("shop",shop,"source",source))>0)
+                if(!batch&&db.count("select count(*) from sys_import_task where shop_id=#{p.shop} and source_type=#{p.source} and status in ('CREATED','VALIDATING','IMPORTING','AGGREGATING')",p("shop",shop,"source",source))>0)
                     throw new Api.Problem(409,"IMPORT_CONCURRENT_TASK","此店铺数据源已有导入任务，请等待完成");
                 if(!force&&db.count("select count(*) from sys_import_task where shop_id=#{p.shop} and source_type=#{p.source} and file_hash=#{p.hash} and status in ('SUCCESS','AGGREGATE_FAILED')",p("shop",shop,"source",source,"hash",hash))>0)
                     throw new Api.Problem(409,"IMPORT_FILE_DUPLICATE","文件已导入，请查看历史或由管理员重跑");

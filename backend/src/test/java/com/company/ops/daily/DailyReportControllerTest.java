@@ -18,6 +18,10 @@ class DailyReportControllerTest {
         assertThrows(Api.Problem.class,()->DailyReportController.day("07/09/2026"));
         assertThrows(Api.Problem.class,()->DailyReportController.status(Map.of("completionStatus","已归档")));
     }
+    @Test void dailyReportAcceptsOneCombinedEntry(){
+        assertEquals(1,DailyReportController.tasks(java.util.List.of(Map.of("workDetail","日报汇总"))).size());
+        assertThrows(Api.Problem.class,()->DailyReportController.tasks(java.util.List.of(Map.of(),Map.of())));
+    }
     @Test void onlyBossOrAdminCanReadEveryone(){
         assertTrue(DailyReportController.leader(Map.of("roles",java.util.List.of(Map.of("roleCode","BOSS")))));
         assertFalse(DailyReportController.leader(Map.of("roles",java.util.List.of(Map.of("roleCode","MARKET_MEMBER")))));

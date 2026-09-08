@@ -59,8 +59,8 @@ public class DailyReportController {
     }
 
     static LocalDate day(String value){try{return LocalDate.parse(value);}catch(Exception e){throw new Api.Problem(400,"VALIDATION_ERROR","日期格式无效");}}
-    @SuppressWarnings("unchecked") private static List<Map<String,Object>> tasks(Object raw){
-        Api.require(raw instanceof List<?>,"tasks 无效"); var list=(List<?>)raw;Api.require(!list.isEmpty()&&list.size()<=50,"日报任务需为 1 至 50 条");
+    @SuppressWarnings("unchecked") static List<Map<String,Object>> tasks(Object raw){
+        Api.require(raw instanceof List<?>,"tasks 无效"); var list=(List<?>)raw;Api.require(list.size()==1,"日报请一次性填写完整内容");
         var result=new ArrayList<Map<String,Object>>();for(Object task:list){Api.require(task instanceof Map<?,?>,"日报任务无效");result.add((Map<String,Object>)task);}return result;
     }
     static String status(Map<String,Object> task){String value=Api.text(task,"completionStatus",20,true);Api.require(Set.of("未开始","进行中","已完成","已阻塞").contains(value),"完成状态无效");return value;}

@@ -17,7 +17,6 @@ public class ModuleRegistrar implements ApplicationRunner {
     @Value("${app.admin-username}")String username;@Value("${app.admin-password}")String password;@Value("${app.shop-name}")String shopName;@Value("${app.shop-key}")String shopKey;
     public ModuleRegistrar(Db db,PasswordEncoder passwords){this.db=db;this.passwords=passwords;}
     @Override @Transactional public void run(ApplicationArguments ignored){
-        boolean newDailyMenu=db.count("select count(*) from sys_menu where menu_code='daily.report'",Map.of())==0;
         String[][] roles={{"ADMIN","系统管理员"},{"BOSS","老板"},{"DEPT_HEAD","部门负责人"},{"TEAM_LEAD","小组负责人"},{"OPS","运营"},{"ADS_BUYER","投流投手"},{"MARKET_LEAD","市场负责人"},{"MARKET_MEMBER","市场成员"},{"SHOOTER","拍摄"}};
         for(var r:roles)db.exec("insert into sys_role(role_code,role_name,system_role) values(#{p.code},#{p.name},true) on conflict(role_code) do nothing",p("code",r[0],"name",r[1]));
         db.exec("update sys_module set status='OFFLINE'",Map.of());
@@ -29,7 +28,7 @@ public class ModuleRegistrar implements ApplicationRunner {
         }
         db.exec("update sys_menu set parent_id=(select id from sys_menu where menu_code='admin.group') where menu_code like 'admin.%' and menu_code<>'admin.group'",Map.of());
         db.exec("insert into sys_role_menu(role_id,menu_id) select r.id,m.id from sys_role r join sys_menu m on m.menu_code='dashboard.overview' on conflict do nothing",Map.of());
-        if(newDailyMenu)db.exec("insert into sys_role_menu(role_id,menu_id) select r.id,m.id from sys_role r join sys_menu m on m.menu_code='daily.report' where r.role_code in ('ADMIN','BOSS','DEPT_HEAD','TEAM_LEAD','OPS','ADS_BUYER','MARKET_LEAD','MARKET_MEMBER','SHOOTER') on conflict do nothing",Map.of());
+        db.exec("insert into sys_role_menu(role_id,menu_id) select r.id,m.id from sys_role r cross join sys_menu m where (r.role_code='ADMIN' and m.menu_code in ('dashboard.overview','daily.report','import.upload','export.details','admin.users','admin.roles','admin.menus','admin.audit','admin.login-logs')) or (r.role_code in ('BOSS','DEPT_HEAD','TEAM_LEAD','OPS','ADS_BUYER','MARKET_LEAD','MARKET_MEMBER','SHOOTER') and m.menu_code in ('dashboard.overview','daily.report')) or (r.role_code in ('DEPT_HEAD','TEAM_LEAD','OPS','ADS_BUYER','MARKET_LEAD','MARKET_MEMBER','SHOOTER') and m.menu_code='import.upload') or (r.role_code='BOSS' and m.menu_code='export.details') on conflict do nothing",Map.of());
         if(db.count("select count(*) from sys_user",Map.of())==0){
             AuthController.validatePassword(password);
             String id=db.insert("insert into sys_user(username,display_name,password_hash) values(#{p.username},'系统管理员',#{p.hash})",p("username",username,"hash",passwords.encode(password)));

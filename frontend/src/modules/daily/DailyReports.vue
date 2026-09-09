@@ -120,6 +120,7 @@ small{display:block;color:var(--hm-text-secondary);font-weight:400}
 .metric-form :deep(.el-input__wrapper){min-height:40px}
 .ads-form{grid-template-columns:repeat(3,minmax(280px,1fr))}
 .submit-bar{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:14px 18px;border-top:1px solid var(--hm-border);background:var(--hm-bg-soft);color:var(--hm-text-secondary);font-size:12px}
+.submit-bar>div{display:flex;align-items:center;gap:12px;flex-shrink:0}
 .note{padding:12px 18px;margin:0;color:var(--hm-text-secondary);font-size:12px}
 .market-picker{padding:16px 18px 0}
 .market-picker :deep(.el-tabs__header){margin-bottom:14px}

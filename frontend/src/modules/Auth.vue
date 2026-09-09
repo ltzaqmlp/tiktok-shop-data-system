@@ -166,10 +166,6 @@ async function submit() { if (!await form.value?.validate().catch(() => false)) 
     background: rgba(255, 255, 255, .54)
 }
 
-.auth-card :deep(.el-input__wrapper.is-focus) {
-    box-shadow: 0 0 0 1px #6D9FD3 inset, 0 0 0 3px rgba(109, 159, 211, .18) !important
-}
-
 .auth-card :deep(.el-input__inner) {
     font-size: 14px;
     color: #516274

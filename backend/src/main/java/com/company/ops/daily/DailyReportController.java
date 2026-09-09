@@ -4,65 +4,147 @@ import com.company.ops.auth.Identity;
 import com.company.ops.common.*;
 import static com.company.ops.common.Db.p;
 import jakarta.servlet.http.HttpServletRequest;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.*;
 import org.springframework.stereotype.*;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.bind.annotation.*;
 
+/**
+ * Role-based daily reports. The legacy daily_report and daily_report_task tables are
+ * intentionally retained by V6 for schema compatibility and are excluded from this API.
+ */
 @RestController
 @RequestMapping("/api/v1/daily-reports")
 public class DailyReportController {
+    private static final List<String> MARKETS=List.of("MY","UK","US","DE","FR");
+    private static final List<String> EDITOR=List.of("plannedNewPublish","actualNewPublish","plannedFirstReview","actualFirstReview","plannedReworkAcceptance","actualReworkAcceptance");
+    private static final List<String> LEAD=List.of("plannedReviewVideos","actualReviewVideos","plannedValidBenchmark","actualValidBenchmark","plannedDeconstruction","actualDeconstruction","plannedCompleteScript","actualCompleteScript","plannedReadyScript","actualReadyScript");
+    private static final List<String> ADS=List.of("plannedTest","actualTest","newAdjustPlan","adSpend","adGmv","impressions","clicks","orders","expandedMaterial","stoppedMaterial");
     private final Db db; private final TransactionTemplate tx;
     public DailyReportController(Db db,org.springframework.transaction.PlatformTransactionManager manager){this.db=db;this.tx=new TransactionTemplate(manager);}
 
-    @GetMapping
-    public Object list(@RequestParam(required=false)String date,HttpServletRequest req){
-        var args=p(); String where="";
-        if(date!=null&&!date.isBlank()){args.put("date",day(date));where=" where r.report_date=#{p.date}";}
-        if(leader(Identity.actor(req)))where+=(where.isEmpty()?" where ":" and ")+"r.submission_status='SUBMITTED'";
-        else {where+=(where.isEmpty()?" where ":" and ")+"r.created_by=#{p.user}";args.put("user",Identity.uid(req));}
-        return Api.ok(req,db.rows("select r.report_date,r.group_name,r.role_market,r.today_focus,r.key_result,r.need_boss_support,r.tomorrow_focus,r.submission_status,r.created_by,u.display_name reporter_name,t.id task_id,t.sort_order,t.work_module,t.work_detail,t.plan_delivery,t.actual_result,t.completion_status,t.issue_next_step,t.result_link from daily_report r join sys_user u on u.id=r.created_by join daily_report_task t on t.report_id=r.id"+where+" order by r.report_date desc,u.display_name,t.sort_order",args));
+    @GetMapping("/context")
+    public Object context(HttpServletRequest req){
+        var actor=Identity.actor(req);var data=p("role",dailyRole(actor),"marketCode",Objects.toString(actor.get("marketCode"),""),"markets",db.rows("select market_code,market_name,currency_code from dim_market where market_code in ('MY','UK','US','DE','FR') and enabled order by case market_code when 'MY' then 1 when 'UK' then 2 when 'US' then 3 when 'DE' then 4 else 5 end"));
+        return Api.ok(req,data);
     }
 
-    @GetMapping("/mine")
-    public Object mine(@RequestParam String date,HttpServletRequest req){
-        LocalDate reportDate=day(date); long user=Identity.uid(req);
-        var report=db.one("select r.id,r.report_date,r.group_name,r.role_market,r.today_focus,r.key_result,r.need_boss_support,r.tomorrow_focus,r.submission_status,u.display_name reporter_name from daily_report r join sys_user u on u.id=r.created_by where r.report_date=#{p.date} and r.created_by=#{p.user}",p("date",reportDate,"user",user));
-        if(report.isEmpty()){
-            var profile=db.one("select u.display_name,coalesce(o.name,'') group_name from sys_user u left join sys_org_unit o on o.id=u.org_unit_id where u.id=#{p.user}",p("user",user));
-            report=p("reportDate",reportDate.toString(),"reporterName",profile.get("displayName"),"groupName",profile.get("groupName"),"roleMarket","","todayFocus","","keyResult","","needBossSupport","","tomorrowFocus","","submissionStatus","DRAFT","tasks",List.of());
-        }else report.put("tasks",db.rows("select id,sort_order,work_module,work_detail,plan_delivery,actual_result,completion_status,issue_next_step,result_link from daily_report_task where report_id=#{p.id} order by sort_order",p("id",Long.parseLong(report.get("id").toString()))));
-        return Api.ok(req,report);
+    @GetMapping("/summary")
+    public Object summary(@RequestParam String date,HttpServletRequest req){
+        requireViewer(Identity.actor(req));var args=p("date",day(date));
+        String sql="select m.market_code,m.market_name,"+
+            "coalesce(sum(r.planned_review_videos) filter(where r.report_type='MARKET_LEAD'),0) planned_review_videos,coalesce(sum(r.actual_review_videos) filter(where r.report_type='MARKET_LEAD'),0) actual_review_videos,"+
+            "coalesce(sum(r.planned_valid_benchmark) filter(where r.report_type='MARKET_LEAD'),0) planned_valid_benchmark,coalesce(sum(r.actual_valid_benchmark) filter(where r.report_type='MARKET_LEAD'),0) actual_valid_benchmark,"+
+            "coalesce(sum(r.planned_deconstruction) filter(where r.report_type='MARKET_LEAD'),0) planned_deconstruction,coalesce(sum(r.actual_deconstruction) filter(where r.report_type='MARKET_LEAD'),0) actual_deconstruction,"+
+            "coalesce(sum(r.planned_complete_script) filter(where r.report_type='MARKET_LEAD'),0) planned_complete_script,coalesce(sum(r.actual_complete_script) filter(where r.report_type='MARKET_LEAD'),0) actual_complete_script,"+
+            "coalesce(sum(r.planned_ready_script) filter(where r.report_type='MARKET_LEAD'),0) planned_ready_script,coalesce(sum(r.actual_ready_script) filter(where r.report_type='MARKET_LEAD'),0) actual_ready_script,"+
+            "coalesce(sum(r.planned_new_publish) filter(where r.report_type='EDITOR'),0) planned_new_publish,coalesce(sum(r.actual_new_publish) filter(where r.report_type='EDITOR'),0) actual_new_publish,"+
+            "coalesce(sum(r.planned_first_review) filter(where r.report_type='EDITOR'),0) planned_first_review,coalesce(sum(r.actual_first_review) filter(where r.report_type='EDITOR'),0) actual_first_review,"+
+            "coalesce(sum(r.planned_rework_acceptance) filter(where r.report_type='EDITOR'),0) planned_rework_acceptance,coalesce(sum(r.actual_rework_acceptance) filter(where r.report_type='EDITOR'),0) actual_rework_acceptance " +
+            "from dim_market m left join daily_metric_report r on r.market_code=m.market_code and r.report_date=#{p.date} and r.submission_status='APPROVED' where m.market_code in ('MY','UK','US','DE','FR') group by m.market_code,m.market_name order by case m.market_code when 'MY' then 1 when 'UK' then 2 when 'US' then 3 when 'DE' then 4 else 5 end";
+        return Api.ok(req,db.rows(sql,args));
     }
 
-    @PutMapping("/mine/{date}")
-    public Object save(@PathVariable String date,@RequestBody Map<String,Object> body,HttpServletRequest req){
-        return store(date,body,req,false);
+    @GetMapping("/summary/details")
+    public Object summaryDetails(@RequestParam String date,HttpServletRequest req){
+        requireViewer(Identity.actor(req));
+        return Api.ok(req,rows("r.report_date=#{p.date} and r.report_type in ('EDITOR','MARKET_LEAD') and r.submission_status='APPROVED'",p("date",day(date))));
     }
-    @PostMapping("/mine/{date}/submit")
-    public Object submit(@PathVariable String date,@RequestBody Map<String,Object> body,HttpServletRequest req){
-        return store(date,body,req,true);
+
+    @GetMapping("/market/{market}")
+    public Object market(@PathVariable String market,@RequestParam String date,HttpServletRequest req){
+        market=market(market);var actor=Identity.actor(req);var args=p("date",day(date),"market",market,"user",Identity.uid(req));String where="r.report_date=#{p.date} and r.market_code=#{p.market} and r.report_type in ('EDITOR','MARKET_LEAD')";
+        if(Identity.role(actor,"BOSS"))where+=" and r.submission_status='APPROVED'";
+        else if(Identity.role(actor,"DEPT_HEAD")||Identity.role(actor,"ADMIN"))where+=" and r.submission_status<>'DRAFT'";
+        else if(Identity.role(actor,"MARKET_LEAD")&&market.equals(actor.get("marketCode")))where+=" and (r.report_type='EDITOR' or r.reporter_id=#{p.user}) and r.submission_status<>'DRAFT'";
+        else if(Identity.role(actor,"MARKET_MEMBER")&&market.equals(actor.get("marketCode")))where+=" and r.reporter_id=#{p.user}";
+        else throw forbidden();
+        return Api.ok(req,rows(where,args));
     }
-    private Object store(String date,Map<String,Object> body,HttpServletRequest req,boolean submit){
-        LocalDate reportDate=day(date); long user=Identity.uid(req); String group=Api.text(body,"groupName",100,submit),roleMarket=Api.text(body,"roleMarket",100,submit),todayFocus=Api.text(body,"todayFocus",2000,false),keyResult=Api.text(body,"keyResult",2000,false),needBossSupport=Api.text(body,"needBossSupport",2000,false),tomorrowFocus=Api.text(body,"tomorrowFocus",2000,false);
-        List<Map<String,Object>> tasks=tasks(body.get("tasks"));
-        tx.executeWithoutResult(s->{
-            var old=db.one("select id,submission_status from daily_report where report_date=#{p.date} and created_by=#{p.user} for update",p("date",reportDate,"user",user));
-            long reportId;
-            if(old.isEmpty()) reportId=Long.parseLong(db.insert("insert into daily_report(report_date,group_name,role_market,today_focus,key_result,need_boss_support,tomorrow_focus,submission_status,submitted_at,created_by) values(#{p.date},#{p.group},#{p.role},#{p.today},#{p.result},#{p.support},#{p.tomorrow},#{p.status},case when #{p.submit} then now() else null end,#{p.user})",p("date",reportDate,"group",group,"role",roleMarket,"today",todayFocus,"result",keyResult,"support",needBossSupport,"tomorrow",tomorrowFocus,"status",submit?"SUBMITTED":"DRAFT","submit",submit,"user",user)));
-            else {reportId=Long.parseLong(old.get("id").toString());db.exec("update daily_report set group_name=#{p.group},role_market=#{p.role},today_focus=#{p.today},key_result=#{p.result},need_boss_support=#{p.support},tomorrow_focus=#{p.tomorrow},submission_status=case when #{p.submit} then 'SUBMITTED' else submission_status end,submitted_at=case when #{p.submit} then now() else submitted_at end,updated_at=now() where id=#{p.id}",p("group",group,"role",roleMarket,"today",todayFocus,"result",keyResult,"support",needBossSupport,"tomorrow",tomorrowFocus,"submit",submit,"id",reportId));db.exec("delete from daily_report_task where report_id=#{p.id}",p("id",reportId));}
-            for(int i=0;i<tasks.size();i++){var task=tasks.get(i);db.exec("insert into daily_report_task(report_id,sort_order,work_module,work_detail,plan_delivery,actual_result,completion_status,issue_next_step,result_link) values(#{p.report},#{p.order},#{p.module},#{p.work},#{p.plan},#{p.actual},#{p.status},#{p.issue},#{p.link})",p("report",reportId,"order",i,"module",Api.text(task,"workModule",100,submit),"work",Api.text(task,"workDetail",2000,submit),"plan",Api.text(task,"planDelivery",2000,submit),"actual",Api.text(task,"actualResult",2000,false),"status",status(task),"issue",Api.text(task,"issueNextStep",2000,false),"link",Api.text(task,"resultLink",2000,false)));}
+
+    @GetMapping("/ads")
+    public Object ads(@RequestParam String date,HttpServletRequest req){
+        var actor=Identity.actor(req);var args=p("date",day(date),"user",Identity.uid(req));String where="r.report_date=#{p.date} and r.report_type='ADS_BUYER'";
+        if(Identity.role(actor,"BOSS"))return Api.ok(req,adsSummary(day(date)));
+        else if(Identity.role(actor,"DEPT_HEAD")||Identity.role(actor,"ADMIN"))where+=" and r.submission_status<>'DRAFT'";
+        else if(Identity.role(actor,"ADS_BUYER"))where+=" and r.reporter_id=#{p.user}";
+        else throw forbidden();
+        return Api.ok(req,rows(where,args));
+    }
+
+    @GetMapping("/mine/content")
+    public Object mineContent(@RequestParam String date,HttpServletRequest req){
+        String type=contentRole(Identity.actor(req));var args=p("date",day(date),"user",Identity.uid(req),"type",type);
+        var report=db.one(select()+" where r.report_date=#{p.date} and r.reporter_id=#{p.user} and r.report_type=#{p.type}",args);
+        if(report.isEmpty())report.putAll(blank(day(date),type,ownMarket(Identity.actor(req))));return Api.ok(req,report);
+    }
+    @PutMapping("/mine/content/{date}") public Object saveContent(@PathVariable String date,@RequestBody Map<String,Object> body,HttpServletRequest req){return storeContent(date,body,req,false);}
+    @PostMapping("/mine/content/{date}/submit") public Object submitContent(@PathVariable String date,@RequestBody Map<String,Object> body,HttpServletRequest req){return storeContent(date,body,req,true);}
+
+    @GetMapping("/mine/ads")
+    public Object mineAds(@RequestParam String date,HttpServletRequest req){
+        requireRole(Identity.actor(req),"ADS_BUYER");return Api.ok(req,rows("r.report_date=#{p.date} and r.reporter_id=#{p.user} and r.report_type='ADS_BUYER'",p("date",day(date),"user",Identity.uid(req))));
+    }
+    @PutMapping("/mine/ads/{date}/{market}") public Object saveAds(@PathVariable String date,@PathVariable String market,@RequestBody Map<String,Object> body,HttpServletRequest req){return storeAds(date,market,body,req,false);}
+    @PostMapping("/mine/ads/{date}/{market}/submit") public Object submitAds(@PathVariable String date,@PathVariable String market,@RequestBody Map<String,Object> body,HttpServletRequest req){return storeAds(date,market,body,req,true);}
+
+    @PostMapping("/{id}/approve") public Object approve(@PathVariable long id,HttpServletRequest req){return review(id,null,req);}
+    @PostMapping("/{id}/reject") public Object reject(@PathVariable long id,@RequestBody Map<String,Object> body,HttpServletRequest req){return review(id,Api.text(body,"reason",2000,true),req);}
+
+    private Object storeContent(String value,Map<String,Object> body,HttpServletRequest req,boolean submit){var actor=Identity.actor(req);return store(day(value),contentRole(actor),ownMarket(actor),body,req,submit);}
+    private Object storeAds(String value,String valueMarket,Map<String,Object> body,HttpServletRequest req,boolean submit){requireRole(Identity.actor(req),"ADS_BUYER");return store(day(value),"ADS_BUYER",market(valueMarket),body,req,submit);}
+    private Object store(LocalDate date,String type,String market,Map<String,Object> body,HttpServletRequest req,boolean submit){
+        long user=Identity.uid(req);Map<String,Object> result=tx.execute(s->{
+            var old=db.one("select id,submission_status from daily_metric_report where report_date=#{p.date} and reporter_id=#{p.user} and report_type=#{p.type} and market_code=#{p.market} for update",p("date",date,"user",user,"type",type,"market",market));
+            Api.require(old.isEmpty()||!"APPROVED".equals(old.get("submissionStatus")),"已审核通过的日报不能修改，请由审核人退回后再填写");
+            var values=metrics(body,type,submit);values.put("deliveryResults",db.json(deliveryResults(body,type)));values.put("submitted",submit);values.put("date",date);values.put("user",user);values.put("type",type);values.put("market",market);values.put("status",submit?("EDITOR".equals(type)?"PENDING_MARKET":"PENDING_DEPT"):(old.isEmpty()?"DRAFT":old.get("submissionStatus").toString()));
+            long id;if(old.isEmpty())id=Long.parseLong(db.insert(insertSql(),values));else{id=Long.parseLong(old.get("id").toString());values.put("id",id);db.exec(updateSql(),values);}return db.one(select()+" where r.id=#{p.id}",p("id",id));
         });
-        req.setAttribute("auditAction",submit?"DAILY_REPORT_SUBMIT":"DAILY_REPORT_DRAFT_SAVE");req.setAttribute("targetId",date);req.setAttribute("auditSummary",p("reportDate",date,"taskCount",tasks.size(),"submissionStatus",submit?"SUBMITTED":"DRAFT"));
-        return mine(date,req);
+        req.setAttribute("auditAction",submit?"DAILY_REPORT_SUBMIT":"DAILY_REPORT_SAVE");req.setAttribute("targetId",result.get("id"));req.setAttribute("auditAfter",result);return Api.ok(req,result);
     }
 
-    static LocalDate day(String value){try{return LocalDate.parse(value);}catch(Exception e){throw new Api.Problem(400,"VALIDATION_ERROR","日期格式无效");}}
-    @SuppressWarnings("unchecked") static List<Map<String,Object>> tasks(Object raw){
-        Api.require(raw instanceof List<?>,"tasks 无效"); var list=(List<?>)raw;Api.require(list.size()==1,"日报请一次性填写完整内容");
-        var result=new ArrayList<Map<String,Object>>();for(Object task:list){Api.require(task instanceof Map<?,?>,"日报任务无效");result.add((Map<String,Object>)task);}return result;
+    private Object review(long id,String reason,HttpServletRequest req){
+        var actor=Identity.actor(req);Map<String,Object> result=tx.execute(s->{
+            var report=db.one("select * from daily_metric_report where id=#{p.id} for update",p("id",id));Api.require(!report.isEmpty(),"日报不存在");String state=report.get("submissionStatus").toString();String type=report.get("reportType").toString();String reportMarket=report.get("marketCode").toString();long user=Identity.uid(req);boolean marketReview="PENDING_MARKET".equals(state)&&"EDITOR".equals(type)&&(Identity.role(actor,"MARKET_LEAD")&&reportMarket.equals(actor.get("marketCode"))||Identity.role(actor,"ADMIN"));boolean deptReview="PENDING_DEPT".equals(state)&&(Identity.role(actor,"DEPT_HEAD")||Identity.role(actor,"ADMIN"));if(!marketReview&&!deptReview)throw forbidden();
+            String next=reason==null?(marketReview?"PENDING_DEPT":"APPROVED"):"REJECTED";String stage=marketReview?"MARKET":"DEPT";
+            db.exec("update daily_metric_report set submission_status=#{p.status},rejection_stage=#{p.stage},rejection_reason=#{p.reason},market_reviewer_id=case when #{p.market} then #{p.user} else market_reviewer_id end,market_reviewed_at=case when #{p.market} then now() else market_reviewed_at end,dept_reviewer_id=case when #{p.dept} then #{p.user} else dept_reviewer_id end,dept_reviewed_at=case when #{p.dept} then now() else dept_reviewed_at end,updated_at=now() where id=#{p.id}",p("status",next,"stage",reason==null?null:stage,"reason",Objects.toString(reason,""),"market",marketReview,"dept",deptReview,"user",user,"id",id));return db.one(select()+" where r.id=#{p.id}",p("id",id));
+        });
+        req.setAttribute("auditAction",reason==null?"DAILY_REPORT_APPROVE":"DAILY_REPORT_REJECT");req.setAttribute("targetId",id);req.setAttribute("auditAfter",result);return Api.ok(req,result);
     }
-    static String status(Map<String,Object> task){String value=Api.text(task,"completionStatus",20,true);Api.require(Set.of("未开始","进行中","已完成","已阻塞").contains(value),"完成状态无效");return value;}
-    static boolean leader(Map<String,Object> user){return Identity.role(user,"ADMIN")||Identity.role(user,"BOSS");}
+
+    private List<Map<String,Object>> rows(String where,Map<String,Object> args){return db.rows(select()+" where "+where+" order by r.market_code,u.display_name,r.id",args);}
+    private List<Map<String,Object>> adsSummary(LocalDate date){
+        String sql="select m.market_code id,#{p.date} report_date,'ADS_BUYER' report_type,m.market_code,m.market_name,'已审核汇总' reporter_name,'APPROVED' submission_status,'' rejection_reason,"+
+            "coalesce(sum(r.planned_test),0) planned_test,coalesce(sum(r.actual_test),0) actual_test,greatest(coalesce(sum(r.planned_test-r.actual_test),0),0) test_gap,coalesce(sum(r.new_adjust_plan),0) new_adjust_plan,coalesce(sum(r.ad_spend),0) ad_spend,coalesce(sum(r.ad_gmv),0) ad_gmv,"+
+            "case when coalesce(sum(r.ad_spend),0)=0 then 0 else round(sum(r.ad_gmv)/sum(r.ad_spend),4) end roi,coalesce(sum(r.impressions),0) impressions,coalesce(sum(r.clicks),0) clicks,case when coalesce(sum(r.impressions),0)=0 then 0 else round(sum(r.clicks)::numeric/sum(r.impressions),4) end ctr,"+
+            "coalesce(sum(r.orders),0) orders,coalesce(sum(r.expanded_material),0) expanded_material,coalesce(sum(r.stopped_material),0) stopped_material " +
+            "from dim_market m left join daily_metric_report r on r.market_code=m.market_code and r.report_date=#{p.date} and r.report_type='ADS_BUYER' and r.submission_status='APPROVED' where m.market_code in ('MY','UK','US','DE','FR') group by m.market_code,m.market_name order by case m.market_code when 'MY' then 1 when 'UK' then 2 when 'US' then 3 when 'DE' then 4 else 5 end";
+        return db.rows(sql,p("date",date));
+    }
+    private static String select(){return "select r.*,u.display_name reporter_name,m.market_name,greatest(r.planned_test-r.actual_test,0) test_gap,case when r.ad_spend=0 then 0 else round(r.ad_gmv/r.ad_spend,4) end roi,case when r.impressions=0 then 0 else round(r.clicks::numeric/r.impressions,4) end ctr from daily_metric_report r join sys_user u on u.id=r.reporter_id join dim_market m on m.market_code=r.market_code";}
+    private static Map<String,Object> blank(LocalDate date,String type,String market){var value=p("reportDate",date.toString(),"reportType",type,"marketCode",market,"submissionStatus","DRAFT","rejectionReason","","deliveryResults",new LinkedHashMap<>(),"submittedAt",null);for(String key:EDITOR)value.put(key,0);for(String key:LEAD)value.put(key,0);for(String key:ADS)value.put(key,key.equals("adSpend")||key.equals("adGmv")?BigDecimal.ZERO:0);value.put("testGap",0);value.put("roi",BigDecimal.ZERO);value.put("ctr",BigDecimal.ZERO);return value;}
+    static Map<String,String> deliveryResults(Map<String,Object> body,String type){
+        Object raw=body.get("deliveryResults");if(raw==null)return new LinkedHashMap<>();Api.require(raw instanceof Map,"交付成果格式无效");var source=(Map<?,?>)raw;var result=new LinkedHashMap<String,String>();List<String> fields="EDITOR".equals(type)?EDITOR:"MARKET_LEAD".equals(type)?LEAD:ADS;for(String key:fields){Object value=source.get(key);if(value==null)continue;String text=value.toString().trim();Api.require(text.length()<=2000,key+" 交付成果不能超过 2000 个字符");if(!text.isBlank())result.put(key,text);}return result;
+    }
+    static Map<String,Object> metrics(Map<String,Object> body,String type,boolean required){
+        var values=p();for(String key:EDITOR)values.put(camelToSnake(key),0);for(String key:LEAD)values.put(camelToSnake(key),0);for(String key:ADS)values.put(camelToSnake(key),key.equals("adSpend")||key.equals("adGmv")?BigDecimal.ZERO:0);
+        List<String> fields="EDITOR".equals(type)?EDITOR:"MARKET_LEAD".equals(type)?LEAD:ADS;
+        for(String key:fields)values.put(camelToSnake(key),(key.equals("adSpend")||key.equals("adGmv"))?money(body,key,required):number(body,key,required));return values;
+    }
+    private static long number(Map<String,Object> body,String key,boolean required){Object raw=body.get(key);if(raw==null||raw.toString().isBlank()){Api.require(!required,key+" 不能为空");return 0;}try{long result=Long.parseLong(raw.toString());Api.require(result>=0,key+" 不能小于 0");return result;}catch(NumberFormatException e){throw new Api.Problem(400,"VALIDATION_ERROR",key+" 必须是非负整数");}}
+    private static BigDecimal money(Map<String,Object> body,String key,boolean required){Object raw=body.get(key);if(raw==null||raw.toString().isBlank()){Api.require(!required,key+" 不能为空");return BigDecimal.ZERO;}try{var result=new BigDecimal(raw.toString());Api.require(result.signum()>=0&&result.scale()<=2,key+" 必须是最多两位小数的非负数");return result;}catch(NumberFormatException e){throw new Api.Problem(400,"VALIDATION_ERROR",key+" 格式无效");}}
+    private static String insertSql(){return "insert into daily_metric_report(report_date,reporter_id,report_type,market_code,submission_status,delivery_results,submitted_at,planned_review_videos,actual_review_videos,planned_valid_benchmark,actual_valid_benchmark,planned_deconstruction,actual_deconstruction,planned_complete_script,actual_complete_script,planned_ready_script,actual_ready_script,planned_new_publish,actual_new_publish,planned_first_review,actual_first_review,planned_rework_acceptance,actual_rework_acceptance,planned_test,actual_test,new_adjust_plan,ad_spend,ad_gmv,impressions,clicks,orders,expanded_material,stopped_material) values(#{p.date},#{p.user},#{p.type},#{p.market},#{p.status},cast(#{p.deliveryResults} as jsonb),case when #{p.submitted} then now() else null end,#{p.planned_review_videos},#{p.actual_review_videos},#{p.planned_valid_benchmark},#{p.actual_valid_benchmark},#{p.planned_deconstruction},#{p.actual_deconstruction},#{p.planned_complete_script},#{p.actual_complete_script},#{p.planned_ready_script},#{p.actual_ready_script},#{p.planned_new_publish},#{p.actual_new_publish},#{p.planned_first_review},#{p.actual_first_review},#{p.planned_rework_acceptance},#{p.actual_rework_acceptance},#{p.planned_test},#{p.actual_test},#{p.new_adjust_plan},#{p.ad_spend},#{p.ad_gmv},#{p.impressions},#{p.clicks},#{p.orders},#{p.expanded_material},#{p.stopped_material})";}
+    private static String updateSql(){return "update daily_metric_report set submission_status=#{p.status},rejection_stage=null,rejection_reason='',delivery_results=cast(#{p.deliveryResults} as jsonb),submitted_at=case when #{p.submitted} then now() else submitted_at end,planned_review_videos=#{p.planned_review_videos},actual_review_videos=#{p.actual_review_videos},planned_valid_benchmark=#{p.planned_valid_benchmark},actual_valid_benchmark=#{p.actual_valid_benchmark},planned_deconstruction=#{p.planned_deconstruction},actual_deconstruction=#{p.actual_deconstruction},planned_complete_script=#{p.planned_complete_script},actual_complete_script=#{p.actual_complete_script},planned_ready_script=#{p.planned_ready_script},actual_ready_script=#{p.actual_ready_script},planned_new_publish=#{p.planned_new_publish},actual_new_publish=#{p.actual_new_publish},planned_first_review=#{p.planned_first_review},actual_first_review=#{p.actual_first_review},planned_rework_acceptance=#{p.planned_rework_acceptance},actual_rework_acceptance=#{p.actual_rework_acceptance},planned_test=#{p.planned_test},actual_test=#{p.actual_test},new_adjust_plan=#{p.new_adjust_plan},ad_spend=#{p.ad_spend},ad_gmv=#{p.ad_gmv},impressions=#{p.impressions},clicks=#{p.clicks},orders=#{p.orders},expanded_material=#{p.expanded_material},stopped_material=#{p.stopped_material},updated_at=now() where id=#{p.id}";}
+    static LocalDate day(String value){try{return LocalDate.parse(value);}catch(Exception e){throw new Api.Problem(400,"VALIDATION_ERROR","日期格式无效");}}
+    static boolean leader(Map<String,Object> user){return Identity.role(user,"ADMIN")||Identity.role(user,"BOSS")||Identity.role(user,"DEPT_HEAD");}
+    private static String camelToSnake(String value){return value.replaceAll("([a-z])([A-Z])","$1_$2").toLowerCase(Locale.ROOT);}
+    private static String market(String value){String code=Objects.toString(value,"").toUpperCase(Locale.ROOT);Api.require(MARKETS.contains(code),"市场无效");return code;}
+    private static Api.Problem forbidden(){return new Api.Problem(403,"AUTH_FORBIDDEN","没有此操作的权限");}
+    private static void requireRole(Map<String,Object> actor,String role){if(!Identity.role(actor,role)&&!Identity.role(actor,"ADMIN"))throw forbidden();}
+    private static void requireViewer(Map<String,Object> actor){if(!leader(actor))throw forbidden();}
+    private static String ownMarket(Map<String,Object> actor){String code=Objects.toString(actor.get("marketCode"),"");Api.require(MARKETS.contains(code),"账号尚未配置负责市场");return code;}
+    private static String dailyRole(Map<String,Object> actor){if(Identity.role(actor,"MARKET_MEMBER"))return "EDITOR";if(Identity.role(actor,"MARKET_LEAD"))return "MARKET_LEAD";if(Identity.role(actor,"ADS_BUYER"))return "ADS_BUYER";return "VIEWER";}
+    private static String contentRole(Map<String,Object> actor){String role=dailyRole(actor);if(!Set.of("EDITOR","MARKET_LEAD").contains(role))throw forbidden();return role;}
 }

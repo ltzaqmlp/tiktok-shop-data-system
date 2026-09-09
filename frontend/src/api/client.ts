@@ -11,6 +11,8 @@ function makeDates(n: number) {
 const _d30 = makeDates(30), _d7 = _d30.slice(-7), _yesterday = _d30[_d30.length - 1]
 const _today = new Date().toLocaleDateString('en-CA')
 const _ok={comparePreviousStatus:'OK',compare7dAvgStatus:'OK'}
+const _dailyMarkets=[{marketCode:'MY',marketName:'马来西亚',currencyCode:'MYR'},{marketCode:'UK',marketName:'英国',currencyCode:'GBP'},{marketCode:'US',marketName:'美国',currencyCode:'USD'},{marketCode:'DE',marketName:'德国',currencyCode:'EUR'},{marketCode:'FR',marketName:'法国',currencyCode:'EUR'}]
+const _dailyReport={id:'daily-demo-1',reportDate:_today,reportType:'EDITOR',marketCode:'MY',marketName:'马来西亚',reporterName:'演示剪辑',submissionStatus:'PENDING_DEPT',rejectionReason:'',deliveryResults:{actualNewPublish:'https://example.test/publish-001'},submittedAt:new Date().toISOString(),plannedReviewVideos:0,actualReviewVideos:0,plannedValidBenchmark:0,actualValidBenchmark:0,plannedDeconstruction:0,actualDeconstruction:0,plannedCompleteScript:0,actualCompleteScript:0,plannedReadyScript:0,actualReadyScript:0,plannedNewPublish:3,actualNewPublish:2,plannedFirstReview:4,actualFirstReview:3,plannedReworkAcceptance:2,actualReworkAcceptance:1,plannedTest:0,actualTest:0,testGap:0,newAdjustPlan:0,adSpend:0,adGmv:0,roi:0,impressions:0,clicks:0,ctr:0,orders:0,expandedMaterial:0,stoppedMaterial:0}
 const MOCK: Record<string, unknown> = {
   '/auth/login': {},
   '/auth/session': { authenticated: true },
@@ -18,6 +20,7 @@ const MOCK: Record<string, unknown> = {
   '/me/menus': [
     { id: '1', name: '经营驾驶舱', menuCode: 'dashboard', routePath: '/dashboard', sortOrder: 1, enabled: true },
     { id: '8', name: '日报', menuCode: 'daily.report', routePath: '/daily-reports', sortOrder: 2, enabled: true },
+    { id: '10', name: '拍摄工单', menuCode: 'shooting.ticket', routePath: '/shooting-tickets', sortOrder: 3, enabled: true },
     { id: '2', name: '数据导入', menuCode: 'data-import', routePath: '/data-import', sortOrder: 2, enabled: true },
     { id: '9', name: '系统管理', menuCode: 'admin', sortOrder: 3, enabled: true, children: [
       { id: '3', name: '用户管理', menuCode: 'admin-users', routePath: '/admin/users', sortOrder: 1, enabled: true },
@@ -49,8 +52,15 @@ const MOCK: Record<string, unknown> = {
   '/dashboard/order-status': [{ status: 'COMPLETED', count: 1124, ratio: 0.610 }, { status: 'SHIPPED', count: 386, ratio: 0.210 }, { status: 'PAID', count: 184, ratio: 0.100 }, { status: 'CANCELLED', count: 92, ratio: 0.050 }, { status: 'REFUNDED', count: 56, ratio: 0.030 }],
   '/dashboard/after-sales': { refundAmount: { value: 8430.00, comparePrevious: -0.082, comparePreviousStatus:'OK' }, refundedQty: { value: 124, comparePrevious: -0.064, comparePreviousStatus:'OK' }, refundCustomerCount: { value: 89, comparePrevious: -0.071, comparePreviousStatus:'OK' }, cancelOrderCount: { value: 92, comparePrevious: 0.043, comparePreviousStatus:'OK' } },
   '/imports': { items: [], total: 0 },
-  '/daily-reports': [{ reportDate: _today, groupName: '视频组', roleMarket: '美国编导', todayFocus: '完成精华油脚本审核', keyResult: '审核 8 条脚本，通过 6 条', needBossSupport: '无', tomorrowFocus: '复核修改后的 2 条脚本', submissionStatus: 'SUBMITTED', reporterName: '演示管理员', createdBy: '1', taskId: '1', sortOrder: 0, workModule: '内容审核', workDetail: '审核精华油口播脚本', planDelivery: '审核 8 条脚本', actualResult: '通过 6 条；2 条退回修改', completionStatus: '已完成', issueNextStep: '编导修改开头，明早复核', resultLink: '' }],
-  '/daily-reports/mine': { reportDate: _today, groupName: '视频组', roleMarket: '美国编导', todayFocus: '完成精华油脚本审核', keyResult: '审核 8 条脚本，通过 6 条', needBossSupport: '无', tomorrowFocus: '复核修改后的 2 条脚本', submissionStatus: 'SUBMITTED', reporterName: '演示管理员', tasks: [] },
+  '/daily-reports/context': { role:'VIEWER', marketCode:'', markets:_dailyMarkets },
+  '/daily-reports/summary': _dailyMarkets.map((market,index)=>({marketCode:market.marketCode,marketName:market.marketName,plannedReviewVideos:0,actualReviewVideos:0,plannedValidBenchmark:0,actualValidBenchmark:0,plannedDeconstruction:0,actualDeconstruction:0,plannedCompleteScript:0,actualCompleteScript:0,plannedReadyScript:0,actualReadyScript:0,plannedNewPublish:index===0?3:0,actualNewPublish:index===0?2:0,plannedFirstReview:index===0?4:0,actualFirstReview:index===0?3:0,plannedReworkAcceptance:index===0?2:0,actualReworkAcceptance:index===0?1:0})),
+  '/daily-reports/summary/details': [_dailyReport],
+  '/daily-reports/market': [_dailyReport],
+  '/daily-reports/ads': [{..._dailyReport,id:'ad-demo-1',reportType:'ADS_BUYER',reporterName:'演示投手',submissionStatus:'APPROVED',plannedTest:5,actualTest:3,testGap:2,newAdjustPlan:2,adSpend:12.5,adGmv:50,roi:4,impressions:1000,clicks:80,ctr:.08,orders:4,expandedMaterial:2,stoppedMaterial:1}],
+  '/daily-reports/mine/content': _dailyReport,
+  '/daily-reports/mine/ads': [{..._dailyReport,id:'ad-demo-1',reportType:'ADS_BUYER',plannedTest:5,actualTest:3,testGap:2,newAdjustPlan:2,adSpend:12.5,adGmv:50,roi:4,impressions:1000,clicks:80,ctr:.08,orders:4,expandedMaterial:2,stoppedMaterial:1}],
+  '/shooting-tickets/context': { role:'ADMIN', markets:_dailyMarkets, taskTypes:[{code:'SCRIPT_SHOOT',name:'脚本拍摄'},{code:'LIBRARY',name:'素材库补充'},{code:'RESHOOT',name:'补拍'}] },
+  '/shooting-tickets': [{id:'shoot-demo-1',ticketNo:'PS20260909-0001',createdAt:new Date().toISOString(),marketCode:'MY',regionName:'马来西亚',taskType:'SCRIPT_SHOOT',shotRequirement:'产品正面、背面、包装开合，按脚本完成三组构图。',plannedValidShotCount:8,deadline:new Date(Date.now()+86400000).toISOString(),shooterId:null,shooterName:null,directorName:'演示编导',sku:'',actualValidShotCount:null,materialNotes:'',actualDeliveredAt:null,status:'PENDING_SHOOT',rejectionStage:null,rejectionReason:''}],
   '/admin/users': { items: [{ id: '1', username: 'demo', displayName: '演示管理员', status: 'ACTIVE', roles: [{ id: '1', roleCode: 'ADMIN', roleName: '管理员' }], lastLoginAt: new Date().toISOString() }], total: 1 },
   '/admin/roles': [{ id: '1', roleCode: 'ADMIN', roleName: '管理员', description: '系统管理员，拥有全部权限', enabled: true, menuIds: ['1','2','3','4','5','6','7'] }, { id: '2', roleCode: 'BOSS', roleName: '老板', description: '查看驾驶舱与导出', enabled: true, menuIds: ['1'] }],
   '/admin/menus': [{ id: '1', name: '经营驾驶舱', menuCode: 'dashboard', routePath: '/dashboard', sortOrder: 1, enabled: true }, { id: '2', name: '数据导入', menuCode: 'data-import', routePath: '/data-import', sortOrder: 2, enabled: true }],

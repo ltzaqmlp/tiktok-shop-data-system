@@ -49,6 +49,7 @@ public class Security {
                     if(path.startsWith("/api/v1/admin/")||path.endsWith("/reaggregate"))allowed=Identity.role(user,"ADMIN");
                     else if(path.startsWith("/api/v1/dashboard/"))allowed=identity.hasMenu(user,"dashboard.overview");
                     else if(path.startsWith("/api/v1/daily-reports"))allowed=identity.hasMenu(user,"daily.report");
+                    else if(path.startsWith("/api/v1/shooting-tickets"))allowed=identity.hasMenu(user,"shooting.ticket");
                     else if(path.startsWith("/api/v1/imports"))allowed=identity.hasMenu(user,"import.upload");
                     else if(path.startsWith("/api/v1/exports/"))allowed=identity.canExport(user);
                     if(!allowed)throw new Api.Problem(403,"AUTH_FORBIDDEN","没有此操作的权限");

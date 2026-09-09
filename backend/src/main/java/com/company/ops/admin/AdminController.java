@@ -7,14 +7,13 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.transaction.support.TransactionTemplate;
-import java.security.SecureRandom;
 import java.util.*;
 
 @RestController @RequestMapping("/api/v1")
 public class AdminController {
     private final Db db;private final Identity identity;private final PasswordEncoder passwords;private final TransactionTemplate tx;
     public AdminController(Db db,Identity identity,PasswordEncoder passwords,org.springframework.transaction.PlatformTransactionManager manager){this.db=db;this.identity=identity;this.passwords=passwords;tx=new TransactionTemplate(manager);}
-    public static String temporary(){byte[] bytes=new byte[18];new SecureRandom().nextBytes(bytes);return "T9!"+Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);}
+    public static String temporary(){return "admin100";}
     @GetMapping("/system/health")public Object health(HttpServletRequest req){db.rows("select 1");return Api.ok(req,Map.of("status","UP","buildVersion","2026.09.07-product-period-v3"));}
     @GetMapping("/system/markets")public Object markets(HttpServletRequest req){return Api.ok(req,db.rows("select market_code,market_name,currency_code from dim_market where enabled order by market_code"));}
     @GetMapping("/system/shops")public Object shops(@RequestParam String marketCode,HttpServletRequest req){return Api.ok(req,db.rows("select id,market_code,shop_name from dim_shop where enabled and market_code=#{p.market} order by id",p("market",marketCode)));}
@@ -28,18 +27,25 @@ public class AdminController {
     }
     @PostMapping("/admin/users")public Object createUser(@RequestBody Map<String,Object> body,HttpServletRequest req){
         String username=Api.text(body,"username",64,true),name=Api.text(body,"displayName",100,true),password=temporary();
-        var result=tx.execute(s->{String id=db.insert("insert into sys_user(username,display_name,password_hash,org_unit_id) values(#{p.username},#{p.name},#{p.hash},#{p.org})",p("username",username,"name",name,"hash",passwords.encode(password),"org",optionalId(body.get("orgUnitId"))));setRoles(Long.parseLong(id),body.get("roleIds"));return p("id",id,"temporaryPassword",password);});
+        var result=tx.execute(s->{String market=market(body.get("marketCode"));String id=db.insert("insert into sys_user(username,display_name,password_hash,org_unit_id,market_code) values(#{p.username},#{p.name},#{p.hash},#{p.org},#{p.market})",p("username",username,"name",name,"hash",passwords.encode(password),"org",optionalId(body.get("orgUnitId")),"market",market.isBlank()?null:market));setRoles(Long.parseLong(id),body.get("roleIds"),market);return p("id",id,"temporaryPassword",password);});
         req.setAttribute("auditAction","USER_CREATE");req.setAttribute("auditAfter",p("username",username,"displayName",name));return Api.ok(req,result);
     }
     @PutMapping("/admin/users/{id}")public Object updateUser(@PathVariable long id,@RequestBody Map<String,Object> body,HttpServletRequest req){
         tx.executeWithoutResult(s->{lockAdmins();var old=identity.user(id);Api.require(!old.isEmpty(),"用户不存在");req.setAttribute("auditBefore",old);
             String status=body.containsKey("status")?Api.text(body,"status",20,true):old.get("status").toString();Api.require(Set.of("ACTIVE","DISABLED","LOCKED").contains(status),"状态无效");
-            db.exec("update sys_user set display_name=#{p.name},org_unit_id=#{p.org},status=#{p.status},failed_login_count=0,locked_until=null,session_version=session_version+1,updated_at=now() where id=#{p.id}",p("name",body.containsKey("displayName")?Api.text(body,"displayName",100,true):old.get("displayName"),"org",body.containsKey("orgUnitId")?optionalId(body.get("orgUnitId")):optionalId(old.get("orgUnitId")),"status",status,"id",id));
-            if(body.containsKey("roleIds"))setRoles(id,body.get("roleIds"));ensureAdmin();req.setAttribute("auditAfter",identity.user(id));});req.setAttribute("auditAction","USER_UPDATE");return Api.ok(req,Map.of());
+            String market=body.containsKey("marketCode")?market(body.get("marketCode")):Objects.toString(old.get("marketCode"),"");
+            db.exec("update sys_user set display_name=#{p.name},org_unit_id=#{p.org},market_code=#{p.market},status=#{p.status},failed_login_count=0,locked_until=null,session_version=session_version+1,updated_at=now() where id=#{p.id}",p("name",body.containsKey("displayName")?Api.text(body,"displayName",100,true):old.get("displayName"),"org",body.containsKey("orgUnitId")?optionalId(body.get("orgUnitId")):optionalId(old.get("orgUnitId")),"market",market.isBlank()?null:market,"status",status,"id",id));
+            if(body.containsKey("roleIds"))setRoles(id,body.get("roleIds"),market);else validateDailyAssignment(id,market);ensureAdmin();req.setAttribute("auditAfter",identity.user(id));});req.setAttribute("auditAction","USER_UPDATE");return Api.ok(req,Map.of());
     }
     @DeleteMapping("/admin/users/{id}")public Object deleteUser(@PathVariable long id,HttpServletRequest req){return updateUser(id,p("status","DISABLED"),req);}
     @PostMapping("/admin/users/{id}/reset-password")public Object reset(@PathVariable long id,HttpServletRequest req){String password=temporary();Api.require(db.exec("update sys_user set password_hash=#{p.hash},must_change_password=true,session_version=session_version+1,failed_login_count=0,locked_until=null,status=case when status='LOCKED' then 'ACTIVE' else status end where id=#{p.id}",p("id",id,"hash",passwords.encode(password)))==1,"用户不存在");req.setAttribute("auditAction","PASSWORD_RESET");req.setAttribute("targetId",id);return Api.ok(req,Map.of("temporaryPassword",password));}
-    private void setRoles(long user,Object raw){Api.require(raw instanceof List<?>,"请至少选择一个角色");var ids=(List<?>)raw;Api.require(!ids.isEmpty()&&ids.size()<=100,"角色数量无效");db.exec("delete from sys_user_role where user_id=#{p.id}",p("id",user));for(var id:new HashSet<>(ids)){long role=Api.idValue(id);Api.require(db.count("select count(*) from sys_role where id=#{p.id} and enabled",p("id",role))==1,"角色不存在或已停用");db.exec("insert into sys_user_role(user_id,role_id) values(#{p.user},#{p.role})",p("user",user,"role",role));}}
+    private void setRoles(long user,Object raw,String market){Api.require(raw instanceof List<?>,"请至少选择一个角色");var ids=(List<?>)raw;Api.require(!ids.isEmpty()&&ids.size()<=100,"角色数量无效");db.exec("delete from sys_user_role where user_id=#{p.id}",p("id",user));for(var id:new HashSet<>(ids)){long role=Api.idValue(id);Api.require(db.count("select count(*) from sys_role where id=#{p.id} and enabled",p("id",role))==1,"角色不存在或已停用");db.exec("insert into sys_user_role(user_id,role_id) values(#{p.user},#{p.role})",p("user",user,"role",role));}validateDailyAssignment(user,market);}
+    private String market(Object raw){String code=Objects.toString(raw,"").trim().toUpperCase(Locale.ROOT);if(code.isBlank())return "";Api.require(code.matches("[A-Z]{2,16}")&&db.count("select count(*) from dim_market where market_code=#{p.code} and enabled",p("code",code))==1,"负责市场无效");return code;}
+    private void validateDailyAssignment(long user,String market){
+        var roles=db.rows("select r.role_code from sys_role r join sys_user_role ur on ur.role_id=r.id where ur.user_id=#{p.id}",p("id",user)).stream().map(r->r.get("roleCode").toString()).collect(java.util.stream.Collectors.toSet());
+        boolean content=roles.contains("MARKET_MEMBER")||roles.contains("MARKET_LEAD");Api.require(!content||!market.isBlank(),"剪辑和市场负责人必须配置负责市场");
+        if(roles.contains("MARKET_LEAD"))Api.require(db.count("select count(*) from sys_user u join sys_user_role ur on ur.user_id=u.id join sys_role r on r.id=ur.role_id where u.id<>#{p.id} and u.market_code=#{p.market} and u.status='ACTIVE' and r.role_code='MARKET_LEAD'",p("id",user,"market",market))==0,"该市场已有市场负责人");
+    }
     private static Long optionalId(Object v){return v==null||v.toString().isBlank()?null:Api.idValue(v);}
     private void lockAdmins(){db.rows("select pg_advisory_xact_lock(71301)");}
     private void ensureAdmin(){Api.require(db.count("select count(*) from sys_user u join sys_user_role ur on ur.user_id=u.id join sys_role r on r.id=ur.role_id where r.role_code='ADMIN' and r.enabled and u.status='ACTIVE'",Map.of())>0,"至少保留一个启用的管理员");}

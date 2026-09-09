@@ -3,41 +3,31 @@ package com.company.ops.daily;
 import com.company.ops.common.Api;
 import java.time.LocalDate;
 import java.util.Map;
-import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
-import org.springframework.transaction.PlatformTransactionManager;
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
 
 class DailyReportControllerTest {
-    @Test void dailyReportAcceptsOnlyWorkbookStatusesAndDates(){
+    @Test void datesAndReviewRolesAreStrict(){
         assertEquals(LocalDate.of(2026,9,7),DailyReportController.day("2026-09-07"));
-        assertEquals("已完成",DailyReportController.status(Map.of("completionStatus","已完成")));
         assertThrows(Api.Problem.class,()->DailyReportController.day("07/09/2026"));
-        assertThrows(Api.Problem.class,()->DailyReportController.status(Map.of("completionStatus","已归档")));
-    }
-    @Test void dailyReportAcceptsOneCombinedEntry(){
-        assertEquals(1,DailyReportController.tasks(java.util.List.of(Map.of("workDetail","日报汇总"))).size());
-        assertThrows(Api.Problem.class,()->DailyReportController.tasks(java.util.List.of(Map.of(),Map.of())));
-    }
-    @Test void onlyBossOrAdminCanReadEveryone(){
-        assertTrue(DailyReportController.leader(Map.of("roles",java.util.List.of(Map.of("roleCode","BOSS")))));
+        assertTrue(DailyReportController.leader(Map.of("roles",java.util.List.of(Map.of("roleCode","DEPT_HEAD")))));
         assertFalse(DailyReportController.leader(Map.of("roles",java.util.List.of(Map.of("roleCode","MARKET_MEMBER")))));
     }
-    @Test @SuppressWarnings("unchecked") void memberListAlwaysFiltersByTheirAccount(){
-        var db=mock(com.company.ops.common.Db.class);when(db.rows(anyString(),anyMap())).thenReturn(java.util.List.of());
-        var request=mock(HttpServletRequest.class);when(request.getAttribute("actor")).thenReturn(Map.of("id","7","roles",java.util.List.of(Map.of("roleCode","MARKET_MEMBER"))));
-        new DailyReportController(db,mock(PlatformTransactionManager.class)).list("2026-09-07",request);
-        var sql=ArgumentCaptor.forClass(String.class);var params=ArgumentCaptor.forClass(Map.class);verify(db).rows(sql.capture(),params.capture());
-        assertTrue(sql.getValue().contains("r.created_by=#{p.user}"));assertEquals(7L,params.getValue().get("user"));
+    @Test void editorSubmissionNeedsOnlyItsSixNonNegativeMetrics(){
+        var values=DailyReportController.metrics(Map.of("plannedNewPublish",3,"actualNewPublish",2,"plannedFirstReview",4,"actualFirstReview",3,"plannedReworkAcceptance",2,"actualReworkAcceptance",2),"EDITOR",true);
+        assertEquals(3L,values.get("planned_new_publish"));
+        assertEquals(0,values.get("planned_review_videos"));
+        assertEquals("0",values.get("ad_spend").toString());
+        assertThrows(Api.Problem.class,()->DailyReportController.metrics(Map.of("plannedNewPublish",-1,"actualNewPublish",2,"plannedFirstReview",4,"actualFirstReview",3,"plannedReworkAcceptance",2,"actualReworkAcceptance",2),"EDITOR",true));
     }
-    @Test void bossListExcludesUnsubmittedReports(){
-        var db=mock(com.company.ops.common.Db.class);when(db.rows(anyString(),anyMap())).thenReturn(java.util.List.of());
-        var request=mock(HttpServletRequest.class);when(request.getAttribute("actor")).thenReturn(Map.of("id","8","roles",java.util.List.of(Map.of("roleCode","BOSS"))));
-        new DailyReportController(db,mock(PlatformTransactionManager.class)).list("2026-09-07",request);
-        var sql=ArgumentCaptor.forClass(String.class);verify(db).rows(sql.capture(),anyMap());
-        assertTrue(sql.getValue().contains("r.submission_status='SUBMITTED'"));
+    @Test void adsAllowMoneyButCountsMustBeWholeNumbers(){
+        var values=DailyReportController.metrics(Map.of("plannedTest",5,"actualTest",3,"newAdjustPlan",2,"adSpend","12.50","adGmv","42.10","impressions",100,"clicks",8,"orders",2,"expandedMaterial",1,"stoppedMaterial",0),"ADS_BUYER",true);
+        assertEquals("12.50",values.get("ad_spend").toString());
+        assertThrows(Api.Problem.class,()->DailyReportController.metrics(Map.of("plannedTest","1.5","actualTest",3,"newAdjustPlan",2,"adSpend","12.50","adGmv","42.10","impressions",100,"clicks",8,"orders",2,"expandedMaterial",1,"stoppedMaterial",0),"ADS_BUYER",true));
+    }
+    @Test void deliveryResultsAreBoundedAndKeptByMetric(){
+        var values=DailyReportController.deliveryResults(Map.of("deliveryResults",Map.of("actualNewPublish","https://example.test/1")),"EDITOR");
+        assertEquals("https://example.test/1",values.get("actualNewPublish"));
+        assertThrows(Api.Problem.class,()->DailyReportController.deliveryResults(Map.of("deliveryResults",Map.of("actualNewPublish","x".repeat(2001))),"EDITOR"));
     }
 }

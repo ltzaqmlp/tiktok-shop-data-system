@@ -12,7 +12,7 @@ public class Identity {
     private final Db db;
     public Identity(Db db){this.db=db;}
     public Map<String,Object> user(long id){
-        var user=db.one("select id,username,display_name,org_unit_id,status,must_change_password,session_version,last_login_at from sys_user where id=#{p.id}",p("id",id));
+        var user=db.one("select id,username,display_name,org_unit_id,market_code,status,must_change_password,session_version,last_login_at from sys_user where id=#{p.id}",p("id",id));
         if(user.isEmpty())return user;
         user.put("roles",db.rows("select r.id,r.role_code,r.role_name from sys_role r join sys_user_role ur on ur.role_id=r.id where ur.user_id=#{p.id} and r.enabled",p("id",id)));
         user.put("permissions",canExport(user)?List.of("export"):List.of());return user;

@@ -3,6 +3,7 @@ package com.company.ops;
 import com.company.ops.importer.ImportMapping;
 import com.company.ops.dashboard.DashboardService;
 import com.company.ops.auth.AuthController;
+import com.company.ops.admin.AdminController;
 import org.junit.jupiter.api.Test;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -66,5 +67,9 @@ class RulesTest {
         assertEquals(Map.of("authenticated",false),((com.company.ops.common.Api.Envelope)controller.session(req)).data());
         when(req.getSession(false)).thenReturn(session);when(session.getAttribute("uid")).thenReturn(1L);
         assertEquals(Map.of("authenticated",true),((com.company.ops.common.Api.Envelope)controller.session(req)).data());
+    }
+
+    @Test void newUserPasswordIsFixed(){
+        assertEquals("admin100",AdminController.temporary());
     }
 }

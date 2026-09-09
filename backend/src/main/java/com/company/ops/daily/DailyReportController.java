@@ -59,6 +59,7 @@ public class DailyReportController {
         if(Identity.role(actor,"BOSS"))where+=" and r.submission_status='APPROVED'";
         else if(Identity.role(actor,"DEPT_HEAD")||Identity.role(actor,"ADMIN"))where+=" and r.submission_status<>'DRAFT'";
         else if(Identity.role(actor,"MARKET_LEAD")&&market.equals(actor.get("marketCode")))where+=" and (r.report_type='EDITOR' or r.reporter_id=#{p.user}) and r.submission_status<>'DRAFT'";
+        else if(Identity.role(actor,"DIRECTOR")&&market.equals(actor.get("marketCode")))where+=" and r.reporter_id=#{p.user}";
         else if(Identity.role(actor,"MARKET_MEMBER")&&market.equals(actor.get("marketCode")))where+=" and r.reporter_id=#{p.user}";
         else throw forbidden();
         return Api.ok(req,rows(where,args));
@@ -145,6 +146,6 @@ public class DailyReportController {
     private static void requireRole(Map<String,Object> actor,String role){if(!Identity.role(actor,role)&&!Identity.role(actor,"ADMIN"))throw forbidden();}
     private static void requireViewer(Map<String,Object> actor){if(!leader(actor))throw forbidden();}
     private static String ownMarket(Map<String,Object> actor){String code=Objects.toString(actor.get("marketCode"),"");Api.require(MARKETS.contains(code),"账号尚未配置负责市场");return code;}
-    private static String dailyRole(Map<String,Object> actor){if(Identity.role(actor,"MARKET_MEMBER"))return "EDITOR";if(Identity.role(actor,"MARKET_LEAD"))return "MARKET_LEAD";if(Identity.role(actor,"ADS_BUYER"))return "ADS_BUYER";return "VIEWER";}
-    private static String contentRole(Map<String,Object> actor){String role=dailyRole(actor);if(!Set.of("EDITOR","MARKET_LEAD").contains(role))throw forbidden();return role;}
+    static String dailyRole(Map<String,Object> actor){if(Identity.role(actor,"MARKET_MEMBER"))return "EDITOR";if(Identity.role(actor,"MARKET_LEAD"))return "MARKET_LEAD";if(Identity.role(actor,"DIRECTOR"))return "DIRECTOR";if(Identity.role(actor,"ADS_BUYER"))return "ADS_BUYER";return "VIEWER";}
+    static String contentRole(Map<String,Object> actor){String role=dailyRole(actor);if("DIRECTOR".equals(role))return "MARKET_LEAD";if(!Set.of("EDITOR","MARKET_LEAD").contains(role))throw forbidden();return role;}
 }

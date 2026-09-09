@@ -17,7 +17,7 @@ export interface Role { systemRole?: boolean; id: string; roleCode: string; role
 export interface Market { marketCode: string; marketName: string; currencyCode: string }
 export interface Shop { id: string; marketCode: string; shopName: string }
 export interface Org { id: string; name: string; children?: Org[] }
-export type DailyRole = 'EDITOR'|'MARKET_LEAD'|'ADS_BUYER'|'VIEWER'
+export type DailyRole = 'EDITOR'|'MARKET_LEAD'|'DIRECTOR'|'ADS_BUYER'|'VIEWER'
 export type DailyStatus = 'DRAFT'|'PENDING_MARKET'|'PENDING_DEPT'|'APPROVED'|'REJECTED'
 export interface DailyContext { role: DailyRole; marketCode: string; markets: Market[] }
 export interface DailyMetricReport { id?: string; reportDate: string; reportType: DailyRole; marketCode: string; marketName?: string; reporterName?: string; submissionStatus: DailyStatus; rejectionReason: string; deliveryResults: Record<string,string>; submittedAt?: string|null; plannedReviewVideos: number; actualReviewVideos: number; plannedValidBenchmark: number; actualValidBenchmark: number; plannedDeconstruction: number; actualDeconstruction: number; plannedCompleteScript: number; actualCompleteScript: number; plannedReadyScript: number; actualReadyScript: number; plannedNewPublish: number; actualNewPublish: number; plannedFirstReview: number; actualFirstReview: number; plannedReworkAcceptance: number; actualReworkAcceptance: number; plannedTest: number; actualTest: number; testGap: number; newAdjustPlan: number; adSpend: number; adGmv: number; roi: number; impressions: number; clicks: number; ctr: number; orders: number; expandedMaterial: number; stoppedMaterial: number }

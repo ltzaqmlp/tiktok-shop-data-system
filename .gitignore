@@ -1,9 +1,14 @@
 .env
 **/.env
+deploy/.env.*
+!deploy/.env.example
+!deploy/.env.test.example
+!deploy/.env.prod.example
 node_modules/
 dist/
 target/
 data/
 backup/
+deploy/backup-*/
 *.log
 .DS_Store

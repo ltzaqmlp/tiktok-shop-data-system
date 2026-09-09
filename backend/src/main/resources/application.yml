@@ -1,12 +1,15 @@
 server:
   port: 8080
   forward-headers-strategy: framework
+  tomcat:
+    max-part-count: -1
   servlet:
     session:
       timeout: 4h
       cookie:
         http-only: true
         same-site: lax
+        name: ${SESSION_COOKIE_NAME:JSESSIONID}
         # The bundled nginx listens on HTTP; production HTTPS deployments can opt in via env.
         secure: ${SESSION_COOKIE_SECURE:false}
 spring:

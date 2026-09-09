@@ -37,13 +37,36 @@ Flyway 会自动执行 `V2__correct_data_source_metrics.sql`。但旧版本导�
 
 需要 Docker Desktop / Docker Compose：
 
+生产环境使用现有的 `deploy/.env`，测试环境使用独立的 `deploy/.env.test`。两套环境通过不同的 Compose 项目名和 `DATA_VOLUME_PREFIX` 运行，因此 PostgreSQL、上传文件、导出文件和日志卷都会分别创建，不共享数据。现有生产环境继续使用 `shop-operations_*` 卷，避免切换时丢失已有数据；测试环境使用 `shop-test_*` 卷。
+
 ```powershell
-Copy-Item deploy/.env.example deploy/.env
-# 修改 deploy/.env 中的密码
 Set-Location deploy
-docker compose --env-file .env up -d --build
-docker compose --env-file .env ps
+# 生产环境：局域网同事访问 http://电脑局域网IP:8080
+docker compose -p shop-prod --env-file .env up -d --build
+docker compose -p shop-prod --env-file .env ps
+
+# 测试环境：仅本机访问 http://127.0.0.1:18080
+if (!(Test-Path .env.test)) { Copy-Item .env.test.example .env.test }
+# 首次使用前修改 .env.test 中的密码
+docker compose -p shop-test --env-file .env.test up -d --build
+docker compose -p shop-test --env-file .env.test ps
 ```
+
+生产环境的 `BIND_IP` 应为 `0.0.0.0`，`HTTP_PORT` 应为 `8080`；测试环境使用 `127.0.0.1` 和 `18080`。PostgreSQL 只绑定宿主机本机调试端口，不对局域网开放。
+
+Navicat 需要连接本机生产数据库时，使用 `127.0.0.1:15432`、数据库 `shop_operations`、用户 `shop_app` 和 `deploy/.env` 中的 `DB_PASSWORD`。数据库端口只绑定本机，不对局域网开放；测试数据库端口为 `127.0.0.1:15433`。
+
+升级、备份和恢复脚本必须明确环境，默认是生产环境：
+
+```powershell
+.\update-no-cache.ps1 -Environment test
+.\update-no-cache.ps1 -Environment prod
+.\backup.ps1 -Environment test
+.\backup.ps1 -Environment prod
+.\restore.ps1 -Environment test -BackupFile .\backup-test\daily-xxxx.dump
+```
+
+测试环境和生产环境使用不同的 Compose 项目名（`shop-test` / `shop-prod`），不要把生产数据卷挂载到测试环境。生产发布前建议先执行生产备份。
 
 ## 前端开发与测试
 

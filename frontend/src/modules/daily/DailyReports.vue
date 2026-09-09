@@ -33,7 +33,7 @@ const today=()=>new Date().toLocaleDateString('en-CA'), selectedDate=ref(today()
 const content=reactive<DailyMetricReport>(blank('EDITOR','MY')), ads=ref<Record<string,DailyMetricReport>>({})
 const viewer=computed(()=>['BOSS','DEPT_HEAD','ADMIN'].some(role=>auth.user?.roles.some(item=>item.roleCode===role)))
 const departmentReviewer=computed(()=>auth.isAdmin||auth.user?.roles.some(role=>role.roleCode==='DEPT_HEAD')||false)
-const reviewColumn=computed(()=>departmentReviewer.value||context.value?.role==='MARKET_LEAD')
+const reviewColumn=computed(()=>departmentReviewer.value||['MARKET_LEAD','DIRECTOR'].includes(context.value?.role??''))
 const contentRole=computed(()=>['EDITOR','MARKET_LEAD','DIRECTOR'].includes(context.value?.role??''))
 const ownMarket=computed(()=>context.value?.marketCode||'MY'), currentMarket=computed(()=>tab.value.startsWith('market-')?tab.value.slice(7):ownMarket.value)
 const marketTabs=computed<Market[]>(()=>context.value?.markets??[])
@@ -41,7 +41,7 @@ function blank(reportType:DailyMetricReport['reportType'],marketCode:string):Dai
   reportDate:selectedDate.value,reportType,marketCode,submissionStatus:'DRAFT',rejectionReason:'',deliveryResults:{},submittedAt:null,plannedReviewVideos:0,actualReviewVideos:0,plannedValidBenchmark:0,actualValidBenchmark:0,plannedDeconstruction:0,actualDeconstruction:0,plannedCompleteScript:0,actualCompleteScript:0,plannedReadyScript:0,actualReadyScript:0,plannedNewPublish:0,actualNewPublish:0,plannedFirstReview:0,actualFirstReview:0,plannedReworkAcceptance:0,actualReworkAcceptance:0,plannedTest:0,actualTest:0,testGap:0,newAdjustPlan:0,adSpend:0,adGmv:0,roi:0,impressions:0,clicks:0,ctr:0,orders:0,expandedMaterial:0,stoppedMaterial:0,
  }}
 function assign(target:DailyMetricReport,value:DailyMetricReport){Object.assign(target,blank(value.reportType,value.marketCode),value)}
-function status(value:string){return ({DRAFT:'草稿',PENDING_MARKET:'待市场负责人审核',PENDING_DEPT:'待部门负责人审核',APPROVED:'已通过',REJECTED:'已退回'} as Record<string,string>)[value]??value}
+function status(value:string){return ({DRAFT:'草稿',PENDING_MARKET:'待编导审核',PENDING_DEPT:'待部门负责人审核',APPROVED:'已通过',REJECTED:'已退回'} as Record<string,string>)[value]??value}
 function statusType(value:string){return ({APPROVED:'success',REJECTED:'danger',DRAFT:'info',PENDING_MARKET:'warning',PENDING_DEPT:'warning'} as Record<string,string>)[value]??'info'}
 function number(value:number){return Number(value??0).toLocaleString('zh-CN',{maximumFractionDigits:2})}
 function percent(value:number){return `${(Number(value??0)*100).toFixed(2)}%`}
@@ -54,7 +54,7 @@ const summaryTotal=computed(()=>summaryMetrics.reduce((total,metric)=>{total[met
 function submittedAt(value?:string|null){return value?new Date(value).toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}):'—'}
 function deliveryKey(metric:Metric){return String(metric.actual)}
 function contentFormMetrics(){return context.value?.role==='EDITOR'?editorMetrics:leadMetrics}
-function canReview(row:DailyMetricReport){return (context.value?.role==='MARKET_LEAD'&&row.reportType==='EDITOR'&&row.submissionStatus==='PENDING_MARKET')||(departmentReviewer.value&&row.submissionStatus==='PENDING_DEPT')}
+function canReview(row:DailyMetricReport){return (['MARKET_LEAD','DIRECTOR'].includes(context.value?.role??'')&&row.reportType==='EDITOR'&&row.submissionStatus==='PENDING_MARKET')||(departmentReviewer.value&&row.submissionStatus==='PENDING_DEPT')}
 async function load(){
   if(!context.value)return
   loading.value=true;error.value=null

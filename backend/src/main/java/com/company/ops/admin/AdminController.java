@@ -43,7 +43,7 @@ public class AdminController {
     private String market(Object raw){String code=Objects.toString(raw,"").trim().toUpperCase(Locale.ROOT);if(code.isBlank())return "";Api.require(code.matches("[A-Z]{2,16}")&&db.count("select count(*) from dim_market where market_code=#{p.code} and enabled",p("code",code))==1,"负责市场无效");return code;}
     private void validateDailyAssignment(long user,String market){
         var roles=db.rows("select r.role_code from sys_role r join sys_user_role ur on ur.role_id=r.id where ur.user_id=#{p.id}",p("id",user)).stream().map(r->r.get("roleCode").toString()).collect(java.util.stream.Collectors.toSet());
-        boolean content=roles.contains("MARKET_MEMBER")||roles.contains("MARKET_LEAD")||roles.contains("DIRECTOR");Api.require(!content||!market.isBlank(),"剪辑、编导和市场负责人必须配置负责市场");
+        boolean content=roles.contains("MARKET_MEMBER")||roles.contains("MARKET_LEAD")||roles.contains("DIRECTOR");Api.require(!content||!market.isBlank(),"剪辑和编导必须配置负责市场");
         if(roles.contains("MARKET_LEAD"))Api.require(db.count("select count(*) from sys_user u join sys_user_role ur on ur.user_id=u.id join sys_role r on r.id=ur.role_id where u.id<>#{p.id} and u.market_code=#{p.market} and u.status='ACTIVE' and r.role_code='MARKET_LEAD'",p("id",user,"market",market))==0,"该市场已有市场负责人");
     }
     private static Long optionalId(Object v){return v==null||v.toString().isBlank()?null:Api.idValue(v);}

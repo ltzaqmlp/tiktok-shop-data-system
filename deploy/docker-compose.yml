@@ -3,7 +3,7 @@ services:
   postgres:
     image: postgres:16-alpine
     ports:
-      - "127.0.0.1:5432:5432"
+      - "127.0.0.1:${DB_PORT_HOST:-15432}:5432"
     environment:
       POSTGRES_DB: shop_operations
       POSTGRES_USER: postgres
@@ -28,6 +28,7 @@ services:
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Set ADMIN_PASSWORD in .env}
       INITIAL_SHOP_KEY: ${INITIAL_SHOP_KEY:-MY_MAIN}
       INITIAL_SHOP_NAME: ${INITIAL_SHOP_NAME:-马来西亚主店}
+      SESSION_COOKIE_NAME: ${SESSION_COOKIE_NAME:-JSESSIONID}
       SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-true}
       FILE_ROOT: /data/files
       TZ: Asia/Shanghai
@@ -57,6 +58,10 @@ services:
     restart: unless-stopped
 volumes:
   postgres_data:
+    name: ${DATA_VOLUME_PREFIX:-shop-operations}_postgres_data
   excel_raw:
+    name: ${DATA_VOLUME_PREFIX:-shop-operations}_excel_raw
   exports:
+    name: ${DATA_VOLUME_PREFIX:-shop-operations}_exports
   app_logs:
+    name: ${DATA_VOLUME_PREFIX:-shop-operations}_app_logs

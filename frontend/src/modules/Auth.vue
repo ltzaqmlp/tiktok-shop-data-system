@@ -24,8 +24,10 @@ async function submit() { if (!await form.value?.validate().catch(() => false)) 
                     class="mask" src="../assets/brand/glowing-tomato-mask.png" alt="" /></div>
         </div>
         <div class="auth-card surface"><template v-if="!forced">
-                <div class="auth-welcome"><span>Welcome to</span><strong>HERBMODA Commerce
-                        Intelligence</strong><small>Sign in to access your workspace</small></div>
+                <div class="auth-welcome"><span><strong style="font-size: 23px;">Welcome to</strong></span><strong
+                        style="font-size: 15px;">HERBMODA Commerce
+                        Intelligence</strong><small style="font-size: 10px;">Sign in to access your workspace</small>
+                </div>
             </template><template v-else>
                 <div class="auth-brand"><img :src="logo" alt="HERBMODA" /><span><strong>HERBMODA</strong><small>Commerce
                             Intelligence</small></span></div>
@@ -33,9 +35,10 @@ async function submit() { if (!await form.value?.validate().catch(() => false)) 
                 <p class="muted">首次登录需要修改临时密码，完成后即可使用系统。</p>
             </template><el-alert v-if="error" :title="error" type="error" show-icon :closable="false"
                 role="alert" /><el-form ref="form" :model="values" :rules="rules" label-position="top"
-                :class="{ 'password-change-form': forced }" @submit.prevent="submit"><template v-if="!forced"><el-form-item label="Email or username"
-                        prop="username"><el-input v-model="values.username" autocomplete="username"
-                            placeholder="Email or username" size="large"><template #prefix><el-icon>
+                :class="{ 'password-change-form': forced }" @submit.prevent="submit"><template
+                    v-if="!forced"><el-form-item label="Email or username" prop="username"><el-input
+                            v-model="values.username" autocomplete="username" placeholder="Email or username"
+                            size="large"><template #prefix><el-icon>
                                     <User />
                                 </el-icon></template></el-input></el-form-item><el-form-item label="Password"
                         prop="password"><el-input v-model="values.password" type="password" show-password

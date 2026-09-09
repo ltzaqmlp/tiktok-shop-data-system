@@ -23,4 +23,4 @@
           - checkbox "Keep me signed in"
         - generic [ref=e38]: Keep me signed in
       - button "Sign in" [ref=e39] [cursor=pointer]
-      - generic [ref=e44]: A smarter, more radiant tomorrow.
+      # - generic [ref=e44]: A smarter, more radiant tomorrow.

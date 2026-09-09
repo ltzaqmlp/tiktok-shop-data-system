@@ -102,6 +102,11 @@ public class ImportService {
             db.exec("update sys_import_task set total_rows=#{p.rows},failed_rows=#{p.failed},success_rows=0 where id=#{p.id}",p("id",id,"rows",listener.count,"failed",listener.failed));
             finalMessage=message;
         }
+        if(source.equals("ORDER_DETAIL")&&!"FAILED".equals(finalStatus)){
+            for(var unmapped:db.rows("select o.seller_sku,sum(greatest(o.quantity-least(o.return_quantity,o.quantity),0)) effective_qty from fact_order_sku o left join sku_config c on c.shop_id=o.shop_id and c.seller_sku=o.seller_sku and c.enabled where o.shop_id=#{p.shop} and c.id is null and o.normalized_status in ('PAID','SHIPPED','COMPLETED') group by o.seller_sku having sum(greatest(o.quantity-least(o.return_quantity,o.quantity),0))>0 order by o.seller_sku",p("shop",shop))){
+                String seller=Objects.toString(unmapped.get("sellerSku"),"");listener.errors.add(p("row",0,"field","Seller SKU","raw",seller,"code","SKU_UNMAPPED","message",(seller.isBlank()?"Seller SKU为空":"Seller SKU未配置")+"，有效销量 "+unmapped.get("effectiveQty")+"，请在 SKU 配置中补充映射"));
+            }
+        }
         for(var error:listener.errors){
             error.put("task",id);
             db.exec("insert into sys_import_error(task_id,row_no,field_name,raw_value,error_code,message) values(#{p.task},#{p.row},#{p.field},#{p.raw},#{p.code},#{p.message})",error);
@@ -163,7 +168,9 @@ public class ImportService {
         Map<Integer,String> header;String signature;int count,failed;String currentField="";String currentRaw="";
         ImportMapping.DateRange productRange;
         final LinkedHashMap<String,Map<String,Object>> batch=new LinkedHashMap<>();
+        final LinkedHashMap<String,Map<String,Object>> skuBatch=new LinkedHashMap<>();
         final List<Map<String,Object>> errors=new ArrayList<>();final TreeSet<LocalDate> dates=new TreeSet<>();Set<String> bestFields=Set.of();
+        boolean snapshotReset;
         Reader(long task,String source,String market,long shop,LocalDate chosen,Map<String,Object> context){this.task=task;this.source=source;this.market=market;this.shop=shop;this.chosen=chosen;this.context=context;}
         @Override public void invoke(Map<Integer,String> row,AnalysisContext ctx){process(row,ctx.readRowHolder().getRowIndex()+1);}
 
@@ -211,7 +218,7 @@ public class ImportService {
             try{
                 var values=new LinkedHashMap<String,Object>();
                 LocalDate date=null;
-                currentField="biz_date";currentRaw=raw.getOrDefault("biz_date",raw.getOrDefault("order_created_at",""));
+                currentField="biz_date";currentRaw=raw.getOrDefault("biz_date","");if(source.equals("ORDER_DETAIL")){currentRaw=raw.getOrDefault("paid_time","").trim();if(currentRaw.isBlank())currentRaw=raw.getOrDefault("order_created_at","");}
                 if(source.equals("PRODUCT_DAILY")&&productRange!=null){
                     if(!isProductPeriod())date=productRange.from();
                 }else{
@@ -258,9 +265,22 @@ public class ImportService {
                 if(source.equals("PRODUCT_DAILY"))validateProductRatio(raw,values,"add_to_cart_rate_src","add_to_cart_count","clicks");
                 if(source.equals("PRODUCT_DAILY"))validateProductRatio(raw,values,"ctor_src","sku_order_count","clicks");
                 if(source.equals("ORDER_DETAIL")){
+                    long quantity=nonNegativeInt(raw.getOrDefault("quantity",raw.getOrDefault("item_qty","")));
+                    long returned=returnQuantity(raw.getOrDefault("return_quantity",raw.getOrDefault("returned_qty","")),rowNo);
+                    if(returned>quantity&&errors.size()<1000)errors.add(p("row",rowNo,"field","return_quantity","raw",String.valueOf(returned),"code","RETURN_QTY_GT_QUANTITY","message","退货数大于 Quantity，统计时按 Quantity 上限扣减"));
+                    values.put("item_qty",quantity);values.put("returned_qty",returned);
                     String created=raw.getOrDefault("order_created_at","");if(!created.isBlank())values.put("order_created_at",ImportMapping.dateTime(created));
                     values.put("normalized_status",ImportMapping.status(raw.getOrDefault("source_status","")));
                     if("UNKNOWN".equals(values.get("normalized_status"))&&errors.size()<1000)errors.add(p("row",rowNo,"field","source_status","raw",raw.getOrDefault("source_status",""),"code","ORDER_STATUS_UNKNOWN","message","未知源状态，已映射为 UNKNOWN"));
+                    Map<String,Object> sku=new LinkedHashMap<>(p("shop_id",shop,"market_code",market,"biz_date",date,"order_id",raw.getOrDefault("order_id","").trim(),"sku_id",raw.getOrDefault("sku_id","").trim(),"seller_sku",raw.getOrDefault("seller_sku","").trim(),"source_status",raw.getOrDefault("source_status","").trim(),"normalized_status",values.get("normalized_status"),"quantity",quantity,"return_quantity",returned,"raw_extra",db.json(row)));
+                    String paid=raw.getOrDefault("paid_time","").trim(),createdTime=raw.getOrDefault("order_created_at","").trim();
+                    sku.put("paid_time",paid.isBlank()?null:ImportMapping.dateTime(paid));
+                    sku.put("created_time",createdTime.isBlank()?null:ImportMapping.dateTime(createdTime));
+                    String cancel=raw.getOrDefault("cancel_type","").trim();sku.put("cancel_type",cancel.isBlank()?null:cancel);
+                    sku.put("order_refund_amount",values.get("order_refund_amount"));
+                    Api.require(((String)sku.get("sku_id")).length()<=100,"sku_id 超过长度限制");Api.require(((String)sku.get("seller_sku")).length()<=100,"seller_sku 超过长度限制");
+                    String skuKey=sku.get("order_id")+"\u001f"+sku.get("sku_id");
+                    if(skuBatch.put(skuKey,sku)!=null&&errors.size()<1000)errors.add(p("row",rowNo,"field","Order ID + SKU ID","raw",skuKey,"code","ORDER_SKU_DUPLICATE","message","同一 Order ID + SKU ID 重复，已保留最后一条"));
                 }
                 values.put("raw_extra",db.json(row));
                 String keys=keyColumns();String key=Arrays.stream(keys.split(",")).map(k->Objects.toString(values.get(k),"")).collect(java.util.stream.Collectors.joining("\u001f"));
@@ -277,6 +297,8 @@ public class ImportService {
             }
         }
         long asLong(Object value){return value==null?0:((Number)value).longValue();}
+        long nonNegativeInt(String raw){var n=ImportMapping.amount(raw);Api.require(n.signum()>=0&&n.scale()<=0,"数量必须是非负整数");return n.longValueExact();}
+        long returnQuantity(String raw,int rowNo){var n=ImportMapping.amount(raw);Api.require(n.scale()<=0,"数量必须是整数");if(n.signum()<0){if(errors.size()<1000)errors.add(p("row",rowNo,"field","return_quantity","raw",raw,"code","RETURN_QTY_NEGATIVE","message","退货数为负，已按 0 处理"));return 0;}return n.longValueExact();}
         Long sumNullableLong(Object a,Object b){return a==null&&b==null?null:asLong(a)+asLong(b);}
         private void validateProductRatio(Map<String,String> raw,Map<String,Object> values,String field,String numerator,String denominator){
             String text=raw.getOrDefault(field,"").trim();if(text.isEmpty()||text.equals("-"))return;
@@ -285,20 +307,32 @@ public class ImportService {
         }
 
         void flush(){
-            if(batch.isEmpty())return;
-            List<String> names=new ArrayList<>(batch.values().iterator().next().keySet());var params=new LinkedHashMap<String,Object>();var tuples=new ArrayList<String>();int index=0;
-            if(source.equals("ORDER_DETAIL")){
-                var ids=new ArrayList<String>();for(var row:batch.values()){String key="old"+index++;params.put(key,row.get("order_id"));ids.add("#{p."+key+"}");}
-                params.put("shop",shop);for(var old:db.rows("select biz_date from fact_order where shop_id=#{p.shop} and order_id in ("+String.join(",",ids)+")",params))dates.add(LocalDate.parse(old.get("bizDate").toString()));
+            if(batch.isEmpty()&&skuBatch.isEmpty())return;
+            if(source.equals("ORDER_DETAIL")&&!snapshotReset){
+                for(var old:db.rows("select distinct biz_date from fact_order where shop_id=#{p.shop}",p("shop",shop)))dates.add(LocalDate.parse(old.get("bizDate").toString()));
+                db.exec("delete from fact_order_sku where shop_id=#{p.shop}",p("shop",shop));
+                db.exec("delete from fact_order where shop_id=#{p.shop}",p("shop",shop));
+                snapshotReset=true;
             }
-            index=0;
-            for(var row:batch.values()){
-                var binds=new ArrayList<String>();for(String col:names){String key="v"+index++;params.put(key,row.get(col));binds.add(col.equals("raw_extra")?"cast(#{p."+key+"} as jsonb)":"#{p."+key+"}");}tuples.add("("+String.join(",",binds)+")");
+            if(!batch.isEmpty()){
+                List<String> names=new ArrayList<>(batch.values().iterator().next().keySet());var params=new LinkedHashMap<String,Object>();var tuples=new ArrayList<String>();int index=0;
+                for(var row:batch.values()){
+                    var binds=new ArrayList<String>();for(String col:names){String key="v"+index++;params.put(key,row.get(col));binds.add(col.equals("raw_extra")?"cast(#{p."+key+"} as jsonb)":"#{p."+key+"}");}tuples.add("("+String.join(",",binds)+")");
+                }
+                String keys=keyColumns();Set<String> keySet=new HashSet<>(Arrays.asList(keys.split(",")));
+                String update=names.stream().filter(k->!keySet.contains(k)).map(k->k+"=excluded."+k).collect(java.util.stream.Collectors.joining(","));
+                db.exec("insert into "+targetTable()+"("+String.join(",",names)+") values "+String.join(",",tuples)+" on conflict("+keys+") do update set "+update+",updated_at=now()",params);
             }
-            String keys=keyColumns();Set<String> keySet=new HashSet<>(Arrays.asList(keys.split(",")));
-            String update=names.stream().filter(k->!keySet.contains(k)).map(k->k+"=excluded."+k).collect(java.util.stream.Collectors.joining(","));
-            db.exec("insert into "+targetTable()+"("+String.join(",",names)+") values "+String.join(",",tuples)+" on conflict("+keys+") do update set "+update+",updated_at=now()",params);
+            if(!skuBatch.isEmpty()){
+                var skuNames=new ArrayList<>(skuBatch.values().iterator().next().keySet());var skuParams=new LinkedHashMap<String,Object>();var skuTuples=new ArrayList<String>();int skuIndex=0;
+                for(var row:skuBatch.values()){
+                    var binds=new ArrayList<String>();for(String col:skuNames){String key="s"+skuIndex++;skuParams.put(key,row.get(col));binds.add(col.equals("raw_extra")?"cast(#{p."+key+"} as jsonb)":"#{p."+key+"}");}skuTuples.add("("+String.join(",",binds)+")");
+                }
+                var skuKeys="shop_id,order_id,sku_id";var skuUpdate=skuNames.stream().filter(k->!Set.of("shop_id","order_id","sku_id").contains(k)).map(k->k+"=excluded."+k).collect(java.util.stream.Collectors.joining(","));
+                db.exec("insert into fact_order_sku("+String.join(",",skuNames)+") values "+String.join(",",skuTuples)+" on conflict("+skuKeys+") do update set "+skuUpdate+",updated_at=now()",skuParams);
+            }
             batch.clear();
+            skuBatch.clear();
         }
         @Override public void doAfterAllAnalysed(AnalysisContext context){}
     }

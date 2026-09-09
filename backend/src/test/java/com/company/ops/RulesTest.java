@@ -33,6 +33,7 @@ class RulesTest {
         assertThrows(RuntimeException.class,()->ImportMapping.ratio("101%"));
         assertEquals(LocalDate.of(2026,9,5),ImportMapping.date("2026/9/5"));
         assertEquals(LocalDate.of(2026,9,5),ImportMapping.date("05/09/2026"));
+        assertEquals(LocalDate.of(2026,10,9),ImportMapping.date("09/10/2026"));
         assertEquals(LocalDate.of(2026,9,5),ImportMapping.dateTime("05/09/2026 14:08:11").toLocalDate());
         var productRange=ImportMapping.dateRange("数据分析日期: 30/08/2026~05/09/2026").orElseThrow();
         assertEquals(LocalDate.of(2026,8,30),productRange.from());

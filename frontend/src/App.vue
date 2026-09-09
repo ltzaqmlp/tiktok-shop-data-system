@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { DataBoard, Upload, User, Key, Menu as MenuIcon, Document, Connection, Fold, Expand, SwitchButton } from '@element-plus/icons-vue'
+import { DataBoard, Upload, User, Key, Menu as MenuIcon, Document, Connection, Goods, Fold, Expand, SwitchButton } from '@element-plus/icons-vue'
 import { useAuth } from './stores/auth'
 import { clearSession, supportedPaths } from './router'
 import { api } from './api/client'
@@ -10,8 +10,8 @@ import { navigationMenus } from './api/format.mjs'
 import logo from './assets/brand/herbmoda-logo-dark.png'
 const auth = useAuth(), route = useRoute(), router = useRouter(), collapsed = ref(false), loggingOut = ref(false)
 const publicPage = computed(() => ['/login','/force-change-password'].includes(route.path))
-const icons: Record<string, unknown> = { DataBoard, Upload, User, Key, Menu: MenuIcon, Document, Connection }
-const fallback: Record<string,string> = { '/dashboard':'DataBoard','/data-import':'Upload','/admin/users':'User','/admin/roles':'Key','/admin/menus':'Menu','/admin/audit':'Document','/admin/login-logs':'Connection' }
+const icons: Record<string, unknown> = { DataBoard, Upload, User, Key, Menu: MenuIcon, Document, Connection, Goods }
+const fallback: Record<string,string> = { '/dashboard':'DataBoard','/data-import':'Upload','/admin/users':'User','/admin/roles':'Key','/admin/menus':'Menu','/admin/sku-config':'Goods','/admin/audit':'Document','/admin/login-logs':'Connection' }
 const entries = computed(() => navigationMenus(auth.allMenus, supportedPaths, auth.isAdmin))
 async function logout() { loggingOut.value = true; try { await api('/auth/logout',{method:'POST'}); clearSession(); await router.replace('/login') } catch(e) { ElMessage.error((e as Error).message) } finally { loggingOut.value = false } }
 </script>
@@ -41,7 +41,7 @@ async function logout() { loggingOut.value = true; try { await api('/auth/logout
 .sidebar-bottom{margin-top:auto;padding:16px 8px 0;display:flex;gap:8px;align-items:center;color:var(--hm-text-tertiary);font-size:11px}.connection-dot{width:6px;height:6px;background:var(--hm-positive);border-radius:50%}
 .workspace{min-width:0}.topbar{height:64px;background:var(--hm-surface-glass);backdrop-filter:blur(18px);border-bottom:1px solid #E8EDF2;padding:0 24px;display:flex;justify-content:space-between;align-items:center}.topbar :deep(.el-button.is-text){color:#536171}.topbar :deep(.el-button.is-text:hover){background:#F5F8FB;color:var(--hm-text)}
 .user-area{display:flex;align-items:center;gap:10px;font-size:12px}.user-area small{display:block;font-size:10px;margin-top:3px;color:var(--hm-text-secondary)}.avatar{display:grid;place-items:center;width:32px;height:32px;background:#EEF3F8;color:#263241;border:1px solid #DCE6F0;border-radius:50%;font-size:13px;font-weight:600}
-main{padding:24px;min-height:calc(100vh - 112px)}footer{padding:0 24px 16px;display:flex;justify-content:space-between;font-size:11px;color:var(--hm-text-tertiary)}
+ main{padding:24px;min-height:calc(100vh - 112px)}footer{padding:0 24px 16px;display:flex;justify-content:space-between;font-size:11px;color:var(--hm-text-tertiary);border-top:0}
 .collapsed{grid-template-columns:72px minmax(0,1fr)}.collapsed .brand{padding:0 5px 28px}.collapsed .brand-copy,.collapsed nav span,.collapsed .nav-section,.collapsed .sidebar-bottom{display:none}.collapsed nav a{justify-content:center;padding:14px 0}.collapsed nav a.router-link-active{box-shadow:inset 2px 0 0 var(--hm-accent)}
 @media(max-width:1100px){.app-shell{grid-template-columns:72px minmax(0,1fr)}.brand-copy,.nav-section,.sidebar-bottom,nav span{display:none}.brand{padding:0 5px 28px}nav a{justify-content:center;padding:14px 0}main{padding:16px}.topbar{padding:0 16px}}
 @media(max-width:600px){.app-shell{grid-template-columns:52px minmax(0,1fr)}.sidebar{padding:16px 4px}.brand{padding:0 3px 24px}.brand-icon,.brand-icon img{width:32px;height:32px}.topbar{padding:0 8px}.user-area div,.user-area .avatar,.topbar .el-button:first-child{display:none}.el-breadcrumb{font-size:11px}main{padding:12px}footer{padding:0 12px 12px}footer span{display:none}}

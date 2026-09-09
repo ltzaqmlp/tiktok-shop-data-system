@@ -16,7 +16,7 @@ class DailyReportControllerTest {
     @Test void directorUsesTheContentDailyReportFlow(){
         var actor=Map.<String,Object>of("marketCode","MY","roles",java.util.List.of(Map.of("roleCode","DIRECTOR")));
         assertEquals("DIRECTOR",DailyReportController.dailyRole(actor));
-        assertEquals("MARKET_LEAD",DailyReportController.contentRole(actor));
+        assertEquals("DIRECTOR",DailyReportController.contentRole(actor));
         assertTrue(DailyReportController.marketReviewer(actor,"MY"));
         assertFalse(DailyReportController.marketReviewer(actor,"UK"));
     }

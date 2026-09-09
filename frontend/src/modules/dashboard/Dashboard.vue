@@ -3,7 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import { Coin, Goods, InfoFilled, Refresh, ShoppingBag, Tickets, View } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { api, query, download } from '../../api/client'
-import type { Overview, Trend, Funnel, Ads, OrderStatus, AfterSales, Metric, Market } from '../../api/types'
+import type { Overview, Trend, Funnel, Ads, SkuSales, AfterSales, Metric, Market } from '../../api/types'
 import { comparisonLabel, dateRangeError, presetRange, number } from '../../api/format.mjs'
 import { useAuth } from '../../stores/auth'
 import Chart from '../../components/Chart.vue'
@@ -12,13 +12,13 @@ import RequestError from '../../components/RequestError.vue'
 import { spark, combo } from './charts'
 const auth = useAuth(), busy = ref(false), exporting = ref(false), error = ref<Error | null>(null), markets = ref<Market[]>([]), marketCode = ref('MY')
 const initialRange = presetRange('yesterday') as [string, string], dates = ref<[string, string]>(initialRange), period = ref('yesterday')
-const overview = ref<Overview>(), sales = ref<Trend[]>([]), funnel = ref<Funnel>(), ads = ref<Ads>(), statuses = ref<OrderStatus[]>([]), after = ref<AfterSales>(), loaded = ref(false)
+const overview = ref<Overview>(), sales = ref<Trend[]>([]), funnel = ref<Funnel>(), ads = ref<Ads>(), skuSales = ref<SkuSales[]>([]), after = ref<AfterSales>(), loaded = ref(false)
 const applied = ref({ marketCode: 'MY', dateFrom: initialRange[0], dateTo: initialRange[1], comparisonPeriod: 'yesterday' })
 const single = computed(() => applied.value.dateFrom === applied.value.dateTo), compare = computed(() => overview.value?.comparisonLabel ?? comparisonLabel(applied.value.comparisonPeriod))
 const currency = computed(() => overview.value?.currencyCode ?? markets.value.find(m => m.marketCode === marketCode.value)?.currencyCode ?? 'MYR')
 const currencyDisplay = computed(() => currency.value === 'MYR' ? 'RM' : currency.value)
-const metricIcons: Record<string, unknown> = { gmv: ShoppingBag, orderCount: Tickets, soldQty: Goods, skuOrderCount: Goods, aov: Coin, refundAmount: Refresh }
-const kpis = computed(() => [{ key: 'gmv', label: 'GMV', hint: 'Shop Analytics 每日 GMV', money: true }, { key: 'orderCount', label: '订单数', hint: 'Shop Analytics 每日订单数' }, { key: 'soldQty', label: '商品成交件数', hint: 'Shop Analytics 每日商品成交件数' }, { key: 'skuOrderCount', label: 'SKU 订单数', hint: 'Shop Analytics 每日 SKU 订单数；不是成交件数' }, { key: 'aov', label: '平均订单金额', hint: 'AOV = 总 GMV ÷ 总订单数', money: true }, { key: 'refundAmount', label: '退款金额', hint: 'Shop Analytics 每日退款金额', money: true, direction: 'lower' }])
+const metricIcons: Record<string, unknown> = { gmv: ShoppingBag, orderCount: Tickets, soldQty: Goods, aov: Coin, refundAmount: Refresh }
+const kpis = computed(() => [{ key: 'gmv', label: 'GMV', hint: 'Shop Analytics 每日 GMV', money: true }, { key: 'orderCount', label: '订单数', hint: 'Shop Analytics 每日订单数' }, { key: 'soldQty', label: '商品成交件数', hint: 'Shop Analytics 每日商品成交件数' }, { key: 'aov', label: '平均订单金额', hint: 'AOV = 总 GMV ÷ 总订单数', money: true }, { key: 'refundAmount', label: '退款金额', hint: 'Shop Analytics 每日退款金额', money: true, direction: 'lower' }])
 const getMetric = (key: string) => overview.value?.[key as keyof Overview] as Metric | undefined
 const pct = (v: number | null | undefined) => v == null ? '—' : `${number(v * 100, 1)}%`
 const productNotice = computed(() => { if (!loaded.value || !funnel.value) return ''; if (funnel.value.source === 'SHOP_ANALYTICS_PARTIAL') return '当前范围没有可精确匹配的商品报表，商品漏斗暂用 Shop Analytics 的曝光、点击和 SKU 订单数据；加购相关字段需要导入与当前日期范围一致的商品报表。顶部 GMV、订单、成交件数、SKU 订单和退款金额不受影响。'; if (funnel.value.source === 'NONE') return '当前范围没有 Shop Analytics 或可精确匹配的商品报表，商品漏斗无法计算。'; return '' })
@@ -31,11 +31,10 @@ const currentAfterMetrics = computed(() => [{ label: '退款金额', metric: aft
 const cumulativeAfterMetrics = computed(() => [{ label: '已退款商品件数', metric: after.value?.refundedQty }, { label: '退款客户数', metric: after.value?.refundCustomerCount }])
 const afterSource = computed(() => after.value?.productDataRange ? `商品售后累计数据：${after.value.productDataRange.dateFrom} 至今` : '商品售后累计数据暂无可用报表')
 const afterUpdatedAt = computed(() => after.value?.productDataRange?.dateTo)
-const statusNames: Record<string, string> = { UNPAID: '未付款', PAID: '已付款', SHIPPED: '已发货', COMPLETED: '已完成', CANCELLED: '已取消', REFUNDED: '已退款', UNKNOWN: '未知状态' }
-const statusTotal = computed(() => statuses.value.reduce((sum, s) => sum + s.count, 0))
-const statusOption = computed(() => ({ tooltip: { trigger: 'item', confine: true }, color: ['#5F8FBE', '#7EA6C9', '#AAB7C5', '#C7D3DF', '#E14B50', '#D9E2EB'], series: [{ type: 'pie', radius: ['66%', '84%'], center: ['50%', '50%'], label: { show: false }, itemStyle: { borderWidth: 2, borderColor: '#fff' }, data: statuses.value.map(s => ({ name: statusNames[s.status] ?? s.status, value: s.count })) }] }))
+const skuSalesTotal = computed(() => skuSales.value.reduce((sum, s) => sum + s.sales, 0))
+const skuSalesOption = computed(() => ({ tooltip: { trigger: 'item', confine: true }, color: ['#5F8FBE', '#7EA6C9', '#AAB7C5', '#C7D3DF', '#D9E2EB', '#E14B50'], series: [{ type: 'pie', radius: ['66%', '84%'], center: ['50%', '50%'], label: { show: false }, itemStyle: { borderWidth: 2, borderColor: '#fff' }, data: skuSales.value.map(s => ({ name: s.displayName, value: s.sales })) }] }))
 let request = 0
-async function load() { const validation = dateRangeError(dates.value?.[0], dates.value?.[1]); if (validation) { ElMessage.warning(validation); return } const current = ++request; busy.value = true; error.value = null; loaded.value = false; overview.value = undefined; sales.value = []; funnel.value = undefined; ads.value = undefined; statuses.value = []; after.value = undefined; const filters = { marketCode: marketCode.value, dateFrom: dates.value[0], dateTo: dates.value[1], comparisonPeriod: period.value }, suffix = `?${query(filters)}`; try { const values = await Promise.all([api<Overview>('/dashboard/overview' + suffix), api<Trend[]>('/dashboard/sales-trend' + suffix), api<Funnel>('/dashboard/product-funnel' + suffix), api<Ads>('/dashboard/ads' + suffix), api<OrderStatus[]>('/dashboard/order-status' + suffix), api<AfterSales>('/dashboard/after-sales' + suffix)]); if (current !== request) return;[overview.value, sales.value, funnel.value, ads.value, statuses.value, after.value] = values; applied.value = filters; loaded.value = true } catch (e) { if (current === request) error.value = e as Error } finally { if (current === request) busy.value = false } }
+async function load() { const validation = dateRangeError(dates.value?.[0], dates.value?.[1]); if (validation) { ElMessage.warning(validation); return } const current = ++request; busy.value = true; error.value = null; loaded.value = false; overview.value = undefined; sales.value = []; funnel.value = undefined; ads.value = undefined; skuSales.value = []; after.value = undefined; const filters = { marketCode: marketCode.value, dateFrom: dates.value[0], dateTo: dates.value[1], comparisonPeriod: period.value }, suffix = `?${query(filters)}`; try { const values = await Promise.all([api<Overview>('/dashboard/overview' + suffix), api<Trend[]>('/dashboard/sales-trend' + suffix), api<Funnel>('/dashboard/product-funnel' + suffix), api<Ads>('/dashboard/ads' + suffix), api<SkuSales[]>('/dashboard/sku-sales' + suffix), api<AfterSales>('/dashboard/after-sales' + suffix)]); if (current !== request) return;[overview.value, sales.value, funnel.value, ads.value, skuSales.value, after.value] = values; applied.value = filters; loaded.value = true } catch (e) { if (current === request) error.value = e as Error } finally { if (current === request) busy.value = false } }
 function choosePeriod(value: string) { period.value = value; if (value === 'custom') return; dates.value = presetRange(value) as [string, string]; void load() }
 async function exportData(type: string) { exporting.value = true; try { await download(`/exports/${type}`, applied.value); ElMessage.success('导出文件已下载') } catch (e) { ElMessage.error((e as Error).message) } finally { exporting.value = false } }
 onMounted(async () => { void load(); try { markets.value = await api<Market[]>('/system/markets') } catch {/* MY is the documented initial market; no invented additional markets. */ } })
@@ -83,7 +82,7 @@ onMounted(async () => { void load(); try { markets.value = await api<Market[]>('
           <MetricChange v-if="single" :value="getMetric(k.key)?.compare7dAvg"
             :status="getMetric(k.key)?.compare7dAvgStatus" :direction="k.direction" label="较前 7 日均值" />
           <Chart v-if="getMetric(k.key)?.trend?.length"
-            :option="spark(getMetric(k.key), k.key === 'refundAmount' ? '#E14B50' : k.key === 'aov' ? '#7EA6C9' : k.key === 'skuOrderCount' ? '#5F8FBE' : k.key === 'soldQty' ? '#8AA9C5' : '#355D86')"
+            :option="spark(getMetric(k.key), k.key === 'refundAmount' ? '#E14B50' : k.key === 'aov' ? '#7EA6C9' : k.key === 'soldQty' ? '#8AA9C5' : '#355D86')"
             :height="43" :label="`${k.label}小趋势`" />
           <div v-else class="no-spark">{{ loaded ? '暂无趋势数据' : '等待数据加载' }}</div>
         </article>
@@ -135,21 +134,21 @@ onMounted(async () => { void load(); try { markets.value = await api<Market[]>('
       <section class="bottom-grid">
         <article class="surface panel">
           <div class="panel-head">
-            <h2>订单状态分布</h2>
+            <h2>SKU销量分布</h2>
           </div>
-          <div v-if="statusTotal" class="status-layout">
+          <div v-if="skuSalesTotal" class="status-layout">
             <div class="donut">
-              <Chart :option="statusOption" :height="166" label="订单状态数量分布环形图" />
-              <div class="donut-center"><strong class="number">{{ number(statusTotal) }}</strong><small
-                  class="muted">总订单数</small></div>
+              <Chart :option="skuSalesOption" :height="166" label="SKU销量分布环形图" />
+              <div class="donut-center"><strong class="number">{{ number(skuSalesTotal) }}</strong><small
+                  class="muted">有效销量</small></div>
             </div>
             <div class="status-list">
-              <div v-for="(s, i) in statuses" :key="s.status"><span class="status-dot"
+              <div v-for="(s, i) in skuSales" :key="s.sellerSku"><span class="status-dot"
                   :class="`dot-${i % 6}`" /><span>{{
-                    statusNames[s.status] ?? s.status }}</span><small class="number muted">{{ pct(s.ratio) }}</small><b
-                  class="number">({{ number(s.count) }})</b></div>
+                    s.displayName }}</span><small class="number muted">{{ pct(s.ratio) }}</small><b
+                  class="number">({{ number(s.sales) }})</b></div>
             </div>
-          </div><el-empty v-else description="暂无订单状态数据" :image-size="52" />
+          </div><el-empty v-else description="暂无已配置 SKU 销量数据" :image-size="52" />
         </article>
         <article class="surface panel after-panel">
           <div class="panel-head">
@@ -239,7 +238,7 @@ onMounted(async () => { void load(); try { markets.value = await api<Market[]>('
 
 .kpi-grid {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 12px;
   margin-bottom: 16px
 }

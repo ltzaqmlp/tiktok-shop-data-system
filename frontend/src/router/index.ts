@@ -7,7 +7,7 @@ const pages: Record<string, RouteRecordRaw['component']> = {
   '/daily-reports': () => import('../modules/daily/DailyReports.vue'),
   '/shooting-tickets': () => import('../modules/shooting/ShootingTickets.vue'),
   '/admin/users': () => import('../modules/admin/Users.vue'), '/admin/roles': () => import('../modules/admin/Roles.vue'),
-  '/admin/menus': () => import('../modules/admin/Menus.vue'), '/admin/audit': () => import('../modules/admin/Logs.vue'), '/admin/login-logs': () => import('../modules/admin/Logs.vue'),
+  '/admin/menus': () => import('../modules/admin/Menus.vue'), '/admin/sku-config': () => import('../modules/admin/SkuConfig.vue'), '/admin/audit': () => import('../modules/admin/Logs.vue'), '/admin/login-logs': () => import('../modules/admin/Logs.vue'),
 }
 export const supportedPaths = Object.keys(pages)
 export const router = createRouter({ history: createWebHistory(), routes: [

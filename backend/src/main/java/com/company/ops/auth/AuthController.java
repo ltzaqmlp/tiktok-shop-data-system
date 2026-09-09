@@ -20,7 +20,7 @@ public class AuthController {
     @PostMapping("/auth/login") public Object login(@RequestBody Map<String,Object> body,HttpServletRequest req,HttpServletResponse res){
         String username=Api.text(body,"username",64,true),password=Objects.toString(body.get("password"),"");Api.require(password.length()<=72,"密码过长");
         Map<String,Object> result=tx.execute(s->{
-            var u=db.one("select * from sys_user where username=#{p.username} for update",p("username",username));String reason=null;
+            var u=db.one("select * from sys_user where username=#{p.username} and deleted_at is null for update",p("username",username));String reason=null;
             boolean valid=passwords.matches(password,u.isEmpty()?dummy:u.get("passwordHash").toString());
             if(!u.isEmpty()&&"DISABLED".equals(u.get("status")))reason="账号已停用";
             else if(!u.isEmpty()&&u.get("lockedUntil")!=null&&Instant.parse(u.get("lockedUntil").toString()).isAfter(Instant.now()))reason="账号暂时锁定";

@@ -141,6 +141,18 @@
     "订单 ID",
     "Order ID"
   ],
+  "sku_id": [
+    "SKU ID",
+    "Sku ID",
+    "平台 SKU ID",
+    "Platform SKU ID"
+  ],
+  "seller_sku": [
+    "Seller SKU",
+    "Seller sku",
+    "商家 SKU",
+    "商家SKU"
+  ],
   "source_status": [
     "订单状态",
     "Status",
@@ -156,10 +168,31 @@
     "Quantity",
     "Item quantity"
   ],
+  "quantity": [
+    "Quantity",
+    "SKU sold quantity in the order",
+    "SKU 销量"
+  ],
+  "return_quantity": [
+    "Sku Quantity of return",
+    "SKU Quantity of return",
+    "退货数量",
+    "SKU returned quantity in the order"
+  ],
   "order_created_at": [
     "订单创建时间",
     "Created time",
     "Order created time"
+  ],
+  "paid_time": [
+    "Paid Time",
+    "支付时间",
+    "付款时间"
+  ],
+  "cancel_type": [
+    "Cancelation/Return Type",
+    "Cancellation/Return Type",
+    "取消/退货类型"
   ],
   "ad_account_key": [
     "广告账户",

@@ -2,7 +2,7 @@
 import { computed, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import type { FormInstance, FormRules } from 'element-plus'
-import { DataBoard, Connection, User, Lock, OfficeBuilding, ArrowRight } from '@element-plus/icons-vue'
+import { User, Lock, ArrowRight } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { save } from '../api/client'
 import { passwordError } from '../api/format.mjs'
@@ -11,31 +11,17 @@ import { clearSession } from '../router'
 import logo from '../assets/brand/herbmoda-logo-dark.png'
 const route = useRoute(), router = useRouter(), auth = useAuth(), form = ref<FormInstance>(), busy = ref(false), error = ref('')
 const forced = computed(() => route.path === '/force-change-password')
-const values = reactive({ username: '', password: '', oldPassword: '', newPassword: '', confirm: '' })
+const values = reactive({ username: '', password: '', oldPassword: '', newPassword: '', confirm: '', rememberMe: false })
 const rules: FormRules = { username: [{ required: true, message: '请输入账号', trigger: 'blur' }], password: [{ required: true, message: '请输入密码', trigger: 'blur' }], oldPassword: [{ required: true, message: '请输入原密码', trigger: 'blur' }], newPassword: [{ validator: (_r, v, cb) => { const message = passwordError(v); cb(message ? new Error(message) : undefined) }, trigger: 'blur' }], confirm: [{ validator: (_r, v, cb) => cb(v && v === values.newPassword ? undefined : new Error('两次输入的密码不一致')), trigger: 'blur' }] }
-async function submit() { if (!await form.value?.validate().catch(() => false)) return; busy.value = true; error.value = ''; try { if (forced.value) { await save('/auth/change-password', { oldPassword: values.oldPassword, newPassword: values.newPassword }); clearSession(); ElMessage.success('密码已更新，请重新登录'); await router.replace('/login') } else { await save('/auth/login', { username: values.username, password: values.password }); await auth.load(); const redirect = String(route.query.redirect ?? ''); const target = auth.allMenus.some(menu => menu.routePath === redirect) ? redirect : '/dashboard'; await router.replace(target) } } catch (e) { error.value = (e as Error).message } finally { busy.value = false; values.password = '' } }
+async function submit() { if (!await form.value?.validate().catch(() => false)) return; busy.value = true; error.value = ''; try { if (forced.value) { await save('/auth/change-password', { oldPassword: values.oldPassword, newPassword: values.newPassword }); clearSession(); ElMessage.success('密码已更新，请重新登录'); await router.replace('/login') } else { await save('/auth/login', { username: values.username, password: values.password, rememberMe: values.rememberMe }); await auth.load(); const redirect = String(route.query.redirect ?? ''); const target = auth.allMenus.some(menu => menu.routePath === redirect) ? redirect : '/dashboard'; await router.replace(target) } } catch (e) { error.value = (e as Error).message } finally { busy.value = false; values.password = '' } }
 </script>
 <template>
     <main class="auth-page">
         <div class="auth-backdrop">
             <div class="backdrop-brand"><img :src="logo" alt="HERBMODA" /><span
-                    class="wordmark">HERBMODA<small>LONDON</small></span><i></i><span
-                    class="brand-meta">COMMERCE<br />INTELLIGENCE</span></div><small class="backdrop-kicker">DATA
-                DRIVES<br />A MORE RADIANT TOMORROW</small>
-            <div class="hero-copy">
-                <h2>Insight for<br />a More Radiant World</h2>
-                <p>Unify data. Empower decisions.<br />Grow a more beautiful tomorrow.</p>
-            </div>
-            <div class="hero-traits"><span><i><el-icon>
-                            <DataBoard />
-                        </el-icon></i>DEEPER<br />INSIGHTS</span><span><i><el-icon>
-                            <Connection />
-                        </el-icon></i>SMARTER<br />OPERATIONS</span><span><i><el-icon>
-                            <User />
-                        </el-icon></i>BRIGHTER<br />GROWTH</span></div>
+                    class="wordmark">HERBMODA<small>LONDON</small></span></div>
             <div class="hero-media"><img class="oil" src="../assets/brand/radiant-oil-capsules-main.png" alt="" /><img
                     class="mask" src="../assets/brand/glowing-tomato-mask.png" alt="" /></div>
-            <div class="backdrop-note">BRAND<br />PEOPLE<br />PRODUCT<br />DATA<br />GROWTH<i></i></div>
         </div>
         <div class="auth-card surface"><template v-if="!forced">
                 <div class="auth-welcome"><span>Welcome to</span><strong>HERBMODA Commerce
@@ -57,15 +43,12 @@ async function submit() { if (!await form.value?.validate().catch(() => false)) 
                                 #prefix><el-icon>
                                     <Lock />
                                 </el-icon></template></el-input></el-form-item>
-                    <div class="login-options"><el-checkbox>Keep me signed in</el-checkbox><span>Forgot password?</span>
+                    <div class="login-options"><el-checkbox v-model="values.rememberMe">Keep me signed in</el-checkbox>
                     </div><el-button class="submit" type="primary" native-type="submit" size="large"
                         :loading="busy">Sign in <el-icon>
                             <ArrowRight />
                         </el-icon></el-button>
-                    <div class="or-divider"><span>or</span></div>
-                    <div class="sso-button"><el-icon>
-                            <OfficeBuilding />
-                        </el-icon><span>Sign in with SSO</span></div><small class="auth-footnote">A smarter, more
+                    <small class="auth-footnote">A smarter, more
                         radiant
                         tomorrow.</small>
                 </template><template v-else><el-form-item label="原密码" prop="oldPassword"><el-input
@@ -124,103 +107,8 @@ async function submit() { if (!await form.value?.validate().catch(() => false)) 
     letter-spacing: .22em
 }
 
-.backdrop-brand>i {
-    height: 52px;
-    width: 1px;
-    background: #AAB7C5;
-    margin: 0 6px
-}
-
-.brand-meta {
-    font-size: 12px;
-    line-height: 1.55;
-    letter-spacing: .19em;
-    color: #7D8B9B
-}
-
-.backdrop-kicker {
-    position: absolute;
-    left: clamp(110px, 7.4vw, 150px);
-    top: 28vh;
-    font-size: 12px;
-    line-height: 1.45;
-    letter-spacing: .2em;
-    color: #8795A5
-}
-
-.hero-copy {
-    position: absolute;
-    left: clamp(32px, 3.4vw, 68px);
-    top: 39%;
-    max-width: 520px
-}
-
-.hero-copy h2 {
-    font-size: clamp(30px, 2.8vw, 56px);
-    line-height: 1.08;
-    letter-spacing: -.045em;
-    font-weight: 500;
-    color: #101820
-}
-
-.hero-copy p {
-    margin-top: 24px;
-    color: #8190A1;
-    font-size: clamp(14px, 1.35vw, 27px);
-    line-height: 1.28
-}
-
-.hero-traits {
-    position: absolute;
-    left: clamp(36px, 3.5vw, 72px);
-    bottom: 16%;
-    display: flex;
-    gap: clamp(24px, 3vw, 64px);
-    color: #7D8B9B;
-    font-size: 11px;
-    letter-spacing: .15em;
-    line-height: 1.35
-}
-
-.hero-traits span {
-    display: grid;
-    gap: 10px
-}
-
-.hero-traits i {
-    width: 48px;
-    height: 48px;
-    border: 1px solid #D8E3EC;
-    border-radius: 50%;
-    display: grid;
-    place-items: center;
-    color: #7189A0;
-    font-size: 22px;
-    font-style: normal;
-    line-height: 1;
-    background: rgba(255, 255, 255, .62)
-}
-
 .hero-media {
     display: none
-}
-
-.backdrop-note {
-    position: absolute;
-    right: 3%;
-    top: 6%;
-    color: #8795A5;
-    font-size: 11px;
-    line-height: 1.55;
-    letter-spacing: .18em
-}
-
-.backdrop-note i {
-    display: block;
-    width: 42px;
-    height: 1px;
-    background: #AAB7C5;
-    margin-top: 18px
 }
 
 .auth-card {
@@ -305,10 +193,6 @@ async function submit() { if (!await form.value?.validate().catch(() => false)) 
     font-size: 13px
 }
 
-.login-options>span {
-    color: #3E72AD
-}
-
 .login-options :deep(.el-checkbox__label) {
     color: #8090A1;
     font-size: 13px;
@@ -332,41 +216,6 @@ async function submit() { if (!await form.value?.validate().catch(() => false)) 
 
 .submit .el-icon {
     margin-left: 7px
-}
-
-.or-divider {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-    margin: 27px 0 19px;
-    color: #92A0AE;
-    font-size: 12px
-}
-
-.or-divider::before,
-.or-divider::after {
-    content: '';
-    height: 1px;
-    background: #DCE4EB;
-    flex: 1
-}
-
-.sso-button {
-    height: 48px;
-    border: 1px solid #D9E2EA;
-    border-radius: 9px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    color: #5F7285;
-    font-size: 14px;
-    background: rgba(255, 255, 255, .38)
-}
-
-.sso-button .el-icon {
-    font-size: 19px;
-    color: #557895
 }
 
 .auth-footnote {
@@ -428,21 +277,9 @@ async function submit() { if (!await form.value?.validate().catch(() => false)) 
         background-position: 8% center
     }
 
-    .hero-copy {
-        max-width: 28%
-    }
-
     .hero-media {
         left: 26%;
         width: 70%;
-    }
-
-    .hero-copy h2 {
-        font-size: 36px
-    }
-
-    .hero-copy p {
-        font-size: 15px
     }
 
     .auth-card {
@@ -469,9 +306,6 @@ async function submit() { if (!await form.value?.validate().catch(() => false)) 
         font-size: 13px
     }
 
-    .brand-meta {
-        font-size: 10px
-    }
 }
 
 @media(min-width:1201px) and (min-aspect-ratio:1/2.5) and (max-aspect-ratio:2.5/1) {
@@ -481,19 +315,6 @@ async function submit() { if (!await form.value?.validate().catch(() => false)) 
 }
 
 @media(max-height:700px) and (min-width:768px) {
-    .hero-copy {
-        top: 40%;
-        max-width: 560px
-    }
-
-    .hero-copy h2 {
-        font-size: 44px
-    }
-
-    .hero-copy p {
-        margin-top: 14px
-    }
-
     .auth-card {
         top: 54.5%;
         padding: 28px 34px
@@ -509,10 +330,6 @@ async function submit() { if (!await form.value?.validate().catch(() => false)) 
 
     .login-options {
         margin: 0 0 18px
-    }
-
-    .or-divider {
-        margin: 18px 0 14px
     }
 
     .auth-footnote {
@@ -563,23 +380,6 @@ async function submit() { if (!await form.value?.validate().catch(() => false)) 
 
     .wordmark small {
         font-size: 9px
-    }
-
-    .backdrop-brand>i {
-        height: 30px;
-        margin: 0 2px
-    }
-
-    .brand-meta {
-        font-size: 8px;
-        letter-spacing: .12em
-    }
-
-    .backdrop-kicker,
-    .hero-copy,
-    .hero-traits,
-    .backdrop-note {
-        display: none
     }
 
     .auth-card {

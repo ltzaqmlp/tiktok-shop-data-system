@@ -17,7 +17,7 @@ public class AuthController {
     private final String dummy;
     public AuthController(Db db,Identity identity,PasswordEncoder passwords,org.springframework.transaction.PlatformTransactionManager manager){this.db=db;this.identity=identity;this.passwords=passwords;this.tx=new TransactionTemplate(manager);dummy=passwords.encode(UUID.randomUUID().toString());}
     public static void validatePassword(String value){Api.require(value.length()>=10&&value.length()<=72,"密码须为10–72位");int kinds=0;for(String regex:List.of(".*[a-zA-Z].*",".*[0-9].*",".*[^a-zA-Z0-9].*"))if(value.matches(regex))kinds++;Api.require(kinds>=2,"密码须包含字母、数字、符号中的两类");}
-    @PostMapping("/auth/login") public Object login(@RequestBody Map<String,Object> body,HttpServletRequest req){
+    @PostMapping("/auth/login") public Object login(@RequestBody Map<String,Object> body,HttpServletRequest req,HttpServletResponse res){
         String username=Api.text(body,"username",64,true),password=Objects.toString(body.get("password"),"");Api.require(password.length()<=72,"密码过长");
         Map<String,Object> result=tx.execute(s->{
             var u=db.one("select * from sys_user where username=#{p.username} for update",p("username",username));String reason=null;
@@ -31,7 +31,7 @@ public class AuthController {
         });
         if(result.get("reason")!=null)throw new Api.Problem(401,result.get("reason").equals("账号暂时锁定")?"AUTH_ACCOUNT_LOCKED":"AUTH_INVALID_CREDENTIALS",result.get("reason").toString());
         @SuppressWarnings("unchecked")var u=(Map<String,Object>)result.get("user");
-        if(req.getSession(false)!=null)req.getSession(false).invalidate();var session=req.getSession(true);session.setAttribute("uid",Long.parseLong(u.get("id").toString()));session.setAttribute("version",u.get("sessionVersion"));
+        if(req.getSession(false)!=null)req.getSession(false).invalidate();var session=req.getSession(true);boolean remember=Boolean.TRUE.equals(body.get("rememberMe"));session.setMaxInactiveInterval(remember?30*24*60*60:4*60*60);session.setAttribute("uid",Long.parseLong(u.get("id").toString()));session.setAttribute("version",u.get("sessionVersion"));var cookie=new Cookie("JSESSIONID",session.getId());cookie.setMaxAge(remember?30*24*60*60:-1);cookie.setHttpOnly(true);cookie.setSecure(req.isSecure());cookie.setPath(req.getContextPath().isBlank()?"/":req.getContextPath());cookie.setAttribute("SameSite","Lax");res.addCookie(cookie);
         return Api.ok(req,Map.of("mustChangePassword",u.get("mustChangePassword")));
     }
     @GetMapping("/auth/session") public Object session(HttpServletRequest req){var session=req.getSession(false);return Api.ok(req,Map.of("authenticated",session!=null&&session.getAttribute("uid")!=null));}

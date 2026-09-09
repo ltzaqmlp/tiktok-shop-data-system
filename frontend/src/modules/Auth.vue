@@ -33,7 +33,7 @@ async function submit() { if (!await form.value?.validate().catch(() => false)) 
                 <p class="muted">首次登录需要修改临时密码，完成后即可使用系统。</p>
             </template><el-alert v-if="error" :title="error" type="error" show-icon :closable="false"
                 role="alert" /><el-form ref="form" :model="values" :rules="rules" label-position="top"
-                @submit.prevent="submit"><template v-if="!forced"><el-form-item label="Email or username"
+                :class="{ 'password-change-form': forced }" @submit.prevent="submit"><template v-if="!forced"><el-form-item label="Email or username"
                         prop="username"><el-input v-model="values.username" autocomplete="username"
                             placeholder="Email or username" size="large"><template #prefix><el-icon>
                                     <User />
@@ -157,6 +157,14 @@ async function submit() { if (!await form.value?.validate().catch(() => false)) 
 
 .auth-card :deep(.el-form-item__label) {
     display: none
+}
+
+.password-change-form :deep(.el-form-item__label) {
+    display: block;
+    padding-bottom: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--hm-text)
 }
 
 .auth-card :deep(.el-input__wrapper) {

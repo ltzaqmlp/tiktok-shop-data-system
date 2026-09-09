@@ -1,0 +1,30 @@
+- generic [ref=f3e3]:
+  - link "跳转到主要内容" [ref=f3e4] [cursor=pointer]:
+    - /url: "#main"
+  - complementary "主导航" [ref=f3e5]:
+    - generic [ref=f3e6]:
+      - img "HERBMODA" [ref=f3e8]
+      - generic [ref=f3e9]:
+        - strong [ref=f3e10]: HERBMODA
+        - generic [ref=f3e11]: Commerce Intelligence
+    - generic [ref=f3e12]: 工作空间
+    - navigation
+    - generic [ref=f3e13]: 内部经营系统 · V1.0
+  - generic [ref=f3e16]:
+    - banner [ref=f3e17]:
+      - generic [ref=f3e18]:
+        - button "收起侧栏" [ref=f3e19] [cursor=pointer]
+        - navigation "面包屑" [ref=f3e24]:
+          - generic [ref=f3e25]:
+            - link "工作空间" [ref=f3e26]
+            - text: /
+          - link "访问提示" [ref=f3e28]
+      - generic [ref=f3e29]:
+        - generic [ref=f3e30]: 用
+        - generic:
+          - strong
+        - button "退出登录" [ref=f3e31] [cursor=pointer]
+    - main [ref=f3e37]
+    - contentinfo [ref=f3e38]:
+      - text: 跨境电商经营数据平台
+      - generic [ref=f3e39]: 按业务日期统计 · 金额按市场币种展示

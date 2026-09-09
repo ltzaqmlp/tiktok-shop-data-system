@@ -1,0 +1,424 @@
+- generic [active] [ref=f5e1]:
+  - generic [ref=f5e3]:
+    - link "跳转到主要内容" [ref=f5e4] [cursor=pointer]:
+      - /url: "#main"
+    - complementary "主导航" [ref=f5e5]:
+      - generic [ref=f5e6]:
+        - img "HERBMODA" [ref=f5e8]
+        - generic [ref=f5e9]:
+          - strong [ref=f5e10]: HERBMODA
+          - generic [ref=f5e11]: Commerce Intelligence
+      - generic [ref=f5e12]: 工作空间
+      - navigation [ref=f5e43]:
+        - link "经营驾驶舱" [ref=f5e44] [cursor=pointer]:
+          - /url: /dashboard
+        - link "数据导入" [ref=f5e51] [cursor=pointer]:
+          - /url: /data-import
+        - link "日报" [ref=f5e56] [cursor=pointer]:
+          - /url: /daily-reports
+        - link "用户管理" [ref=f5e61] [cursor=pointer]:
+          - /url: /admin/users
+        - link "角色管理" [ref=f5e66] [cursor=pointer]:
+          - /url: /admin/roles
+        - link "菜单管理" [ref=f5e71] [cursor=pointer]:
+          - /url: /admin/menus
+        - link "审计日志" [ref=f5e76] [cursor=pointer]:
+          - /url: /admin/audit
+        - link "登录日志" [ref=f5e81] [cursor=pointer]:
+          - /url: /admin/login-logs
+        - link "拍摄工单" [ref=f5e87] [cursor=pointer]:
+          - /url: /shooting-tickets
+      - generic [ref=f5e13]: 内部经营系统 · V1.0
+    - generic [ref=f5e16]:
+      - banner [ref=f5e17]:
+        - generic [ref=f5e18]:
+          - button "收起侧栏" [ref=f5e19] [cursor=pointer]
+          - navigation "面包屑" [ref=f5e24]:
+            - generic [ref=f5e25]:
+              - link "工作空间" [ref=f5e26]
+              - text: /
+            - link "经营驾驶舱" [ref=f5e92]
+        - generic [ref=f5e29]:
+          - generic [ref=f5e30]: 系
+          - generic [ref=f5e31]:
+            - strong [ref=f5e32]: 系统管理员
+            - generic [ref=f5e33]: 系统管理员 · 老板 · 部门负责人
+          - button "退出登录" [ref=f5e34] [cursor=pointer]
+      - main [ref=f5e40]:
+        - generic [ref=f5e93]:
+          - heading "经营驾驶舱" [level=1] [ref=f5e94]
+          - generic [ref=f5e95]:
+            - generic [ref=f5e96]:
+              - generic [ref=f5e97]:
+                - generic [ref=f5e98]: 业务日期
+                - radiogroup "业务日期快捷选择" [ref=f5e99]:
+                  - generic [ref=f5e100]:
+                    - radio "业务日期 业务日期快捷选择 2026/09/01 - 2026/09/07 今日" [ref=f5e783]
+                    - generic [ref=f5e102] [cursor=pointer]: 今日
+                  - generic [ref=f5e103]:
+                    - radio "昨日" [ref=f5e104]
+                    - generic [ref=f5e105] [cursor=pointer]: 昨日
+                  - generic [ref=f5e106]:
+                    - radio "本周" [ref=f5e107]
+                    - generic [ref=f5e108] [cursor=pointer]: 本周
+                  - generic [ref=f5e109]:
+                    - radio "本月" [ref=f5e110]
+                    - generic [ref=f5e111] [cursor=pointer]: 本月
+                  - generic [ref=f5e112]:
+                    - radio "自定义" [checked] [ref=f5e113]
+                    - generic [ref=f5e114] [cursor=pointer]: 自定义
+                - generic [ref=f5e455]:
+                  - combobox "开始日期" [ref=f5e459]: 2026/09/01
+                  - generic [ref=f5e460]: "-"
+                  - combobox "结束日期" [ref=f5e461]: 2026/09/07
+              - generic [ref=f5e115]:
+                - generic [ref=f5e116]: 市场
+                - generic [ref=f5e118] [cursor=pointer]:
+                  - generic:
+                    - combobox "市场" [ref=f5e120]
+                    - generic [ref=f5e121]: 马来西亚 (MY)
+              - button "查询" [ref=f5e126] [cursor=pointer]
+            - button "刷新数据" [ref=f5e128] [cursor=pointer]
+          - alert [ref=f5e784]:
+            - generic [ref=f5e785]: 当前范围没有可精确匹配的商品报表，商品漏斗暂用 Shop Analytics 的曝光、点击和 SKU 订单数据；加购相关字段需要导入与当前日期范围一致的商品报表。顶部 GMV、订单、成交件数、SKU 订单和退款金额不受影响。
+          - region "核心经营指标" [ref=f5e787]:
+            - article [ref=f5e788]:
+              - generic [ref=f5e795]:
+                - generic [ref=f5e796]: GMV
+                - button "Shop Analytics 每日 GMV" [ref=f5e797] [cursor=pointer]
+              - generic [ref=f5e801]:
+                - generic [ref=f5e802]: RM
+                - text: 1,458.00
+              - generic [ref=f5e803]:
+                - generic [ref=f5e804]: ↓ 34.7%
+                - generic [ref=f5e805]: 较上一周期
+              - img "这是一个图表，图表类型是折线图。其数据是——2026-09-01的数据是0，350.71，2026-09-02的数据是1，397，2026-09-03的数据是2，195.27，2026-09-04的数据是3，130.95，2026-09-05的数据是4，144.71，2026-09-06的数据是5，153.16，2026-09-07的数据是6，86.2。" [ref=f5e806]
+            - article [ref=f5e809]:
+              - generic [ref=f5e815]:
+                - generic [ref=f5e816]: 订单数
+                - button "Shop Analytics 每日订单数" [ref=f5e817] [cursor=pointer]
+              - generic [ref=f5e821]: "30"
+              - generic [ref=f5e822]:
+                - generic [ref=f5e823]: ↓ 40.0%
+                - generic [ref=f5e824]: 较上一周期
+              - img "这是一个图表，图表类型是折线图。其数据是——2026-09-01的数据是0，8，2026-09-02的数据是1，8，2026-09-03的数据是2，3，2026-09-04的数据是3，2，2026-09-05的数据是4，4，2026-09-06的数据是5，3，2026-09-07的数据是6，2。" [ref=f5e825]
+            - article [ref=f5e828]:
+              - generic [ref=f5e834]:
+                - generic [ref=f5e835]: 商品成交件数
+                - button "Shop Analytics 每日商品成交件数" [ref=f5e836] [cursor=pointer]
+              - generic [ref=f5e840]: "35"
+              - generic [ref=f5e841]:
+                - generic [ref=f5e842]: ↓ 30.0%
+                - generic [ref=f5e843]: 较上一周期
+              - img "这是一个图表，图表类型是折线图。其数据是——2026-09-01的数据是0，8，2026-09-02的数据是1，9，2026-09-03的数据是2，5，2026-09-04的数据是3，3，2026-09-05的数据是4，4，2026-09-06的数据是5，4，2026-09-07的数据是6，2。" [ref=f5e844]
+            - article [ref=f5e847]:
+              - generic [ref=f5e853]:
+                - generic [ref=f5e854]: SKU 订单数
+                - button "Shop Analytics 每日 SKU 订单数；不是成交件数" [ref=f5e855] [cursor=pointer]
+              - generic [ref=f5e859]: "30"
+              - generic [ref=f5e860]:
+                - generic [ref=f5e861]: ↓ 40.0%
+                - generic [ref=f5e862]: 较上一周期
+              - img "这是一个图表，图表类型是折线图。其数据是——2026-09-01的数据是0，8，2026-09-02的数据是1，8，2026-09-03的数据是2，3，2026-09-04的数据是3，2，2026-09-05的数据是4，4，2026-09-06的数据是5，3，2026-09-07的数据是6，2。" [ref=f5e863]
+            - article [ref=f5e866]:
+              - generic [ref=f5e874]:
+                - generic [ref=f5e875]: 平均订单金额
+                - button "AOV = 总 GMV ÷ 总订单数" [ref=f5e876] [cursor=pointer]
+              - generic [ref=f5e880]:
+                - generic [ref=f5e881]: RM
+                - text: "48.60"
+              - generic [ref=f5e882]:
+                - generic [ref=f5e883]: ↑ 8.8%
+                - generic [ref=f5e884]: 较上一周期
+              - img "这是一个图表，图表类型是折线图。其数据是——2026-09-01的数据是0，43.83875，2026-09-02的数据是1，49.625，2026-09-03的数据是2，65.09，2026-09-04的数据是3，65.475，2026-09-05的数据是4，36.1775，2026-09-06的数据是5，51.053333333333335，2026-09-07的数据是6，43.1。" [ref=f5e885]
+            - article [ref=f5e888]:
+              - generic [ref=f5e894]:
+                - generic [ref=f5e895]: 退款金额
+                - button "Shop Analytics 每日退款金额" [ref=f5e896] [cursor=pointer]
+              - generic [ref=f5e900]:
+                - generic [ref=f5e901]: RM
+                - text: "0.00"
+              - generic [ref=f5e902]:
+                - generic [ref=f5e903]: ↓ 100.0%
+                - generic [ref=f5e904]: 较上一周期
+              - img "这是一个图表，图表类型是折线图。其数据是——2026-09-01的数据是0，0，2026-09-02的数据是1，0，2026-09-03的数据是2，0，2026-09-04的数据是3，0，2026-09-05的数据是4，0，2026-09-06的数据是5，0，2026-09-07的数据是6，0。" [ref=f5e905]
+          - generic [ref=f5e908]:
+            - article [ref=f5e909]:
+              - generic [ref=f5e910]:
+                - heading "销售趋势" [level=2] [ref=f5e911]
+                - generic [ref=f5e912]: ■ GMV (RM)
+                - generic [ref=f5e913]: ● 订单数
+              - img "这是一个图表，它由2个图表系列组成。第0个系列是一个表示GMV (RM)的柱状图，其数据是——2026-09-01的数据是0，350.71，2026-09-02的数据是1，397，2026-09-03的数据是2，195.27，2026-09-04的数据是3，130.95，2026-09-05的数据是4，144.71，2026-09-06的数据是5，153.16，2026-09-07的数据是6，86.2；第1个系列是一个表示订单数的折线图，其数据是——2026-09-01的数据是0，8，2026-09-02的数据是1，8，2026-09-03的数据是2，3，2026-09-04的数据是3，2，2026-09-05的数据是4，4，2026-09-06的数据是5，3，2026-09-07的数据是6，2。" [ref=f5e914]
+            - article [ref=f5e917]:
+              - heading "商品转化漏斗 从曝光到下单的转化表现" [level=2] [ref=f5e919]
+              - generic [ref=f5e920]:
+                - generic [ref=f5e921]:
+                  - generic [ref=f5e923]:
+                    - generic [ref=f5e924]: 商品曝光次数
+                    - strong [ref=f5e925]: 48,549
+                  - generic [ref=f5e926]:
+                    - generic [ref=f5e927]: 去重曝光
+                    - generic [ref=f5e928]: 27,902
+                - generic [ref=f5e929]:
+                  - generic [ref=f5e931]:
+                    - generic [ref=f5e932]: 商品点击量
+                    - strong [ref=f5e933]: 3,489
+                  - generic [ref=f5e934]:
+                    - generic [ref=f5e935]: CTR
+                    - generic [ref=f5e936]: 7.2%
+                  - generic [ref=f5e937]:
+                    - generic [ref=f5e938]: 去重点击
+                    - generic [ref=f5e939]: 2,610
+                - generic [ref=f5e940]:
+                  - generic [ref=f5e942]:
+                    - generic [ref=f5e943]: 加购次数
+                    - strong [ref=f5e944]: —
+                  - generic [ref=f5e945]:
+                    - generic [ref=f5e946]: 加购率
+                    - generic [ref=f5e947]: —
+                  - generic [ref=f5e948]:
+                    - generic [ref=f5e949]: 加购用户
+                    - generic [ref=f5e950]: —
+                - generic [ref=f5e951]:
+                  - generic [ref=f5e953]:
+                    - generic [ref=f5e954]: SKU 订单数
+                    - strong [ref=f5e955]: "30"
+                  - generic [ref=f5e956]:
+                    - generic [ref=f5e957]: CTOR
+                    - generic [ref=f5e958]: 0.9%
+                  - generic [ref=f5e959]:
+                    - generic [ref=f5e960]: 下单客户
+                    - generic [ref=f5e961]: "30"
+            - article [ref=f5e962]:
+              - generic [ref=f5e963]:
+                - heading "GMV Max 广告效果 仅包含已归因的广告数据" [level=2] [ref=f5e964]
+                - generic [ref=f5e965]: "币种: USD"
+              - generic [ref=f5e966]:
+                - generic [ref=f5e967]:
+                  - text: 广告花费
+                  - strong [ref=f5e968]: "584.13"
+                  - generic [ref=f5e969]: ↓ 48.1%
+                - generic [ref=f5e971]:
+                  - text: 广告归因收入
+                  - strong [ref=f5e972]: "405.64"
+                  - generic [ref=f5e973]: ↓ 35.3%
+                - generic [ref=f5e975]:
+                  - text: ROI
+                  - strong [ref=f5e976]: "0.69"
+                  - generic [ref=f5e977]: ↑ 24.6%
+                - generic [ref=f5e979]:
+                  - text: CPO
+                  - strong [ref=f5e980]: "19.47"
+                  - generic [ref=f5e981]: ↓ 15.2%
+              - img "这是一个图表，它由2个图表系列组成。第0个系列是一个表示Cost (USD)的柱状图，其数据是——2026-09-01的数据是0，95.29，2026-09-02的数据是1，110.34，2026-09-03的数据是2，81.48，2026-09-04的数据是3，72，2026-09-05的数据是4，74.48，2026-09-06的数据是5，85.97，2026-09-07的数据是6，64.57；第1个系列是一个表示Gross Revenue (USD)的折线图，其数据是——2026-09-01的数据是0，96.75，2026-09-02的数据是1，112.03，2026-09-03的数据是2，52.48，2026-09-04的数据是3，33.64，2026-09-05的数据是4，43.69，2026-09-06的数据是5，42.98，2026-09-07的数据是6，24.07。" [ref=f5e983]
+          - generic [ref=f5e986]:
+            - article [ref=f5e987]:
+              - heading "订单状态分布" [level=2] [ref=f5e989]
+              - generic [ref=f5e990]:
+                - generic [ref=f5e991]:
+                  - img "这是一个图表，图表类型是饼图。其数据是——已发货的数据是74，已付款的数据是12，已取消的数据是3。" [ref=f5e992]
+                  - generic:
+                    - strong: "89"
+                    - generic: 总订单数
+                - generic [ref=f5e995]:
+                  - generic [ref=f5e996]:
+                    - generic [ref=f5e998]: 已发货
+                    - generic [ref=f5e999]: 83.1%
+                    - generic [ref=f5e1000]: (74)
+                  - generic [ref=f5e1001]:
+                    - generic [ref=f5e1003]: 已付款
+                    - generic [ref=f5e1004]: 13.5%
+                    - generic [ref=f5e1005]: (12)
+                  - generic [ref=f5e1006]:
+                    - generic [ref=f5e1008]: 已取消
+                    - generic [ref=f5e1009]: 3.4%
+                    - generic [ref=f5e1010]: (3)
+            - article [ref=f5e1011]:
+              - heading "售后情况 基于订单数据统计" [level=2] [ref=f5e1013]
+              - generic [ref=f5e1014]:
+                - generic [ref=f5e1015]:
+                  - generic [ref=f5e1016]: ×
+                  - generic [ref=f5e1017]:
+                    - text: 退款金额
+                    - strong [ref=f5e1018]: RM0.00
+                    - generic [ref=f5e1019]:
+                      - generic [ref=f5e1020]: ↓ 100.0%
+                      - generic [ref=f5e1021]: 较上一周期
+                - generic [ref=f5e1022]:
+                  - generic [ref=f5e1023]: ×
+                  - generic [ref=f5e1024]:
+                    - text: 取消订单数
+                    - strong [ref=f5e1025]: "3"
+                    - generic [ref=f5e1026]:
+                      - generic [ref=f5e1027]: ↓ 40.0%
+                      - generic [ref=f5e1028]: 较上一周期
+                - generic [ref=f5e1029]:
+                  - generic [ref=f5e1030]: ×
+                  - generic [ref=f5e1031]:
+                    - text: 已退款商品件数
+                    - strong [ref=f5e1032]: "8"
+                    - generic [ref=f5e1033]:
+                      - generic [ref=f5e1034]: 区间总计，无法环比
+                      - generic [ref=f5e1035]: 较上一周期
+                - generic [ref=f5e1036]:
+                  - generic [ref=f5e1037]: ×
+                  - generic [ref=f5e1038]:
+                    - text: 退款客户数
+                    - strong [ref=f5e1039]: "7"
+                    - generic [ref=f5e1040]:
+                      - generic [ref=f5e1041]: 区间总计，无法环比
+                      - generic [ref=f5e1042]: 较上一周期
+            - article [ref=f5e1043]:
+              - heading "商品访客与转化" [level=2] [ref=f5e1045]
+              - generic [ref=f5e1046]:
+                - generic [ref=f5e1047]:
+                  - generic [ref=f5e1052]:
+                    - text: 商品访客数
+                    - strong [ref=f5e1053]: 3,012
+                    - generic [ref=f5e1054]:
+                      - generic [ref=f5e1055]: ↓ 18.3%
+                      - generic [ref=f5e1056]: 较上一周期
+                  - img "这是一个图表，图表类型是折线图。其数据是——2026-09-01的数据是0，541，2026-09-02的数据是1，552，2026-09-03的数据是2，369，2026-09-04的数据是3，434，2026-09-05的数据是4，439，2026-09-06的数据是5，451，2026-09-07的数据是6，226。" [ref=f5e1057]
+                - generic [ref=f5e1060]:
+                  - generic [ref=f5e1065]:
+                    - text: 店铺转化率
+                    - strong [ref=f5e1066]: 1.0%
+                    - generic [ref=f5e1067]:
+                      - generic [ref=f5e1068]: ↓ 25.0%
+                      - generic [ref=f5e1069]: 较上一周期
+                  - img "这是一个图表，图表类型是折线图。其数据是——2026-09-01的数据是0，0.014787，2026-09-02的数据是1，0.014493，2026-09-03的数据是2，0.00813，2026-09-04的数据是3，0.004608，2026-09-05的数据是4，0.009112，2026-09-06的数据是5，0.006652，2026-09-07的数据是6，0.00885。" [ref=f5e1070]
+      - contentinfo [ref=f5e41]:
+        - text: 跨境电商经营数据平台
+        - generic [ref=f5e42]: 按业务日期统计 · 金额按市场币种展示
+  - dialog [ref=f5e1073]:
+    - generic [ref=f5e1076]:
+      - generic [ref=f5e1077]:
+        - generic [ref=f5e1078]:
+          - button "前一年" [ref=f5e1079] [cursor=pointer]
+          - button "上个月" [ref=f5e1083] [cursor=pointer]
+          - generic [ref=f5e1087]:
+            - button "2026 年" [ref=f5e1088] [cursor=pointer]
+            - button "9 月" [ref=f5e1089] [cursor=pointer]
+        - grid "使用方向键与 Enter 键可选择日期" [ref=f5e1090]:
+          - rowgroup [ref=f5e1091]:
+            - row [ref=f5e1092]:
+              - columnheader "星期日" [ref=f5e1093]: 日
+              - columnheader "星期一" [ref=f5e1094]: 一
+              - columnheader "星期二" [ref=f5e1095]: 二
+              - columnheader "星期三" [ref=f5e1096]: 三
+              - columnheader "星期四" [ref=f5e1097]: 四
+              - columnheader "星期五" [ref=f5e1098]: 五
+              - columnheader "星期六" [ref=f5e1099]: 六
+            - row [ref=f5e1100]:
+              - gridcell "30" [ref=f5e1101] [cursor=pointer]
+              - gridcell "31" [ref=f5e1104] [cursor=pointer]
+              - gridcell "1" [ref=f5e1107] [cursor=pointer]
+              - gridcell "2" [ref=f5e1110] [cursor=pointer]
+              - gridcell "3" [ref=f5e1113] [cursor=pointer]
+              - gridcell "4" [ref=f5e1116] [cursor=pointer]
+              - gridcell "5" [ref=f5e1119] [cursor=pointer]
+            - row [ref=f5e1122]:
+              - gridcell "6" [ref=f5e1123] [cursor=pointer]
+              - gridcell "7" [ref=f5e1126] [cursor=pointer]
+              - gridcell "8" [ref=f5e1129] [cursor=pointer]
+              - gridcell "9" [ref=f5e1132] [cursor=pointer]
+              - gridcell "10" [ref=f5e1135] [cursor=pointer]
+              - gridcell "11" [ref=f5e1138] [cursor=pointer]
+              - gridcell "12" [ref=f5e1141] [cursor=pointer]
+            - row [ref=f5e1144]:
+              - gridcell "13" [ref=f5e1145] [cursor=pointer]
+              - gridcell "14" [ref=f5e1148] [cursor=pointer]
+              - gridcell "15" [ref=f5e1151] [cursor=pointer]
+              - gridcell "16" [ref=f5e1154] [cursor=pointer]
+              - gridcell "17" [ref=f5e1157] [cursor=pointer]
+              - gridcell "18" [ref=f5e1160] [cursor=pointer]
+              - gridcell "19" [ref=f5e1163] [cursor=pointer]
+            - row [ref=f5e1166]:
+              - gridcell "20" [ref=f5e1167] [cursor=pointer]
+              - gridcell "21" [ref=f5e1170] [cursor=pointer]
+              - gridcell "22" [ref=f5e1173] [cursor=pointer]
+              - gridcell "23" [ref=f5e1176] [cursor=pointer]
+              - gridcell "24" [ref=f5e1179] [cursor=pointer]
+              - gridcell "25" [ref=f5e1182] [cursor=pointer]
+              - gridcell "26" [ref=f5e1185] [cursor=pointer]
+            - row [ref=f5e1188]:
+              - gridcell "27" [ref=f5e1189] [cursor=pointer]
+              - gridcell "28" [ref=f5e1192] [cursor=pointer]
+              - gridcell "29" [ref=f5e1195] [cursor=pointer]
+              - gridcell "30" [ref=f5e1198] [cursor=pointer]
+              - gridcell "1" [ref=f5e1201] [cursor=pointer]
+              - gridcell "2" [ref=f5e1204] [cursor=pointer]
+              - gridcell "3" [ref=f5e1207] [cursor=pointer]
+            - row [ref=f5e1210]:
+              - gridcell "4" [ref=f5e1211] [cursor=pointer]
+              - gridcell "5" [ref=f5e1214] [cursor=pointer]
+              - gridcell "6" [ref=f5e1217] [cursor=pointer]
+              - gridcell "7" [ref=f5e1220] [cursor=pointer]
+              - gridcell "8" [ref=f5e1223] [cursor=pointer]
+              - gridcell "9" [ref=f5e1226] [cursor=pointer]
+              - gridcell "10" [ref=f5e1229] [cursor=pointer]
+      - generic [ref=f5e1232]:
+        - generic [ref=f5e1233]:
+          - button "后一年" [ref=f5e1234] [cursor=pointer]
+          - button "下个月" [ref=f5e1238] [cursor=pointer]
+          - generic [ref=f5e1242]:
+            - button "2026 年" [ref=f5e1243] [cursor=pointer]
+            - button "10 月" [ref=f5e1244] [cursor=pointer]
+        - grid "使用方向键与 Enter 键可选择日期" [ref=f5e1245]:
+          - rowgroup [ref=f5e1246]:
+            - row [ref=f5e1247]:
+              - columnheader "星期日" [ref=f5e1248]: 日
+              - columnheader "星期一" [ref=f5e1249]: 一
+              - columnheader "星期二" [ref=f5e1250]: 二
+              - columnheader "星期三" [ref=f5e1251]: 三
+              - columnheader "星期四" [ref=f5e1252]: 四
+              - columnheader "星期五" [ref=f5e1253]: 五
+              - columnheader "星期六" [ref=f5e1254]: 六
+            - row [ref=f5e1255]:
+              - gridcell "27" [ref=f5e1256] [cursor=pointer]
+              - gridcell "28" [ref=f5e1259] [cursor=pointer]
+              - gridcell "29" [ref=f5e1262] [cursor=pointer]
+              - gridcell "30" [ref=f5e1265] [cursor=pointer]
+              - gridcell "1" [ref=f5e1268] [cursor=pointer]
+              - gridcell "2" [ref=f5e1271] [cursor=pointer]
+              - gridcell "3" [ref=f5e1274] [cursor=pointer]
+            - row [ref=f5e1277]:
+              - gridcell "4" [ref=f5e1278] [cursor=pointer]
+              - gridcell "5" [ref=f5e1281] [cursor=pointer]
+              - gridcell "6" [ref=f5e1284] [cursor=pointer]
+              - gridcell "7" [ref=f5e1287] [cursor=pointer]
+              - gridcell "8" [ref=f5e1290] [cursor=pointer]
+              - gridcell "9" [ref=f5e1293] [cursor=pointer]
+              - gridcell "10" [ref=f5e1296] [cursor=pointer]
+            - row [ref=f5e1299]:
+              - gridcell "11" [ref=f5e1300] [cursor=pointer]
+              - gridcell "12" [ref=f5e1303] [cursor=pointer]
+              - gridcell "13" [ref=f5e1306] [cursor=pointer]
+              - gridcell "14" [ref=f5e1309] [cursor=pointer]
+              - gridcell "15" [ref=f5e1312] [cursor=pointer]
+              - gridcell "16" [ref=f5e1315] [cursor=pointer]
+              - gridcell "17" [ref=f5e1318] [cursor=pointer]
+            - row [ref=f5e1321]:
+              - gridcell "18" [ref=f5e1322] [cursor=pointer]
+              - gridcell "19" [ref=f5e1325] [cursor=pointer]
+              - gridcell "20" [ref=f5e1328] [cursor=pointer]
+              - gridcell "21" [ref=f5e1331] [cursor=pointer]
+              - gridcell "22" [ref=f5e1334] [cursor=pointer]
+              - gridcell "23" [ref=f5e1337] [cursor=pointer]
+              - gridcell "24" [ref=f5e1340] [cursor=pointer]
+            - row [ref=f5e1343]:
+              - gridcell "25" [ref=f5e1344] [cursor=pointer]
+              - gridcell "26" [ref=f5e1347] [cursor=pointer]
+              - gridcell "27" [ref=f5e1350] [cursor=pointer]
+              - gridcell "28" [ref=f5e1353] [cursor=pointer]
+              - gridcell "29" [ref=f5e1356] [cursor=pointer]
+              - gridcell "30" [ref=f5e1359] [cursor=pointer]
+              - gridcell "31" [ref=f5e1362] [cursor=pointer]
+            - row [ref=f5e1365]:
+              - gridcell "1" [ref=f5e1366] [cursor=pointer]
+              - gridcell "2" [ref=f5e1369] [cursor=pointer]
+              - gridcell "3" [ref=f5e1372] [cursor=pointer]
+              - gridcell "4" [ref=f5e1375] [cursor=pointer]
+              - gridcell "5" [ref=f5e1378] [cursor=pointer]
+              - gridcell "6" [ref=f5e1381] [cursor=pointer]
+              - gridcell "7" [ref=f5e1384] [cursor=pointer]

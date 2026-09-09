@@ -14,9 +14,11 @@ class DailyReportControllerTest {
         assertFalse(DailyReportController.leader(Map.of("roles",java.util.List.of(Map.of("roleCode","MARKET_MEMBER")))));
     }
     @Test void directorUsesTheContentDailyReportFlow(){
-        var actor=Map.<String,Object>of("roles",java.util.List.of(Map.of("roleCode","DIRECTOR")));
+        var actor=Map.<String,Object>of("marketCode","MY","roles",java.util.List.of(Map.of("roleCode","DIRECTOR")));
         assertEquals("DIRECTOR",DailyReportController.dailyRole(actor));
         assertEquals("MARKET_LEAD",DailyReportController.contentRole(actor));
+        assertTrue(DailyReportController.marketReviewer(actor,"MY"));
+        assertFalse(DailyReportController.marketReviewer(actor,"UK"));
     }
     @Test void editorSubmissionNeedsOnlyItsSixNonNegativeMetrics(){
         var values=DailyReportController.metrics(Map.of("plannedNewPublish",3,"actualNewPublish",2,"plannedFirstReview",4,"actualFirstReview",3,"plannedReworkAcceptance",2,"actualReworkAcceptance",2),"EDITOR",true);

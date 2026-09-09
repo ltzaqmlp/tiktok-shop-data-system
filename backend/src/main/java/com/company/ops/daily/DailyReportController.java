@@ -58,7 +58,7 @@ public class DailyReportController {
         market=market(market);var actor=Identity.actor(req);var args=p("date",day(date),"market",market,"user",Identity.uid(req));String where="r.report_date=#{p.date} and r.market_code=#{p.market} and r.report_type in ('EDITOR','MARKET_LEAD')";
         if(Identity.role(actor,"BOSS"))where+=" and r.submission_status='APPROVED'";
         else if(Identity.role(actor,"DEPT_HEAD")||Identity.role(actor,"ADMIN"))where+=" and r.submission_status<>'DRAFT'";
-        else if(Identity.role(actor,"MARKET_LEAD")&&market.equals(actor.get("marketCode")))where+=" and (r.report_type='EDITOR' or r.reporter_id=#{p.user}) and r.submission_status<>'DRAFT'";
+        else if(marketReviewer(actor,market))where+=" and (r.report_type='EDITOR' or r.reporter_id=#{p.user}) and r.submission_status<>'DRAFT'";
         else if(Identity.role(actor,"DIRECTOR")&&market.equals(actor.get("marketCode")))where+=" and r.reporter_id=#{p.user}";
         else if(Identity.role(actor,"MARKET_MEMBER")&&market.equals(actor.get("marketCode")))where+=" and r.reporter_id=#{p.user}";
         else throw forbidden();
@@ -108,7 +108,7 @@ public class DailyReportController {
 
     private Object review(long id,String reason,HttpServletRequest req){
         var actor=Identity.actor(req);Map<String,Object> result=tx.execute(s->{
-            var report=db.one("select * from daily_metric_report where id=#{p.id} for update",p("id",id));Api.require(!report.isEmpty(),"日报不存在");String state=report.get("submissionStatus").toString();String type=report.get("reportType").toString();String reportMarket=report.get("marketCode").toString();long user=Identity.uid(req);boolean marketReview="PENDING_MARKET".equals(state)&&"EDITOR".equals(type)&&(Identity.role(actor,"MARKET_LEAD")&&reportMarket.equals(actor.get("marketCode"))||Identity.role(actor,"ADMIN"));boolean deptReview="PENDING_DEPT".equals(state)&&(Identity.role(actor,"DEPT_HEAD")||Identity.role(actor,"ADMIN"));if(!marketReview&&!deptReview)throw forbidden();
+            var report=db.one("select * from daily_metric_report where id=#{p.id} for update",p("id",id));Api.require(!report.isEmpty(),"日报不存在");String state=report.get("submissionStatus").toString();String type=report.get("reportType").toString();String reportMarket=report.get("marketCode").toString();long user=Identity.uid(req);boolean marketReview="PENDING_MARKET".equals(state)&&"EDITOR".equals(type)&&(marketReviewer(actor,reportMarket)||Identity.role(actor,"ADMIN"));boolean deptReview="PENDING_DEPT".equals(state)&&(Identity.role(actor,"DEPT_HEAD")||Identity.role(actor,"ADMIN"));if(!marketReview&&!deptReview)throw forbidden();
             String next=reason==null?(marketReview?"PENDING_DEPT":"APPROVED"):"REJECTED";String stage=marketReview?"MARKET":"DEPT";
             db.exec("update daily_metric_report set submission_status=#{p.status},rejection_stage=#{p.stage},rejection_reason=#{p.reason},market_reviewer_id=case when #{p.market} then #{p.user} else market_reviewer_id end,market_reviewed_at=case when #{p.market} then now() else market_reviewed_at end,dept_reviewer_id=case when #{p.dept} then #{p.user} else dept_reviewer_id end,dept_reviewed_at=case when #{p.dept} then now() else dept_reviewed_at end,updated_at=now() where id=#{p.id}",p("status",next,"stage",reason==null?null:stage,"reason",Objects.toString(reason,""),"market",marketReview,"dept",deptReview,"user",user,"id",id));return db.one(select()+" where r.id=#{p.id}",p("id",id));
         });
@@ -147,5 +147,6 @@ public class DailyReportController {
     private static void requireViewer(Map<String,Object> actor){if(!leader(actor))throw forbidden();}
     private static String ownMarket(Map<String,Object> actor){String code=Objects.toString(actor.get("marketCode"),"");Api.require(MARKETS.contains(code),"账号尚未配置负责市场");return code;}
     static String dailyRole(Map<String,Object> actor){if(Identity.role(actor,"MARKET_MEMBER"))return "EDITOR";if(Identity.role(actor,"MARKET_LEAD"))return "MARKET_LEAD";if(Identity.role(actor,"DIRECTOR"))return "DIRECTOR";if(Identity.role(actor,"ADS_BUYER"))return "ADS_BUYER";return "VIEWER";}
+    static boolean marketReviewer(Map<String,Object> actor,String market){return market.equals(actor.get("marketCode"))&&(Identity.role(actor,"MARKET_LEAD")||Identity.role(actor,"DIRECTOR"));}
     static String contentRole(Map<String,Object> actor){String role=dailyRole(actor);if("DIRECTOR".equals(role))return "MARKET_LEAD";if(!Set.of("EDITOR","MARKET_LEAD").contains(role))throw forbidden();return role;}
 }

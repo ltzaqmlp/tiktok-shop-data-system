@@ -85,7 +85,9 @@ public class ImportService {
             db.exec("update sys_import_task set status='VALIDATING',started_at=now() where id=#{p.id}",p("id",id));
             db.exec("update sys_import_task set status='IMPORTING' where id=#{p.id}",p("id",id));
             tx.executeWithoutResult(s->{
-                if(source.equals("ORDER_DETAIL"))readOrder(file,listener);else EasyExcel.read(file.toFile(),listener).headRowNumber(0).sheet().doRead();
+                if(source.equals("ORDER_DETAIL"))readOrder(file,listener);
+                else if(source.equals("PRODUCT_DAILY"))readProduct(file,listener);
+                else EasyExcel.read(file.toFile(),listener).headRowNumber(0).sheet().doRead();
                 Api.require(listener.header!=null,"缺少关键表头："+String.join(", ",ImportMapping.REQUIRED.get(source)));
                 Api.require(listener.count>0,"工作簿没有数据行");
                 if(listener.failed>0)throw new Api.Problem(400,"IMPORT_ROW_INVALID","行数据校验失败，整批数据未写入");
@@ -121,6 +123,13 @@ public class ImportService {
     // fragments without changing the source file.
     private void readOrder(Path file,Reader listener){
         if(file.toString().endsWith(".xlsx")&&hasSplitRows(file)){readBrokenOrderXml(file,listener);return;}
+        readPoi(file,listener,"订单工作簿无法读取");
+    }
+    private void readProduct(Path file,Reader listener){
+        // TikTok product exports can declare dimension=A1 even when rows 3+ contain the report.
+        readPoi(file,listener,"商品工作簿无法读取");
+    }
+    private void readPoi(Path file,Reader listener,String errorMessage){
         try(var book=org.apache.poi.ss.usermodel.WorkbookFactory.create(file.toFile())){
             var formatter=new org.apache.poi.ss.usermodel.DataFormatter(Locale.ROOT);var row=new LinkedHashMap<Integer,String>();int rowNo=-1;
             for(var sourceRow:book.getSheetAt(0)){
@@ -128,7 +137,7 @@ public class ImportService {
                 rowNo=sourceRow.getRowNum();for(var cell:sourceRow)row.put(cell.getColumnIndex(),formatter.formatCellValue(cell));
             }
             if(rowNo!=-1)listener.process(row,rowNo+1);
-        }catch(IOException e){throw new Api.Problem(400,"IMPORT_FILE_INVALID","订单工作簿无法读取");}
+        }catch(IOException e){throw new Api.Problem(400,"IMPORT_FILE_INVALID",errorMessage);}
     }
     private boolean hasSplitRows(Path file){
         try(var zip=new java.util.zip.ZipFile(file.toFile())){

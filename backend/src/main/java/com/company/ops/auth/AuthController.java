@@ -9,9 +9,12 @@ import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.bind.annotation.*;
 import java.util.*;
 import java.time.*;
+import java.nio.charset.StandardCharsets;
+import java.security.*;
 
 @RestController @RequestMapping("/api/v1")
 public class AuthController {
+    static final String REMEMBER_COOKIE="REMEMBER_LOGIN";
     private final Db db;private final Identity identity;private final PasswordEncoder passwords;private final TransactionTemplate tx;
     @Value("${app.login-max-failures}") int threshold;@Value("${app.lock-minutes}") int lockMinutes;
     private final String dummy;
@@ -31,16 +34,21 @@ public class AuthController {
         });
         if(result.get("reason")!=null)throw new Api.Problem(401,result.get("reason").equals("账号暂时锁定")?"AUTH_ACCOUNT_LOCKED":"AUTH_INVALID_CREDENTIALS",result.get("reason").toString());
         @SuppressWarnings("unchecked")var u=(Map<String,Object>)result.get("user");
-        if(req.getSession(false)!=null)req.getSession(false).invalidate();var session=req.getSession(true);boolean remember=Boolean.TRUE.equals(body.get("rememberMe"));session.setMaxInactiveInterval(remember?30*24*60*60:4*60*60);session.setAttribute("uid",Long.parseLong(u.get("id").toString()));session.setAttribute("version",u.get("sessionVersion"));var cookie=new Cookie("JSESSIONID",session.getId());cookie.setMaxAge(remember?30*24*60*60:-1);cookie.setHttpOnly(true);cookie.setSecure(req.isSecure());cookie.setPath(req.getContextPath().isBlank()?"/":req.getContextPath());cookie.setAttribute("SameSite","Lax");res.addCookie(cookie);
+        if(req.getSession(false)!=null)req.getSession(false).invalidate();var session=req.getSession(true);boolean remember=Boolean.TRUE.equals(body.get("rememberMe"));session.setMaxInactiveInterval(remember?30*24*60*60:4*60*60);session.setAttribute("uid",Long.parseLong(u.get("id").toString()));session.setAttribute("version",u.get("sessionVersion"));var cookie=new Cookie("JSESSIONID",session.getId());cookie.setMaxAge(remember?30*24*60*60:-1);cookie.setHttpOnly(true);cookie.setSecure(req.isSecure());cookie.setPath(req.getContextPath().isBlank()?"/":req.getContextPath());cookie.setAttribute("SameSite","Lax");res.addCookie(cookie);clearRemember(req,res);if(remember)createRemember(Long.parseLong(u.get("id").toString()),Integer.parseInt(u.get("sessionVersion").toString()),req,res);
         return Api.ok(req,Map.of("mustChangePassword",u.get("mustChangePassword")));
     }
     @GetMapping("/auth/session") public Object session(HttpServletRequest req){var session=req.getSession(false);return Api.ok(req,Map.of("authenticated",session!=null&&session.getAttribute("uid")!=null));}
     @GetMapping("/auth/me") public Object me(HttpServletRequest req){var user=new LinkedHashMap<>(Identity.actor(req));user.remove("sessionVersion");return Api.ok(req,user);}
     @GetMapping("/me/menus") public Object menus(HttpServletRequest req){return Api.ok(req,identity.menus(Identity.actor(req)));}
-    @PostMapping("/auth/logout") public Object logout(HttpServletRequest req){req.getSession().invalidate();return Api.ok(req,Map.of());}
+    @PostMapping("/auth/logout") public Object logout(HttpServletRequest req,HttpServletResponse res){clearRemember(req,res);req.getSession().invalidate();return Api.ok(req,Map.of());}
     @PostMapping("/auth/change-password") public Object change(@RequestBody Map<String,Object> body,HttpServletRequest req){
         String old=Objects.toString(body.get("oldPassword"),""),next=Objects.toString(body.get("newPassword"),"");validatePassword(next);Api.require(!next.equals(old),"新密码不能与原密码相同");
-        tx.executeWithoutResult(s->{var u=db.one("select password_hash from sys_user where id=#{p.id} for update",p("id",Identity.uid(req)));if(!passwords.matches(old,u.get("passwordHash").toString()))throw new Api.Problem(400,"AUTH_INVALID_CREDENTIALS","原密码不正确");db.exec("update sys_user set password_hash=#{p.hash},must_change_password=false,session_version=session_version+1,updated_at=now() where id=#{p.id}",p("id",Identity.uid(req),"hash",passwords.encode(next)));});
+        tx.executeWithoutResult(s->{var u=db.one("select password_hash from sys_user where id=#{p.id} for update",p("id",Identity.uid(req)));if(!passwords.matches(old,u.get("passwordHash").toString()))throw new Api.Problem(400,"AUTH_INVALID_CREDENTIALS","原密码不正确");db.exec("update sys_user set password_hash=#{p.hash},must_change_password=false,session_version=session_version+1,updated_at=now() where id=#{p.id}",p("id",Identity.uid(req),"hash",passwords.encode(next)));db.exec("delete from sys_remember_token where user_id=#{p.id}",p("id",Identity.uid(req)));});
         req.setAttribute("auditAction","PASSWORD_CHANGE");req.getSession().invalidate();return Api.ok(req,Map.of());
     }
+    static String tokenHash(String value){try{return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(value.getBytes(StandardCharsets.UTF_8)));}catch(NoSuchAlgorithmException e){throw new IllegalStateException(e);}}
+    static String rememberValue(HttpServletRequest req){for(Cookie cookie:Optional.ofNullable(req.getCookies()).orElse(new Cookie[0]))if(REMEMBER_COOKIE.equals(cookie.getName()))return cookie.getValue();return "";}
+    static void expireRemember(HttpServletRequest req,HttpServletResponse res){var cookie=new Cookie(REMEMBER_COOKIE,"");cookie.setMaxAge(0);cookie.setHttpOnly(true);cookie.setSecure(req.isSecure());cookie.setPath(req.getContextPath().isBlank()?"/":req.getContextPath());cookie.setAttribute("SameSite","Lax");res.addCookie(cookie);}
+    private void clearRemember(HttpServletRequest req,HttpServletResponse res){String selector=rememberValue(req).split("\\.",2)[0];if(!selector.isBlank())db.exec("delete from sys_remember_token where selector=#{p.selector}",p("selector",selector));expireRemember(req,res);}
+    private void createRemember(long user,int version,HttpServletRequest req,HttpServletResponse res){String selector=UUID.randomUUID().toString(),validator=UUID.randomUUID()+UUID.randomUUID().toString().replace("-","");db.exec("insert into sys_remember_token(selector,token_hash,user_id,session_version,expires_at) values(#{p.selector},#{p.hash},#{p.user},#{p.version},now()+interval '30 days')",p("selector",selector,"hash",tokenHash(validator),"user",user,"version",version));var cookie=new Cookie(REMEMBER_COOKIE,selector+"."+validator);cookie.setMaxAge(30*24*60*60);cookie.setHttpOnly(true);cookie.setSecure(req.isSecure());cookie.setPath(req.getContextPath().isBlank()?"/":req.getContextPath());cookie.setAttribute("SameSite","Lax");res.addCookie(cookie);}
 }

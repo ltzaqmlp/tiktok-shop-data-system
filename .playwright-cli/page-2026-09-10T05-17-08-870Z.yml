@@ -1,0 +1,104 @@
+- generic [ref=f3e83]:
+  - link "跳转到主要内容" [ref=f3e84] [cursor=pointer]:
+    - /url: "#main"
+  - complementary "主导航" [ref=f3e85]:
+    - generic [ref=f3e86]:
+      - img "HERBMODA" [ref=f3e88]
+      - generic [ref=f3e89]:
+        - strong [ref=f3e90]: HERBMODA
+        - generic [ref=f3e91]: Commerce Intelligence
+    - generic [ref=f3e92]: 工作空间
+    - navigation [ref=f3e93]:
+      - link "数据看板" [ref=f3e94] [cursor=pointer]:
+        - /url: /dashboard
+      - link "日报" [ref=f3e101] [cursor=pointer]:
+        - /url: /daily-reports
+    - generic [ref=f3e106]: 内部经营系统 · V1.0
+  - generic [ref=f3e109]:
+    - banner [ref=f3e110]:
+      - generic [ref=f3e111]:
+        - button "收起侧栏" [ref=f3e112] [cursor=pointer]
+        - navigation "面包屑" [ref=f3e117]:
+          - generic [ref=f3e118]:
+            - link "工作空间" [ref=f3e119]
+            - text: /
+          - link "日报" [ref=f3e121]
+      - generic [ref=f3e122]:
+        - generic [ref=f3e123]: 马
+        - generic [ref=f3e124]:
+          - strong [ref=f3e125]: 马来剪辑
+          - generic [ref=f3e126]: 剪辑
+        - button "退出登录" [ref=f3e127] [cursor=pointer]
+    - main [ref=f3e133]:
+      - generic [ref=f3e134]:
+        - generic [ref=f3e135]:
+          - heading "日报" [level=1] [ref=f3e136]
+          - paragraph [ref=f3e137]: 按角色填报，审核通过后实时进入对应汇总。
+        - generic [ref=f3e138]:
+          - text: 日期
+          - combobox "日期" [ref=f3e145]: 2026-09-10
+      - generic [ref=f3e146]:
+        - tablist [ref=f3e150]:
+          - tab "马来西亚日报" [selected] [ref=f3e152]
+          - tab "新增日报" [ref=f3e153]
+        - tabpanel "马来西亚日报" [ref=f3e155]:
+          - generic [ref=f3e156]:
+            - generic [ref=f3e157]: 马来西亚区日报 按个人日报展示。
+            - table [ref=f3e159]:
+              - rowgroup [ref=f3e160]:
+                - row [ref=f3e161]:
+                  - columnheader "地区" [ref=f3e162]
+                  - columnheader "每日任务" [ref=f3e163]
+                  - columnheader "执行岗位" [ref=f3e164]
+                  - columnheader "具体负责人" [ref=f3e165]
+                  - columnheader "计划" [ref=f3e166]
+                  - columnheader "实际" [ref=f3e167]
+                  - columnheader "还差" [ref=f3e168]
+                  - columnheader "完成率" [ref=f3e169]
+                  - columnheader "交付链接 / 编号清单" [ref=f3e170]
+                  - columnheader "备注/卡点" [ref=f3e171]
+                  - columnheader "截止时间" [ref=f3e172]
+                  - columnheader "状态" [ref=f3e173]
+              - rowgroup [ref=f3e174]:
+                - row [ref=f3e175]:
+                  - cell "马来西亚" [ref=f3e176]
+                  - cell "新增发布" [ref=f3e177]
+                  - cell "剪辑" [ref=f3e178]
+                  - cell "马来剪辑" [ref=f3e179]
+                  - cell "5" [ref=f3e180]
+                  - cell "5" [ref=f3e181]
+                  - cell "0" [ref=f3e182]
+                  - cell "100.00%" [ref=f3e183]
+                  - cell "—" [ref=f3e184]
+                  - cell "—" [ref=f3e185]
+                  - cell "09/10 13:01" [ref=f3e186]
+                  - cell "已退回" [ref=f3e187]
+                - row [ref=f3e190]:
+                  - cell "马来西亚" [ref=f3e191]
+                  - cell "首次交审" [ref=f3e192]
+                  - cell "剪辑" [ref=f3e193]
+                  - cell "马来剪辑" [ref=f3e194]
+                  - cell "5" [ref=f3e195]
+                  - cell "5" [ref=f3e196]
+                  - cell "0" [ref=f3e197]
+                  - cell "100.00%" [ref=f3e198]
+                  - cell "—" [ref=f3e199]
+                  - cell "—" [ref=f3e200]
+                  - cell "09/10 13:01" [ref=f3e201]
+                  - cell "已退回" [ref=f3e202]
+                - row [ref=f3e205]:
+                  - cell "马来西亚" [ref=f3e206]
+                  - cell "返工验收" [ref=f3e207]
+                  - cell "剪辑" [ref=f3e208]
+                  - cell "马来剪辑" [ref=f3e209]
+                  - cell "5" [ref=f3e210]
+                  - cell "5" [ref=f3e211]
+                  - cell "0" [ref=f3e212]
+                  - cell "100.00%" [ref=f3e213]
+                  - cell "—" [ref=f3e214]
+                  - cell "—" [ref=f3e215]
+                  - cell "09/10 13:01" [ref=f3e216]
+                  - cell "已退回" [ref=f3e217]
+    - contentinfo [ref=f3e220]:
+      - text: 跨境电商经营数据平台
+      - generic [ref=f3e221]: 按业务日期统计 · 金额按市场币种展示

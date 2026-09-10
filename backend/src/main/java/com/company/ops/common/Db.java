@@ -7,6 +7,7 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class Db {
+    private static final Set<String> JSON_FIELDS=Set.of("rawExtra","requestSummary","beforeData","afterData","deliveryResults");
     private final SqlMapper mapper;
     private final ObjectMapper json;
     public Db(SqlMapper mapper, ObjectMapper json) { this.mapper=mapper; this.json=json; }
@@ -32,7 +33,7 @@ public class Db {
             if(value!=null && (k.equals("id")||k.endsWith("Id")||k.equals("createdBy"))) v=value.toString();
             else if(value instanceof java.sql.Timestamp t) v=t.toInstant().toString();
             else if(value instanceof java.sql.Date d) v=d.toLocalDate().toString();
-            else if(value!=null && value.getClass().getName().equals("org.postgresql.util.PGobject")) {
+            else if(value!=null && (value.getClass().getName().equals("org.postgresql.util.PGobject") || JSON_FIELDS.contains(k))) {
                 try{v=json.readValue(value.toString(),Object.class);}catch(Exception ignored){v=value.toString();}
             }
             out.put(k,v);

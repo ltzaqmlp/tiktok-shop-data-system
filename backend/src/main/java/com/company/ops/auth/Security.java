@@ -33,13 +33,14 @@ public class Security {
             req.setAttribute("requestId",UUID.randomUUID().toString());res.setHeader("X-Request-ID",Api.id(req));res.setHeader("Cache-Control","no-store");
             String path=req.getRequestURI();boolean write=!Set.of("GET","HEAD","OPTIONS").contains(req.getMethod());long start=System.currentTimeMillis();
             try{
+                if("/api/v1/auth/session".equals(path))restoreRemember(req,res);
                 if(write){
                     if(!"XMLHttpRequest".equals(req.getHeader("X-Requested-With")))throw new Api.Problem(403,"CSRF_REJECTED","请求来源校验失败");
                     String origin=req.getHeader("Origin");
                     if(origin!=null){URI uri=URI.create(origin);if(!Objects.equals(uri.getAuthority(),req.getHeader("Host"))||!Objects.equals(uri.getScheme(),req.getScheme()))throw new Api.Problem(403,"CSRF_REJECTED","不允许跨站请求");}
                 }
                 if(!Set.of("/api/v1/auth/login","/api/v1/auth/session","/api/v1/system/health","/error").contains(path)){
-                    var session=req.getSession(false);
+                    var session=req.getSession(false);if(session==null||session.getAttribute("uid")==null)session=restoreRemember(req,res);
                     if(session==null||session.getAttribute("uid")==null)throw new Api.Problem(401,"AUTH_REQUIRED","请先登录");
                     var user=identity.user((long)session.getAttribute("uid"));
                     if(user.isEmpty()||!"ACTIVE".equals(user.get("status"))||!Objects.equals(session.getAttribute("version"),user.get("sessionVersion"))){session.invalidate();throw new Api.Problem(401,"AUTH_REQUIRED","会话已失效，请重新登录");}
@@ -63,6 +64,9 @@ public class Security {
                         p("uid",Identity.uid(req),"module",module,"action",Objects.toString(req.getAttribute("auditAction"),req.getMethod()+" "+path),"target",path,"targetId",Objects.toString(req.getAttribute("targetId"),null),"requestId",Api.id(req),"summary",db.json(req.getAttribute("auditSummary")),"before",db.json(req.getAttribute("auditBefore")),"after",db.json(req.getAttribute("auditAfter")),"success",res.getStatus()<400,"duration",(int)(System.currentTimeMillis()-start),"ip",req.getRemoteAddr()));
                 }
             }
+        }
+        private HttpSession restoreRemember(HttpServletRequest req,HttpServletResponse res){
+            String[] parts=AuthController.rememberValue(req).split("\\.",2);if(parts.length!=2){return null;}var token=db.one("select u.id,u.session_version from sys_remember_token t join sys_user u on u.id=t.user_id where t.selector=#{p.selector} and t.token_hash=#{p.hash} and t.expires_at>now() and t.session_version=u.session_version and u.status='ACTIVE' and u.deleted_at is null",p("selector",parts[0],"hash",AuthController.tokenHash(parts[1])));if(token.isEmpty()){AuthController.expireRemember(req,res);return null;}var session=req.getSession(true);session.setMaxInactiveInterval(30*24*60*60);session.setAttribute("uid",Long.parseLong(token.get("id").toString()));session.setAttribute("version",Integer.parseInt(token.get("sessionVersion").toString()));return session;
         }
     }
 }

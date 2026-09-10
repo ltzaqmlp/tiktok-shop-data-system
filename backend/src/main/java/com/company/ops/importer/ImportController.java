@@ -14,7 +14,7 @@ public class ImportController {
     private final Db db;private final ImportService service;
     public ImportController(Db db,ImportService service){this.db=db;this.service=service;}
     @PostMapping public Object upload(@RequestParam String sourceType,@RequestParam String marketCode,@RequestParam long shopId,@RequestParam(required=false)String bizDate,@RequestParam("file")List<MultipartFile> files,@RequestParam(defaultValue="false")boolean force,HttpServletRequest req)throws Exception{
-        Api.require(!files.isEmpty()&&("PRODUCT_DAILY".equals(sourceType)||files.size()<=10),"除商品数据外每批最多导入 10 个文件");Api.require(files.stream().mapToLong(MultipartFile::getSize).sum()<=500L*1024*1024,"批量文件总大小不能超过 500 MB");
+        Api.require(!files.isEmpty(),"请至少选择一个文件");Api.require(files.stream().mapToLong(MultipartFile::getSize).sum()<=500L*1024*1024,"批量文件总大小不能超过 500 MB");
         req.setAttribute("auditAction","IMPORT_START");req.setAttribute("auditSummary",p("sourceType",sourceType,"marketCode",marketCode,"shopId",shopId,"fileCount",files.size(),"filenames",files.stream().map(MultipartFile::getOriginalFilename).toList()));
         if(force&&!Identity.role(Identity.actor(req),"ADMIN"))throw new Api.Problem(403,"AUTH_FORBIDDEN","仅管理员可以强制重跑");
         if(Identity.role(Identity.actor(req),"ADS_BUYER")&&!Identity.role(Identity.actor(req),"ADMIN")&&!sourceType.equals("GMV_MAX_CAMPAIGN"))throw new Api.Problem(403,"AUTH_FORBIDDEN","投流角色仅能导入广告数据");

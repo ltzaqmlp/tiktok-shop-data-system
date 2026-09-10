@@ -46,7 +46,7 @@ async function submit() { if (!await form.value?.validate().catch(() => false)) 
                                 #prefix><el-icon>
                                     <Lock />
                                 </el-icon></template></el-input></el-form-item>
-                    <div class="login-options"><el-checkbox v-model="values.rememberMe">Keep me signed in</el-checkbox>
+                    <div class="login-options"><el-checkbox v-model="values.rememberMe">记住密码</el-checkbox>
                     </div><el-button class="submit" type="primary" native-type="submit" size="large"
                         :loading="busy">Sign in <el-icon>
                             <ArrowRight />

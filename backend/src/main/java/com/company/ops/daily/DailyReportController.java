@@ -22,6 +22,7 @@ public class DailyReportController {
     private static final List<String> EDITOR=List.of("plannedNewPublish","actualNewPublish","plannedFirstReview","actualFirstReview","plannedReworkAcceptance","actualReworkAcceptance");
     private static final List<String> LEAD=List.of("plannedReviewVideos","actualReviewVideos","plannedValidBenchmark","actualValidBenchmark","plannedDeconstruction","actualDeconstruction","plannedCompleteScript","actualCompleteScript","plannedReadyScript","actualReadyScript");
     private static final List<String> ADS=List.of("plannedTest","actualTest","newAdjustPlan","adSpend","adGmv","impressions","clicks","orders","expandedMaterial","stoppedMaterial");
+    private static final List<String> SIMPLE=List.of();
     private final Db db; private final TransactionTemplate tx;
     public DailyReportController(Db db,org.springframework.transaction.PlatformTransactionManager manager){this.db=db;this.tx=new TransactionTemplate(manager);}
 
@@ -101,6 +102,17 @@ public class DailyReportController {
         return Api.ok(req,rows(where,args));
     }
 
+    @GetMapping("/simple/{type}")
+    public Object simple(@PathVariable String type,@RequestParam String date,HttpServletRequest req){
+        type=simpleType(type);var actor=Identity.actor(req);var args=p("date",day(date),"user",Identity.uid(req),"type",type);
+        String where="r.report_date=#{p.date} and r.report_type=#{p.type}";
+        if(Identity.role(actor,"BOSS"))where+=" and r.submission_status='APPROVED'";
+        else if(Identity.role(actor,"DEPT_HEAD")||Identity.role(actor,"ADMIN")){where+=" and r.submission_status<>'DRAFT'";}
+        else if(simpleRole(actor).equals(type))where+=" and r.reporter_id=#{p.user}";
+        else throw forbidden();
+        return Api.ok(req,rows(where,args));
+    }
+
     @GetMapping("/mine/content")
     public Object mineContent(@RequestParam String date,HttpServletRequest req){
         String type=contentRole(Identity.actor(req));var args=p("date",day(date),"user",Identity.uid(req),"type",type);
@@ -117,11 +129,20 @@ public class DailyReportController {
     @PutMapping("/mine/ads/{date}/{market}") public Object saveAds(@PathVariable String date,@PathVariable String market,@RequestBody Map<String,Object> body,HttpServletRequest req){return storeAds(date,market,body,req,false);}
     @PostMapping("/mine/ads/{date}/{market}/submit") public Object submitAds(@PathVariable String date,@PathVariable String market,@RequestBody Map<String,Object> body,HttpServletRequest req){return storeAds(date,market,body,req,true);}
 
+    @GetMapping("/mine/simple")
+    public Object mineSimple(@RequestParam String date,HttpServletRequest req){
+        var actor=Identity.actor(req);String type=simpleRole(actor);var report=db.one(select()+" where r.report_date=#{p.date} and r.reporter_id=#{p.user} and r.report_type=#{p.type}",p("date",day(date),"user",Identity.uid(req),"type",type));
+        if(report.isEmpty())report.putAll(blank(day(date),type,"MY"));return Api.ok(req,report);
+    }
+    @PutMapping("/mine/simple/{date}") public Object saveSimple(@PathVariable String date,@RequestBody Map<String,Object> body,HttpServletRequest req){return storeSimple(date,body,req,false);}
+    @PostMapping("/mine/simple/{date}/submit") public Object submitSimple(@PathVariable String date,@RequestBody Map<String,Object> body,HttpServletRequest req){return storeSimple(date,body,req,true);}
+
     @PostMapping("/{id}/approve") public Object approve(@PathVariable long id,HttpServletRequest req){return review(id,null,req);}
     @PostMapping("/{id}/reject") public Object reject(@PathVariable long id,@RequestBody Map<String,Object> body,HttpServletRequest req){return review(id,Api.text(body,"reason",2000,true),req);}
 
     private Object storeContent(String value,Map<String,Object> body,HttpServletRequest req,boolean submit){var actor=Identity.actor(req);return store(day(value),contentRole(actor),ownMarket(actor),body,req,submit);}
     private Object storeAds(String value,String valueMarket,Map<String,Object> body,HttpServletRequest req,boolean submit){requireRole(Identity.actor(req),"ADS_BUYER");return store(day(value),"ADS_BUYER",market(valueMarket),body,req,submit);}
+    private Object storeSimple(String value,Map<String,Object> body,HttpServletRequest req,boolean submit){var actor=Identity.actor(req);return store(day(value),simpleRole(actor),"MY",body,req,submit);}
     private Object store(LocalDate date,String type,String market,Map<String,Object> body,HttpServletRequest req,boolean submit){
         long user=Identity.uid(req);Map<String,Object> result=tx.execute(s->{
             if("ADS_BUYER".equals(type)){
@@ -168,8 +189,8 @@ public class DailyReportController {
     }
     static Map<String,Object> metrics(Map<String,Object> body,String type,boolean required){
         var values=p();for(String key:EDITOR)values.put(camelToSnake(key),0);for(String key:LEAD)values.put(camelToSnake(key),0);for(String key:ADS)values.put(camelToSnake(key),key.equals("adSpend")||key.equals("adGmv")?BigDecimal.ZERO:0);
-        List<String> fields="EDITOR".equals(type)?EDITOR:"DIRECTOR".equals(type)?LEAD:ADS;
-        for(String key:fields)values.put(camelToSnake(key),(key.equals("adSpend")||key.equals("adGmv"))?money(body,key,required):number(body,key,required));values.put("notes",Api.text(body,"notes",4000,false));return values;
+        List<String> fields="EDITOR".equals(type)?EDITOR:"DIRECTOR".equals(type)?LEAD:"ADS_BUYER".equals(type)?ADS:SIMPLE;
+        for(String key:fields)values.put(camelToSnake(key),(key.equals("adSpend")||key.equals("adGmv"))?money(body,key,required):number(body,key,required));values.put("notes",Api.text(body,"notes",4000,required&&Set.of("EDITOR","DIRECTOR","OPS","TECH").contains(type)));return values;
     }
     private static long number(Map<String,Object> body,String key,boolean required){Object raw=body.get(key);if(raw==null||raw.toString().isBlank()){Api.require(!required,key+" 不能为空");return 0;}try{long result=Long.parseLong(raw.toString());Api.require(result>=0,key+" 不能小于 0");return result;}catch(NumberFormatException e){throw new Api.Problem(400,"VALIDATION_ERROR",key+" 必须是非负整数");}}
     private static BigDecimal money(Map<String,Object> body,String key,boolean required){Object raw=body.get(key);if(raw==null||raw.toString().isBlank()){Api.require(!required,key+" 不能为空");return BigDecimal.ZERO;}try{var result=new BigDecimal(raw.toString());Api.require(result.signum()>=0&&result.scale()<=2,key+" 必须是最多两位小数的非负数");return result;}catch(NumberFormatException e){throw new Api.Problem(400,"VALIDATION_ERROR",key+" 格式无效");}}
@@ -186,7 +207,9 @@ public class DailyReportController {
     private static void requireRole(Map<String,Object> actor,String role){if(!Identity.role(actor,role)&&!Identity.role(actor,"ADMIN"))throw forbidden();}
     private static void requireViewer(Map<String,Object> actor){if(!leader(actor))throw forbidden();}
     private static String ownMarket(Map<String,Object> actor){String code=Objects.toString(actor.get("marketCode"),"");Api.require(MARKETS.contains(code),"账号尚未配置负责市场");return code;}
-    static String dailyRole(Map<String,Object> actor){if(Identity.role(actor,"MARKET_MEMBER"))return "EDITOR";if(Identity.role(actor,"DIRECTOR"))return "DIRECTOR";if(Identity.role(actor,"ADS_BUYER"))return "ADS_BUYER";return "VIEWER";}
+    static String dailyRole(Map<String,Object> actor){if(Identity.role(actor,"MARKET_MEMBER"))return "EDITOR";if(Identity.role(actor,"DIRECTOR"))return "DIRECTOR";if(Identity.role(actor,"ADS_BUYER"))return "ADS_BUYER";if(Identity.role(actor,"OPS"))return "OPS";if(Identity.role(actor,"TECH"))return "TECH";return "VIEWER";}
     static boolean marketReviewer(Map<String,Object> actor,String market){return market.equals(actor.get("marketCode"))&&Identity.role(actor,"DIRECTOR");}
     static String contentRole(Map<String,Object> actor){String role=dailyRole(actor);if(!Set.of("EDITOR","DIRECTOR").contains(role))throw forbidden();return role;}
+    private static String simpleType(String value){String type=Objects.toString(value,"").toUpperCase(Locale.ROOT);Api.require(Set.of("OPS","TECH").contains(type),"日报类型无效");return type;}
+    private static String simpleRole(Map<String,Object> actor){String role=dailyRole(actor);if(!Set.of("OPS","TECH").contains(role))throw forbidden();return role;}
 }

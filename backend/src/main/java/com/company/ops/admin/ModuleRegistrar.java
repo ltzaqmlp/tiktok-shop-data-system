@@ -17,7 +17,7 @@ public class ModuleRegistrar implements ApplicationRunner {
     @Value("${app.admin-username}")String username;@Value("${app.admin-password}")String password;@Value("${app.shop-name}")String shopName;@Value("${app.shop-key}")String shopKey;
     public ModuleRegistrar(Db db,PasswordEncoder passwords){this.db=db;this.passwords=passwords;}
     @Override @Transactional public void run(ApplicationArguments ignored){
-        String[][] roles={{"ADMIN","系统管理员"},{"BOSS","老板"},{"DEPT_HEAD","部门负责人"},{"OPS","运营"},{"ADS_BUYER","投流投手"},{"MARKET_MEMBER","剪辑"},{"DIRECTOR","编导"},{"SHOOTER","拍摄"}};
+        String[][] roles={{"ADMIN","系统管理员"},{"BOSS","老板"},{"DEPT_HEAD","部门负责人"},{"OPS","运营"},{"TECH","技术"},{"ADS_BUYER","投流投手"},{"MARKET_MEMBER","剪辑"},{"DIRECTOR","编导"},{"SHOOTER","拍摄"}};
         for(var r:roles)db.exec("insert into sys_role(role_code,role_name,system_role) values(#{p.code},#{p.name},true) on conflict(role_code) do nothing",p("code",r[0],"name",r[1]));
         db.exec("update sys_role set role_name='剪辑',updated_at=now() where role_code='MARKET_MEMBER'",Map.of());
         db.exec("update sys_module set status='OFFLINE'",Map.of());
@@ -33,8 +33,8 @@ public class ModuleRegistrar implements ApplicationRunner {
         if(bootstrap){
         db.exec("insert into sys_role_menu(role_id,menu_id) select r.id,m.id from sys_role r join sys_menu m on m.menu_code='dashboard.overview' on conflict do nothing",Map.of());
             db.exec("insert into sys_role_menu(role_id,menu_id) select r.id,m.id from sys_role r cross join sys_menu m where (r.role_code='ADMIN' and m.menu_code in ('dashboard.overview','daily.report','shooting.ticket','import.upload','export.details','admin.users','admin.roles','admin.menus','admin.sku-config','admin.audit','admin.login-logs')) or (r.role_code in ('BOSS','DEPT_HEAD','OPS','ADS_BUYER','MARKET_MEMBER','DIRECTOR','SHOOTER') and m.menu_code in ('dashboard.overview','daily.report')) or (r.role_code in ('DEPT_HEAD','OPS','ADS_BUYER','DIRECTOR','MARKET_MEMBER','SHOOTER') and m.menu_code='import.upload') or (r.role_code in ('DEPT_HEAD','DIRECTOR','SHOOTER') and m.menu_code='shooting.ticket') or (r.role_code='BOSS' and m.menu_code='export.details') on conflict do nothing",Map.of());
-        db.exec("delete from sys_role_menu where role_id in (select id from sys_role where role_code in ('OPS','SHOOTER')) and menu_id=(select id from sys_menu where menu_code='daily.report')",Map.of());
         }
+        db.exec("insert into sys_role_menu(role_id,menu_id) select r.id,m.id from sys_role r cross join sys_menu m where r.role_code in ('OPS','TECH') and m.menu_code='daily.report' on conflict do nothing",Map.of());
         if(bootstrap){
             AuthController.validatePassword(password);
             String id=db.insert("insert into sys_user(username,display_name,password_hash) values(#{p.username},'系统管理员',#{p.hash})",p("username",username,"hash",passwords.encode(password)));

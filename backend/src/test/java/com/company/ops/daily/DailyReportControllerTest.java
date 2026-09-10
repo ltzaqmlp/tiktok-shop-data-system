@@ -20,8 +20,14 @@ class DailyReportControllerTest {
         assertTrue(DailyReportController.marketReviewer(actor,"MY"));
         assertFalse(DailyReportController.marketReviewer(actor,"UK"));
     }
+    @Test void operationsAndTechnicalReportsAreSimpleAndRequireNotes(){
+        assertEquals("OPS",DailyReportController.dailyRole(Map.of("roles",java.util.List.of(Map.of("roleCode","OPS")))));
+        assertEquals("TECH",DailyReportController.dailyRole(Map.of("roles",java.util.List.of(Map.of("roleCode","TECH")))));
+        assertThrows(Api.Problem.class,()->DailyReportController.metrics(Map.of(),"OPS",true));
+        assertEquals("已处理接口故障",DailyReportController.metrics(Map.of("notes","已处理接口故障"),"TECH",true).get("notes"));
+    }
     @Test void editorSubmissionNeedsOnlyItsSixNonNegativeMetrics(){
-        var values=DailyReportController.metrics(Map.of("plannedNewPublish",3,"actualNewPublish",2,"plannedFirstReview",4,"actualFirstReview",3,"plannedReworkAcceptance",2,"actualReworkAcceptance",2),"EDITOR",true);
+        var values=DailyReportController.metrics(Map.of("plannedNewPublish",3,"actualNewPublish",2,"plannedFirstReview",4,"actualFirstReview",3,"plannedReworkAcceptance",2,"actualReworkAcceptance",2,"notes","今日按计划完成"),"EDITOR",true);
         assertEquals(3L,values.get("planned_new_publish"));
         assertEquals(0,values.get("planned_review_videos"));
         assertEquals("0",values.get("ad_spend").toString());

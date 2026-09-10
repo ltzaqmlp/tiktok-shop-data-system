@@ -95,9 +95,8 @@ public class DailyReportController {
     @GetMapping("/ads")
     public Object ads(@RequestParam String date,HttpServletRequest req){
         var actor=Identity.actor(req);var args=p("date",day(date),"user",Identity.uid(req));String where="r.report_date=#{p.date} and r.report_type='ADS_BUYER'";
-        if(Identity.role(actor,"BOSS"))return Api.ok(req,adsSummary(day(date)));
+        if(Identity.role(actor,"BOSS")||Identity.role(actor,"ADS_BUYER")){}
         else if(Identity.role(actor,"DEPT_HEAD")||Identity.role(actor,"ADMIN"))where+=" and r.submission_status<>'DRAFT'";
-        else if(Identity.role(actor,"ADS_BUYER"))where+=" and r.reporter_id=#{p.user}";
         else throw forbidden();
         return Api.ok(req,rows(where,args));
     }
@@ -125,6 +124,12 @@ public class DailyReportController {
     private Object storeAds(String value,String valueMarket,Map<String,Object> body,HttpServletRequest req,boolean submit){requireRole(Identity.actor(req),"ADS_BUYER");return store(day(value),"ADS_BUYER",market(valueMarket),body,req,submit);}
     private Object store(LocalDate date,String type,String market,Map<String,Object> body,HttpServletRequest req,boolean submit){
         long user=Identity.uid(req);Map<String,Object> result=tx.execute(s->{
+            if("ADS_BUYER".equals(type)){
+                String lockKey=date+"|"+market;
+                db.rows("select pg_advisory_xact_lock(hashtextextended(#{p.lockKey},0))",p("lockKey",lockKey));
+                var occupied=db.one("select u.display_name reporter_name from daily_metric_report r join sys_user u on u.id=r.reporter_id where r.report_date=#{p.date} and r.market_code=#{p.market} and r.report_type='ADS_BUYER' and r.reporter_id<>#{p.user} limit 1",p("date",date,"market",market,"user",user));
+                if(!occupied.isEmpty())throw new Api.Problem(409,"DAILY_ADS_MARKET_TAKEN","该国家当天已由"+occupied.get("reporterName")+"填报，不能重复填写");
+            }
             var old=db.one("select id,submission_status from daily_metric_report where report_date=#{p.date} and reporter_id=#{p.user} and report_type=#{p.type} and market_code=#{p.market} for update",p("date",date,"user",user,"type",type,"market",market));
             Api.require(old.isEmpty()||!"APPROVED".equals(old.get("submissionStatus")),"已审核通过的日报不能修改，请由审核人退回后再填写");
             var values=metrics(body,type,submit);values.put("deliveryResults",db.json(deliveryResults(body,type)));values.put("submitted",submit);values.put("date",date);values.put("user",user);values.put("type",type);values.put("market",market);values.put("status",submit?("EDITOR".equals(type)?"PENDING_MARKET":"PENDING_DEPT"):(old.isEmpty()?"DRAFT":old.get("submissionStatus").toString()));
@@ -156,14 +161,6 @@ public class DailyReportController {
     }
 
     private List<Map<String,Object>> rows(String where,Map<String,Object> args){return db.rows(select()+" where "+where+" order by r.market_code,u.display_name,r.id",args);}
-    private List<Map<String,Object>> adsSummary(LocalDate date){
-        String sql="select m.market_code id,#{p.date} report_date,'ADS_BUYER' report_type,m.market_code,m.market_name,'已审核汇总' reporter_name,'APPROVED' submission_status,'' rejection_reason,"+
-            "coalesce(sum(r.planned_test),0) planned_test,coalesce(sum(r.actual_test),0) actual_test,greatest(coalesce(sum(r.planned_test-r.actual_test),0),0) test_gap,coalesce(sum(r.new_adjust_plan),0) new_adjust_plan,coalesce(sum(r.ad_spend),0) ad_spend,coalesce(sum(r.ad_gmv),0) ad_gmv,"+
-            "case when coalesce(sum(r.ad_spend),0)=0 then 0 else round(sum(r.ad_gmv)/sum(r.ad_spend),4) end roi,coalesce(sum(r.impressions),0) impressions,coalesce(sum(r.clicks),0) clicks,case when coalesce(sum(r.impressions),0)=0 then 0 else round(sum(r.clicks)::numeric/sum(r.impressions),4) end ctr,"+
-            "coalesce(sum(r.orders),0) orders,coalesce(sum(r.expanded_material),0) expanded_material,coalesce(sum(r.stopped_material),0) stopped_material " +
-            "from dim_market m left join daily_metric_report r on r.market_code=m.market_code and r.report_date=#{p.date} and r.report_type='ADS_BUYER' and r.submission_status='APPROVED' where m.market_code in ('MY','UK','US','DE','FR') group by m.market_code,m.market_name order by case m.market_code when 'MY' then 1 when 'UK' then 2 when 'US' then 3 when 'DE' then 4 else 5 end";
-        return db.rows(sql,p("date",date));
-    }
     private static String select(){return "select r.*,u.display_name reporter_name,m.market_name,greatest(r.planned_test-r.actual_test,0) test_gap,case when r.ad_spend=0 then 0 else round(r.ad_gmv/r.ad_spend,4) end roi,case when r.impressions=0 then 0 else round(r.clicks::numeric/r.impressions,4) end ctr from daily_metric_report r join sys_user u on u.id=r.reporter_id join dim_market m on m.market_code=r.market_code";}
     private static Map<String,Object> blank(LocalDate date,String type,String market){var value=p("reportDate",date.toString(),"reportType",type,"marketCode",market,"submissionStatus","DRAFT","rejectionReason","","deliveryResults",new LinkedHashMap<>(),"submittedAt",null);for(String key:EDITOR)value.put(key,0);for(String key:LEAD)value.put(key,0);for(String key:ADS)value.put(key,key.equals("adSpend")||key.equals("adGmv")?BigDecimal.ZERO:0);value.put("testGap",0);value.put("roi",BigDecimal.ZERO);value.put("ctr",BigDecimal.ZERO);return value;}
     static Map<String,String> deliveryResults(Map<String,Object> body,String type){

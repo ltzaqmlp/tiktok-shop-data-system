@@ -58,7 +58,7 @@ const MOCK: Record<string, unknown> = {
   '/daily-reports/summary/details': [_dailyReport],
   '/daily-reports/summary/review': {id:'summary-demo-1',reportDate:_today,todayImportantResult:'完成本日重点内容交付',needBossSupport:'',tomorrowFocus:'推进明日排期',submissionStatus:'APPROVED',rejectionReason:''},
   '/daily-reports/market': [_dailyReport],
-  '/daily-reports/ads': [{..._dailyReport,id:'ad-demo-1',reportType:'ADS_BUYER',reporterName:'演示投手',submissionStatus:'APPROVED',plannedTest:5,actualTest:3,testGap:2,newAdjustPlan:2,adSpend:12.5,adGmv:50,roi:4,impressions:1000,clicks:80,ctr:.08,orders:4,expandedMaterial:2,stoppedMaterial:1}],
+  '/daily-reports/ads': [{..._dailyReport,id:'ad-demo-1',reporterId:'1',reportType:'ADS_BUYER',reporterName:'演示投手',submissionStatus:'APPROVED',plannedTest:5,actualTest:3,testGap:2,newAdjustPlan:2,adSpend:12.5,adGmv:50,roi:4,impressions:1000,clicks:80,ctr:.08,orders:4,expandedMaterial:2,stoppedMaterial:1}],
   '/daily-reports/mine/content': _dailyReport,
   '/daily-reports/mine/ads': [{..._dailyReport,id:'ad-demo-1',reportType:'ADS_BUYER',plannedTest:5,actualTest:3,testGap:2,newAdjustPlan:2,adSpend:12.5,adGmv:50,roi:4,impressions:1000,clicks:80,ctr:.08,orders:4,expandedMaterial:2,stoppedMaterial:1}],
   '/shooting-tickets/context': { role:'ADMIN', markets:_dailyMarkets, taskTypes:[{code:'SCRIPT_SHOOT',name:'脚本拍摄'},{code:'LIBRARY',name:'素材库补充'},{code:'RESHOOT',name:'补拍'}] },

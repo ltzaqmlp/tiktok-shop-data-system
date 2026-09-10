@@ -45,14 +45,14 @@ Set-Location deploy
 docker compose -p shop-prod --env-file .env up -d --build
 docker compose -p shop-prod --env-file .env ps
 
-# 测试环境：仅本机访问 http://127.0.0.1:18080
+# 测试环境：局域网访问 http://192.168.100.39:18080
 if (!(Test-Path .env.test)) { Copy-Item .env.test.example .env.test }
 # 首次使用前修改 .env.test 中的密码
 docker compose -p shop-test --env-file .env.test up -d --build
 docker compose -p shop-test --env-file .env.test ps
 ```
 
-生产环境的 `BIND_IP` 应为 `0.0.0.0`，`HTTP_PORT` 应为 `8080`；测试环境使用 `127.0.0.1` 和 `18080`。PostgreSQL 只绑定宿主机本机调试端口，不对局域网开放。
+生产环境的 `BIND_IP` 应为 `0.0.0.0`，`HTTP_PORT` 应为 `8080`；本服务器测试环境使用 `192.168.100.39` 和 `18080`，并仅在 Windows 防火墙放行 `192.168.100.0/24`。PostgreSQL 只绑定宿主机本机调试端口，不对局域网开放。
 
 Navicat 需要连接本机生产数据库时，使用 `127.0.0.1:15432`、数据库 `shop_operations`、用户 `shop_app` 和 `deploy/.env` 中的 `DB_PASSWORD`。数据库端口只绑定本机，不对局域网开放；测试数据库端口为 `127.0.0.1:15433`。
 

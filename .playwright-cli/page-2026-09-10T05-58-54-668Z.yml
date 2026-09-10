@@ -1,0 +1,26 @@
+- main [ref=f1e414]:
+  - generic [ref=f1e416]:
+    - img "HERBMODA" [ref=f1e417]
+    - generic [ref=f1e418]:
+      - text: HERBMODA
+      - generic [ref=f1e419]: LONDON
+  - generic [ref=f1e420]:
+    - generic [ref=f1e421]:
+      - strong [ref=f1e423]: Welcome to
+      - strong [ref=f1e424]: HERBMODA Commerce Intelligence
+      - generic [ref=f1e425]: Sign in to access your workspace
+    - generic [ref=f1e426]:
+      - generic [ref=f1e427]:
+        - text: "*"
+        - textbox "*Email or username" [ref=f1e435]:
+          - /placeholder: Email or username
+      - generic [ref=f1e436]:
+        - text: "*"
+        - textbox "*Password" [ref=f1e445]:
+          - /placeholder: Password
+      - generic [ref=f1e447] [cursor=pointer]:
+        - generic [ref=f1e448]:
+          - checkbox "记住密码"
+        - generic [ref=f1e450]: 记住密码
+      - button "Sign in" [ref=f1e451] [cursor=pointer]
+      - generic [ref=f1e456]: A smarter, more radiant tomorrow.

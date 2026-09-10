@@ -40,6 +40,7 @@ function status(row: ShootingTicket) {
   if (row.status === 'PENDING_SHOOT' && row.rejectionReason) return '退回拍摄'
   return ({ PENDING_SHOOT: '待拍摄', PENDING_EDITOR_REVIEW: '待编导审核', PENDING_DEPT_REVIEW: '待部门负责人审核', APPROVED: '已完成' } as Record<string, string>)[row.status] ?? row.status
 }
+function reasonText(value: string) { return value ? (value.startsWith('原因：') ? value : `原因：${value}`) : '' }
 function statusType(row: ShootingTicket) { return row.status === 'APPROVED' ? 'success' : row.status === 'PENDING_SHOOT' && row.rejectionReason ? 'danger' : row.status === 'PENDING_SHOOT' ? 'info' : 'warning' }
 function dateTime(value?: string | null) { return value ? new Date(value).toLocaleString('zh-CN', { hour12: false }) : '—' }
 function date(value?: string | null) { return value ? new Date(value).toLocaleDateString('zh-CN') : '—' }
@@ -92,7 +93,7 @@ onMounted(async () => { try { context.value = await api<ShootingContext>('/shoot
           <tr v-for="row in tickets" :key="row.id">
             <td>{{ date(row.createdAt) }}</td><td>{{ row.regionName }}</td><td>{{ row.shooterName || '—' }}</td><td>{{ row.ticketNo }}</td><td>{{ row.sku || '—' }}</td><td>{{ taskType(row.taskType) }}</td>
             <td class="requirement">{{ row.shotRequirement }}</td><td>{{ row.plannedValidShotCount }}</td><td>{{ dateTime(row.deadline) }}</td><td>{{ row.actualValidShotCount ?? '—' }}</td><td>{{ dateTime(row.actualDeliveredAt) }}</td>
-            <td><el-tooltip v-if="row.rejectionReason" :content="row.rejectionReason" placement="top"><el-tag size="small" :type="statusType(row)">{{ status(row) }}</el-tag></el-tooltip><el-tag v-else size="small" :type="statusType(row)">{{ status(row) }}</el-tag></td>
+            <td><el-tooltip v-if="row.rejectionReason" :content="reasonText(row.rejectionReason)" placement="top"><el-tag size="small" :type="statusType(row)">{{ status(row) }}</el-tag></el-tooltip><el-tag v-else size="small" :type="statusType(row)">{{ status(row) }}</el-tag></td>
             <td class="notes">{{ row.materialNotes || '—' }}</td>
             <td class="actions">
               <el-button v-if="canComplete && row.status === 'PENDING_SHOOT'" link type="primary" @click="openComplete(row)">{{ row.rejectionReason ? '重新提交' : '完成拍摄' }}</el-button>

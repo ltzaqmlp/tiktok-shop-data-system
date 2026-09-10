@@ -1,0 +1,96 @@
+- generic [ref=f1e457]:
+  - link "跳转到主要内容" [ref=f1e458] [cursor=pointer]:
+    - /url: "#main"
+  - complementary "主导航" [ref=f1e459]:
+    - generic [ref=f1e460]:
+      - img "HERBMODA" [ref=f1e462]
+      - generic [ref=f1e463]:
+        - strong [ref=f1e464]: HERBMODA
+        - generic [ref=f1e465]: Commerce Intelligence
+    - generic [ref=f1e466]: 工作空间
+    - navigation [ref=f1e467]:
+      - link "数据看板" [ref=f1e468] [cursor=pointer]:
+        - /url: /dashboard
+      - link "日报" [active] [ref=f1e475] [cursor=pointer]:
+        - /url: /daily-reports
+    - generic [ref=f1e480]: 内部经营系统 · V1.0
+  - generic [ref=f1e483]:
+    - banner [ref=f1e484]:
+      - generic [ref=f1e485]:
+        - button "收起侧栏" [ref=f1e486] [cursor=pointer]
+        - navigation "面包屑" [ref=f1e491]:
+          - generic [ref=f1e492]:
+            - link "工作空间" [ref=f1e493]
+            - text: /
+          - link "日报" [ref=f1e835]
+      - generic [ref=f1e496]:
+        - generic [ref=f1e497]: 马
+        - generic [ref=f1e498]:
+          - strong [ref=f1e499]: 马来剪辑
+          - generic [ref=f1e500]: 剪辑
+        - button "退出登录" [ref=f1e501] [cursor=pointer]
+    - main [ref=f1e507]:
+      - generic [ref=f1e836]:
+        - generic [ref=f1e837]:
+          - heading "日报" [level=1] [ref=f1e838]
+          - paragraph [ref=f1e839]: 按角色填报，审核通过后实时进入对应汇总。
+        - generic [ref=f1e840]:
+          - text: 日期
+          - combobox "日期" [ref=f1e847]: 2026-09-10
+      - generic [ref=f1e848]:
+        - tablist [ref=f1e852]:
+          - tab "马来西亚日报" [selected] [ref=f1e854]
+          - tab "新增日报" [ref=f1e855]
+        - tabpanel "马来西亚日报" [ref=f1e857]:
+          - generic [ref=f1e858]:
+            - generic [ref=f1e859]: 马来西亚区日报 按个人日报展示。
+            - table [ref=f1e861]:
+              - rowgroup [ref=f1e862]:
+                - row [ref=f1e863]:
+                  - columnheader "地区" [ref=f1e864]
+                  - columnheader "每日任务" [ref=f1e865]
+                  - columnheader "执行岗位" [ref=f1e866]
+                  - columnheader "具体负责人" [ref=f1e867]
+                  - columnheader "计划" [ref=f1e868]
+                  - columnheader "实际" [ref=f1e869]
+                  - columnheader "还差" [ref=f1e870]
+                  - columnheader "完成率" [ref=f1e871]
+                  - columnheader "交付链接 / 编号清单" [ref=f1e872]
+                  - columnheader "备注/卡点" [ref=f1e873]
+                  - columnheader "截止时间" [ref=f1e874]
+                  - columnheader "状态" [ref=f1e875]
+              - rowgroup [ref=f1e876]:
+                - row [ref=f1e877]:
+                  - cell "马来西亚" [ref=f1e878]
+                  - cell "新增发布 首次交审 返工验收" [ref=f1e879]:
+                    - generic [ref=f1e880]: 新增发布
+                    - generic [ref=f1e881]: 首次交审
+                    - generic [ref=f1e882]: 返工验收
+                  - cell "剪辑" [ref=f1e883]
+                  - cell "马来剪辑" [ref=f1e884]
+                  - cell "5 5 5" [ref=f1e885]:
+                    - generic [ref=f1e886]: "5"
+                    - generic [ref=f1e887]: "5"
+                    - generic [ref=f1e888]: "5"
+                  - cell "5 5 5" [ref=f1e889]:
+                    - generic [ref=f1e890]: "5"
+                    - generic [ref=f1e891]: "5"
+                    - generic [ref=f1e892]: "5"
+                  - cell "0 0 0" [ref=f1e893]:
+                    - generic [ref=f1e894]: "0"
+                    - generic [ref=f1e895]: "0"
+                    - generic [ref=f1e896]: "0"
+                  - cell "100.00% 100.00% 100.00%" [ref=f1e897]:
+                    - generic [ref=f1e898]: 100.00%
+                    - generic [ref=f1e899]: 100.00%
+                    - generic [ref=f1e900]: 100.00%
+                  - cell "1 test1 test1" [ref=f1e901]:
+                    - generic [ref=f1e902]: "1"
+                    - generic [ref=f1e903]: test1
+                    - generic [ref=f1e904]: test1
+                  - cell "test1" [ref=f1e905]
+                  - cell "09/10 13:22" [ref=f1e906]
+                  - cell "已退回" [ref=f1e907]
+    - contentinfo [ref=f1e833]:
+      - text: 跨境电商经营数据平台
+      - generic [ref=f1e834]: 按业务日期统计 · 金额按市场币种展示

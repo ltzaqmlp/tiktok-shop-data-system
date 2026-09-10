@@ -1,0 +1,263 @@
+- generic [ref=e83]:
+  - link "跳转到主要内容" [ref=e84] [cursor=pointer]:
+    - /url: "#main"
+  - complementary "主导航" [ref=e85]:
+    - generic [ref=e86]:
+      - img "HERBMODA" [ref=e88]
+      - generic [ref=e89]:
+        - strong [ref=e90]: HERBMODA
+        - generic [ref=e91]: Commerce Intelligence
+    - generic [ref=e92]: 工作空间
+    - navigation [ref=e93]:
+      - link "数据看板" [ref=e94] [cursor=pointer]:
+        - /url: /dashboard
+      - link "日报" [ref=e101] [cursor=pointer]:
+        - /url: /daily-reports
+      - link "拍摄工单" [ref=e106] [cursor=pointer]:
+        - /url: /shooting-tickets
+    - generic [ref=e111]: 内部经营系统 · V1.0
+  - generic [ref=e114]:
+    - banner [ref=e115]:
+      - generic [ref=e116]:
+        - button "收起侧栏" [ref=e117] [cursor=pointer]
+        - navigation "面包屑" [ref=e122]:
+          - generic [ref=e123]:
+            - link "工作空间" [ref=e124]
+            - text: /
+          - link "数据看板" [ref=e126]
+      - generic [ref=e127]:
+        - generic [ref=e128]: 马
+        - generic [ref=e129]:
+          - strong [ref=e130]: 马来编导
+          - generic [ref=e131]: 编导
+        - button "退出登录" [ref=e132] [cursor=pointer]
+    - main [ref=e138]:
+      - generic [ref=e139]:
+        - heading "数据看板" [level=1] [ref=e140]
+        - generic [ref=e141]:
+          - generic [ref=e142]:
+            - generic [ref=e143]:
+              - generic [ref=e144]: 业务日期
+              - radiogroup "业务日期快捷选择" [ref=e145]:
+                - generic [ref=e146]:
+                  - radio "业务日期 业务日期快捷选择 今日" [ref=e147]
+                  - generic [ref=e148] [cursor=pointer]: 今日
+                - generic [ref=e149]:
+                  - radio "昨日" [checked] [ref=e150]
+                  - generic [ref=e151] [cursor=pointer]: 昨日
+                - generic [ref=e152]:
+                  - radio "本周" [ref=e153]
+                  - generic [ref=e154] [cursor=pointer]: 本周
+                - generic [ref=e155]:
+                  - radio "本月" [ref=e156]
+                  - generic [ref=e157] [cursor=pointer]: 本月
+                - generic [ref=e158]:
+                  - radio "自定义" [ref=e159]
+                  - generic [ref=e160] [cursor=pointer]: 自定义
+            - generic [ref=e161]:
+              - generic [ref=e162]: 市场
+              - generic [ref=e164] [cursor=pointer]:
+                - generic:
+                  - combobox "市场" [ref=e166]
+                  - generic [ref=e167]: 马来西亚 (MY)
+            - button "查询" [ref=e172] [cursor=pointer]
+          - button "刷新数据" [ref=e174] [cursor=pointer]
+        - alert [ref=e179]:
+          - generic [ref=e180]: 当前范围没有 Shop Analytics 或可精确匹配的商品报表，商品漏斗无法计算。
+        - region "核心经营指标" [ref=e182]:
+          - article [ref=e183]:
+            - generic [ref=e190]:
+              - generic [ref=e191]: GMV
+              - button "Shop Analytics 每日 GMV" [ref=e192] [cursor=pointer]
+            - generic [ref=e196]:
+              - generic [ref=e197]: RM
+              - text: —
+            - generic [ref=e198]:
+              - generic [ref=e199]: 当前无数据
+              - generic [ref=e200]: 较前日
+            - generic [ref=e201]:
+              - generic [ref=e202]: 当前无数据
+              - generic [ref=e203]: 较前 7 日均值
+            - generic [ref=e204]: 暂无趋势数据
+          - article [ref=e205]:
+            - generic [ref=e211]:
+              - generic [ref=e212]: 订单数
+              - button "Shop Analytics 每日订单数" [ref=e213] [cursor=pointer]
+            - generic [ref=e217]: —
+            - generic [ref=e218]:
+              - generic [ref=e219]: 当前无数据
+              - generic [ref=e220]: 较前日
+            - generic [ref=e221]:
+              - generic [ref=e222]: 当前无数据
+              - generic [ref=e223]: 较前 7 日均值
+            - generic [ref=e224]: 暂无趋势数据
+          - article [ref=e225]:
+            - generic [ref=e231]:
+              - generic [ref=e232]: 商品成交件数
+              - button "Shop Analytics 每日商品成交件数" [ref=e233] [cursor=pointer]
+            - generic [ref=e237]: —
+            - generic [ref=e238]:
+              - generic [ref=e239]: 当前无数据
+              - generic [ref=e240]: 较前日
+            - generic [ref=e241]:
+              - generic [ref=e242]: 当前无数据
+              - generic [ref=e243]: 较前 7 日均值
+            - generic [ref=e244]: 暂无趋势数据
+          - article [ref=e245]:
+            - generic [ref=e253]:
+              - generic [ref=e254]: 平均订单金额
+              - button "AOV = 总 GMV ÷ 总订单数" [ref=e255] [cursor=pointer]
+            - generic [ref=e259]:
+              - generic [ref=e260]: RM
+              - text: —
+            - generic [ref=e261]:
+              - generic [ref=e262]: 当前无数据
+              - generic [ref=e263]: 较前日
+            - generic [ref=e264]:
+              - generic [ref=e265]: 当前无数据
+              - generic [ref=e266]: 较前 7 日均值
+            - generic [ref=e267]: 暂无趋势数据
+          - article [ref=e268]:
+            - generic [ref=e274]:
+              - generic [ref=e275]: 退款金额
+              - button "Shop Analytics 每日退款金额" [ref=e276] [cursor=pointer]
+            - generic [ref=e280]:
+              - generic [ref=e281]: RM
+              - text: —
+            - generic [ref=e282]:
+              - generic [ref=e283]: 当前无数据
+              - generic [ref=e284]: 较前日
+            - generic [ref=e285]:
+              - generic [ref=e286]: 当前无数据
+              - generic [ref=e287]: 较前 7 日均值
+            - generic [ref=e288]: 暂无趋势数据
+        - generic [ref=e289]:
+          - article [ref=e290]:
+            - generic [ref=e291]:
+              - heading "销售趋势" [level=2] [ref=e292]
+              - generic [ref=e293]: ■ GMV (RM)
+              - generic [ref=e294]: ● 订单数
+            - paragraph [ref=e314]: 此范围暂无销售趋势
+          - article [ref=e315]:
+            - heading "商品转化漏斗 从曝光到下单的转化表现" [level=2] [ref=e317]
+            - generic [ref=e318]:
+              - generic [ref=e319]:
+                - generic [ref=e321]:
+                  - generic [ref=e322]: 商品曝光次数
+                  - strong [ref=e323]: —
+                - generic [ref=e324]:
+                  - generic [ref=e325]: 去重曝光
+                  - generic [ref=e326]: —
+              - generic [ref=e327]:
+                - generic [ref=e329]:
+                  - generic [ref=e330]: 商品点击量
+                  - strong [ref=e331]: —
+                - generic [ref=e332]:
+                  - generic [ref=e333]: CTR
+                  - generic [ref=e334]: —
+                - generic [ref=e335]:
+                  - generic [ref=e336]: 去重点击
+                  - generic [ref=e337]: —
+              - generic [ref=e338]:
+                - generic [ref=e340]:
+                  - generic [ref=e341]: 加购次数
+                  - strong [ref=e342]: —
+                - generic [ref=e343]:
+                  - generic [ref=e344]: 加购率
+                  - generic [ref=e345]: —
+                - generic [ref=e346]:
+                  - generic [ref=e347]: 加购用户
+                  - generic [ref=e348]: —
+              - generic [ref=e349]:
+                - generic [ref=e351]:
+                  - generic [ref=e352]: SKU 订单数
+                  - strong [ref=e353]: —
+                - generic [ref=e354]:
+                  - generic [ref=e355]: CTOR
+                  - generic [ref=e356]: —
+                - generic [ref=e357]:
+                  - generic [ref=e358]: 下单客户
+                  - generic [ref=e359]: —
+          - article [ref=e360]:
+            - generic [ref=e361]:
+              - heading "GMV Max 广告效果 仅包含已归因的广告数据" [level=2] [ref=e362]
+              - generic [ref=e363]: "币种: MYR"
+            - generic [ref=e364]:
+              - generic [ref=e365]:
+                - text: 广告花费
+                - strong [ref=e366]: —
+                - generic [ref=e367]: 当前无数据
+              - generic [ref=e369]:
+                - text: 广告归因收入
+                - strong [ref=e370]: —
+                - generic [ref=e371]: 当前无数据
+              - generic [ref=e373]:
+                - text: ROI
+                - strong [ref=e374]: —
+                - generic [ref=e375]: 当前无数据
+              - generic [ref=e377]:
+                - text: CPO
+                - strong [ref=e378]: —
+                - generic [ref=e379]: 当前无数据
+            - generic [ref=e381]: 此范围暂无广告趋势
+        - generic [ref=e382]:
+          - article [ref=e383]:
+            - heading "SKU销量分布" [level=2] [ref=e385]
+            - paragraph [ref=e405]: 暂无已配置 SKU 销量数据
+          - article [ref=e406]:
+            - heading "售后情况 基于订单数据统计" [level=2] [ref=e408]
+            - generic [ref=e409]:
+              - generic [ref=e410]:
+                - generic [ref=e411]: ×
+                - generic [ref=e412]:
+                  - text: 退款金额
+                  - strong [ref=e413]: RM—
+                  - generic [ref=e414]:
+                    - generic [ref=e415]: 当前无数据
+                    - generic [ref=e416]: 较前日
+              - generic [ref=e417]:
+                - generic [ref=e418]: ×
+                - generic [ref=e419]:
+                  - text: 取消订单数
+                  - strong [ref=e420]: "0"
+                  - generic [ref=e421]:
+                    - generic [ref=e422]: 当前无数据
+                    - generic [ref=e423]: 较前日
+              - generic [ref=e424]:
+                - generic [ref=e425]: ×
+                - generic [ref=e426]:
+                  - text: 已退款商品件数
+                  - strong [ref=e427]: —
+                  - generic [ref=e428]:
+                    - generic [ref=e429]: 当前无数据
+                    - generic [ref=e430]: 较前日
+              - generic [ref=e431]:
+                - generic [ref=e432]: ×
+                - generic [ref=e433]:
+                  - text: 退款客户数
+                  - strong [ref=e434]: —
+                  - generic [ref=e435]:
+                    - generic [ref=e436]: 当前无数据
+                    - generic [ref=e437]: 较前日
+          - article [ref=e438]:
+            - heading "商品访客与转化" [level=2] [ref=e440]
+            - generic [ref=e441]:
+              - generic [ref=e442]:
+                - generic [ref=e447]:
+                  - text: 商品访客数
+                  - strong [ref=e448]: —
+                  - generic [ref=e449]:
+                    - generic [ref=e450]: 当前无数据
+                    - generic [ref=e451]: 较前日
+                - generic [ref=e452]: 暂无趋势数据
+              - generic [ref=e453]:
+                - generic [ref=e458]:
+                  - text: 店铺转化率
+                  - strong [ref=e459]: —
+                  - generic [ref=e460]:
+                    - generic [ref=e461]: 当前无数据
+                    - generic [ref=e462]: 较前日
+                - generic [ref=e463]: 暂无趋势数据
+    - contentinfo [ref=e464]:
+      - text: 跨境电商经营数据平台
+      - generic [ref=e465]: 按业务日期统计 · 金额按市场币种展示

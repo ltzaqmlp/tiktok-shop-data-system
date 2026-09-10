@@ -1,0 +1,144 @@
+- generic [ref=e83]:
+  - link "跳转到主要内容" [ref=e84] [cursor=pointer]:
+    - /url: "#main"
+  - complementary "主导航" [ref=e85]:
+    - generic [ref=e86]:
+      - img "HERBMODA" [ref=e88]
+      - generic [ref=e89]:
+        - strong [ref=e90]: HERBMODA
+        - generic [ref=e91]: Commerce Intelligence
+    - generic [ref=e92]: 工作空间
+    - navigation [ref=e93]:
+      - link "数据看板" [ref=e94] [cursor=pointer]:
+        - /url: /dashboard
+      - link "日报" [ref=e101] [cursor=pointer]:
+        - /url: /daily-reports
+      - link "拍摄工单" [ref=e106] [cursor=pointer]:
+        - /url: /shooting-tickets
+    - generic [ref=e111]: 内部经营系统 · V1.0
+  - generic [ref=e114]:
+    - banner [ref=e115]:
+      - generic [ref=e116]:
+        - button "收起侧栏" [ref=e117] [cursor=pointer]
+        - navigation "面包屑" [ref=e122]:
+          - generic [ref=e123]:
+            - link "工作空间" [ref=e124]
+            - text: /
+          - link "日报" [ref=e466]
+      - generic [ref=e127]:
+        - generic [ref=e128]: 马
+        - generic [ref=e129]:
+          - strong [ref=e130]: 马来编导
+          - generic [ref=e131]: 编导
+        - button "退出登录" [ref=e132] [cursor=pointer]
+    - main [ref=e138]:
+      - generic [ref=e467]:
+        - generic [ref=e468]:
+          - heading "日报" [level=1] [ref=e469]
+          - paragraph [ref=e470]: 按角色填报，审核通过后实时进入对应汇总。
+        - generic [ref=e471]:
+          - text: 日期
+          - combobox "日期" [ref=e478]: 2026-09-10
+      - generic [ref=e479]:
+        - tablist [ref=e483]:
+          - tab "马来西亚日报" [active] [selected] [ref=e485] [cursor=pointer]
+          - tab "新增日报" [ref=e486]
+        - tabpanel "马来西亚日报" [ref=e685]:
+          - generic [ref=e686]:
+            - generic [ref=e687]: 马来西亚区日报 按个人日报展示。
+            - table [ref=e689]:
+              - rowgroup [ref=e690]:
+                - row [ref=e691]:
+                  - columnheader "地区" [ref=e692]
+                  - columnheader "每日任务" [ref=e693]
+                  - columnheader "执行岗位" [ref=e694]
+                  - columnheader "具体负责人" [ref=e695]
+                  - columnheader "计划" [ref=e696]
+                  - columnheader "实际" [ref=e697]
+                  - columnheader "还差" [ref=e698]
+                  - columnheader "完成率" [ref=e699]
+                  - columnheader "交付链接 / 编号清单" [ref=e700]
+                  - columnheader "备注/卡点" [ref=e701]
+                  - columnheader "截止时间" [ref=e702]
+                  - columnheader "状态" [ref=e703]
+                  - columnheader "操作" [ref=e704]
+              - rowgroup [ref=e705]:
+                - row [ref=e706]:
+                  - cell "马来西亚" [ref=e707]
+                  - cell "新增发布 首次交审 返工验收" [ref=e708]:
+                    - generic [ref=e709]: 新增发布
+                    - generic [ref=e710]: 首次交审
+                    - generic [ref=e711]: 返工验收
+                  - cell "剪辑" [ref=e712]
+                  - cell "马来剪辑" [ref=e713]
+                  - cell "5 5 5" [ref=e714]:
+                    - generic [ref=e715]: "5"
+                    - generic [ref=e716]: "5"
+                    - generic [ref=e717]: "5"
+                  - cell "5 5 5" [ref=e718]:
+                    - generic [ref=e719]: "5"
+                    - generic [ref=e720]: "5"
+                    - generic [ref=e721]: "5"
+                  - cell "0 0 0" [ref=e722]:
+                    - generic [ref=e723]: "0"
+                    - generic [ref=e724]: "0"
+                    - generic [ref=e725]: "0"
+                  - cell "100.00% 100.00% 100.00%" [ref=e726]:
+                    - generic [ref=e727]: 100.00%
+                    - generic [ref=e728]: 100.00%
+                    - generic [ref=e729]: 100.00%
+                  - cell "1 test1 test1" [ref=e730]:
+                    - generic [ref=e731]: "1"
+                    - generic [ref=e732]: test1
+                    - generic [ref=e733]: test1
+                  - cell "test1" [ref=e734]
+                  - cell "09/10 13:22" [ref=e735]
+                  - cell "已通过" [ref=e736]
+                  - cell "—" [ref=e739]
+                - row [ref=e740]:
+                  - cell "马来西亚" [ref=e741]
+                  - cell "复盘视频 有效对标 完成拆解 完整脚本 可开剪脚本" [ref=e742]:
+                    - generic [ref=e743]: 复盘视频
+                    - generic [ref=e744]: 有效对标
+                    - generic [ref=e745]: 完成拆解
+                    - generic [ref=e746]: 完整脚本
+                    - generic [ref=e747]: 可开剪脚本
+                  - cell "编导" [ref=e748]
+                  - cell "马来编导" [ref=e749]
+                  - cell "5 4 3 2 5" [ref=e750]:
+                    - generic [ref=e751]: "5"
+                    - generic [ref=e752]: "4"
+                    - generic [ref=e753]: "3"
+                    - generic [ref=e754]: "2"
+                    - generic [ref=e755]: "5"
+                  - cell "5 4 3 2 5" [ref=e756]:
+                    - generic [ref=e757]: "5"
+                    - generic [ref=e758]: "4"
+                    - generic [ref=e759]: "3"
+                    - generic [ref=e760]: "2"
+                    - generic [ref=e761]: "5"
+                  - cell "0 0 0 0 0" [ref=e762]:
+                    - generic [ref=e763]: "0"
+                    - generic [ref=e764]: "0"
+                    - generic [ref=e765]: "0"
+                    - generic [ref=e766]: "0"
+                    - generic [ref=e767]: "0"
+                  - cell "100.00% 100.00% 100.00% 100.00% 100.00%" [ref=e768]:
+                    - generic [ref=e769]: 100.00%
+                    - generic [ref=e770]: 100.00%
+                    - generic [ref=e771]: 100.00%
+                    - generic [ref=e772]: 100.00%
+                    - generic [ref=e773]: 100.00%
+                  - cell "test3 rew3 re3 4 5" [ref=e774]:
+                    - generic [ref=e775]: test3
+                    - generic [ref=e776]: rew3
+                    - generic [ref=e777]: re3
+                    - generic [ref=e778]: "4"
+                    - generic [ref=e779]: "5"
+                  - cell "ergvgssssssssssssssssssssssssssss6" [ref=e780]
+                  - cell "09/10 13:24" [ref=e781]
+                  - cell "已通过" [ref=e782]
+                  - cell "—" [ref=e785]
+    - contentinfo [ref=e464]:
+      - text: 跨境电商经营数据平台
+      - generic [ref=e465]: 按业务日期统计 · 金额按市场币种展示

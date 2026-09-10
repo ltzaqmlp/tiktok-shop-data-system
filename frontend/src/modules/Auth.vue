@@ -75,6 +75,16 @@ async function submit() { if (!await form.value?.validate().catch(() => false)) 
     background: #F4F8FC url('../assets/brand/herbmoda-login-background.png') center/cover no-repeat
 }
 
+.auth-page::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: url('../assets/brand/herbmoda-logo-light.webp') center 56%/clamp(340px, 39vw, 620px) auto no-repeat;
+    opacity: .055;
+    pointer-events: none;
+    z-index: 0
+}
+
 .auth-backdrop {
     position: absolute;
     inset: 0;
@@ -347,6 +357,12 @@ async function submit() { if (!await form.value?.validate().catch(() => false)) 
 @media(max-width:767px) {
     .auth-page {
         min-height: 100svh
+    }
+
+    .auth-page::before {
+        background-position: center 38%;
+        background-size: min(78vw, 390px);
+        opacity: .040
     }
 
     .auth-backdrop {

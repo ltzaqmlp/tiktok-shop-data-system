@@ -91,7 +91,10 @@ small, .small { font-size: 12px; }
 .negative { color: var(--hm-negative); }
 .neutral { color: var(--hm-text-secondary); }
 
-.surface { background: var(--hm-surface); border: 1px solid #E7ECF2; border-radius: var(--hm-radius-md); box-shadow: var(--hm-shadow-card); }
+.surface { background: rgba(255,255,255,.80); border: 1px solid rgba(231,236,242,.86); border-radius: var(--hm-radius-md); box-shadow: var(--hm-shadow-card); backdrop-filter: blur(10px) saturate(112%); -webkit-backdrop-filter: blur(10px) saturate(112%); }
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .surface { background: rgba(255,255,255,.94); }
+}
 .panel { padding: 16px; min-width: 0; }
 .panel-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
 .page-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 20px; flex-wrap: wrap; }
@@ -159,6 +162,7 @@ small, .small { font-size: 12px; }
 .el-tooltip__trigger:focus-visible { outline: 1px solid var(--hm-accent); outline-offset: 2px; box-shadow: 0 0 0 3px var(--hm-focus-ring); }
 
 @media (max-width: 767px) {
+  .surface { background: rgba(255,255,255,.86); backdrop-filter: blur(7px) saturate(108%); -webkit-backdrop-filter: blur(7px) saturate(108%); }
   h1 { font-size: 20px; }
   .form-grid { grid-template-columns: 1fr; }
   .filter-field { width: 100%; min-width: 0; }

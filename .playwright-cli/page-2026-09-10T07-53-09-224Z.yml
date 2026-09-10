@@ -1,0 +1,16 @@
+- generic [ref=f4e3]:
+  - link "跳转到主要内容" [ref=f4e4] [cursor=pointer]:
+    - /url: "#main"
+  - complementary "主导航" [ref=f4e5]:
+    - img "HERBMODA" [ref=f4e8]
+    - navigation
+  - generic [ref=f4e9]:
+    - banner [ref=f4e10]:
+      - navigation "面包屑" [ref=f4e12]:
+        - generic [ref=f4e13]:
+          - link "工作空间" [ref=f4e14]
+          - text: /
+        - link "访问提示" [ref=f4e16]
+      - button "退出登录" [ref=f4e18] [cursor=pointer]
+    - main [ref=f4e24]
+    - contentinfo [ref=f4e25]: 跨境电商经营数据平台

@@ -26,6 +26,7 @@ class DailyReportControllerTest {
         assertThrows(Api.Problem.class,()->DailyReportController.metrics(Map.of(),"OPS",true));
         assertEquals("已处理接口故障",DailyReportController.metrics(Map.of("notes","已处理接口故障","blockers","无"),"TECH",true).get("notes"));
         assertThrows(Api.Problem.class,()->DailyReportController.metrics(Map.of("notes","已处理接口故障"),"TECH",true));
+        assertThrows(Api.Problem.class,()->DailyReportController.metrics(Map.of("notes","已处理接口故障","blockers",""),"OPS",false));
     }
     @Test void editorSubmissionNeedsOnlyItsSixNonNegativeMetrics(){
         var values=DailyReportController.metrics(Map.of("plannedNewPublish",3,"actualNewPublish",2,"plannedFirstReview",4,"actualFirstReview",3,"plannedReworkAcceptance",2,"actualReworkAcceptance",2,"notes","今日按计划完成","blockers","无"),"EDITOR",true);

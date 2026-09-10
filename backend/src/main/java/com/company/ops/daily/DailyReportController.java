@@ -148,7 +148,7 @@ public class DailyReportController {
             var summary=db.one("select id from daily_report_summary where report_date=#{p.date} for update",p("date",date));
             Api.require(!summary.isEmpty(),"请先保存汇总日报");
             String status=reason==null?"APPROVED":"REJECTED";
-            db.exec("update daily_report_summary set submission_status=#{p.status},rejection_reason=#{p.reason},reviewer_id=#{p.user},reviewed_at=now(),updated_at=now() where id=#{p.id}",p("status",status,"reason",Objects.toString(reason,""),"user",Identity.uid(req),"id",summary.get("id")));
+            db.exec("update daily_report_summary set submission_status=#{p.status},rejection_reason=#{p.reason},reviewer_id=#{p.user},reviewed_at=now(),updated_at=now() where id=#{p.id}",p("status",status,"reason",Objects.toString(reason,""),"user",Identity.uid(req),"id",Long.parseLong(summary.get("id").toString())));
             if(reason!=null) db.exec("update daily_metric_report set submission_status='REJECTED',rejection_stage='DEPT',rejection_reason=#{p.reason},updated_at=now() where report_date=#{p.date} and report_type in ('EDITOR','DIRECTOR') and submission_status='APPROVED'",p("date",date,"reason",reason));
             return db.one(summarySelect()+" where s.report_date=#{p.date}",p("date",date));
         });

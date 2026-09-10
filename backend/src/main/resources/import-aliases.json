@@ -11,6 +11,7 @@
   "currency_code": [
     "币种",
     "货币",
+    "货币单位",
     "Currency",
     "Currency code"
   ],
@@ -141,6 +142,11 @@
     "订单 ID",
     "Order ID"
   ],
+  "affiliate_username": [
+    "达人用户名",
+    "Affiliate username",
+    "Creator username"
+  ],
   "sku_id": [
     "SKU ID",
     "Sku ID",
@@ -161,7 +167,8 @@
   "order_amount": [
     "订单金额",
     "Order amount",
-    "Order total"
+    "Order total",
+    "支付金额"
   ],
   "item_qty": [
     "件数",
@@ -171,7 +178,8 @@
   "quantity": [
     "Quantity",
     "SKU sold quantity in the order",
-    "SKU 销量"
+    "SKU 销量",
+    "下单件数"
   ],
   "return_quantity": [
     "Sku Quantity of return",
@@ -181,6 +189,7 @@
   ],
   "order_created_at": [
     "订单创建时间",
+    "创建时间",
     "Created time",
     "Order created time"
   ],

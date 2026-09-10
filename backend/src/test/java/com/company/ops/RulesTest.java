@@ -39,6 +39,10 @@ class RulesTest {
         assertEquals(LocalDate.of(2026,8,30),productRange.from());
         assertEquals(LocalDate.of(2026,9,5),productRange.to());
         assertEquals("COMPLETED",ImportMapping.status("已完成"));
+        assertEquals("AFFILIATE_PENDING",ImportMapping.status("待确认"));
+        assertEquals("AFFILIATE_SETTLED",ImportMapping.status("已结算"));
+        assertEquals("fact_affiliate_order",ImportMapping.TABLES.get("AFFILIATE_ORDER"));
+        assertTrue(ImportMapping.REQUIRED.get("AFFILIATE_ORDER").contains("quantity"));
         assertEquals("UNKNOWN",ImportMapping.status("new source status"));
         assertEquals(new BigDecimal("40.00000000"),DashboardService.divide(120,3));
         assertNull(DashboardService.divide(10,0));

@@ -33,6 +33,9 @@ const afterSource = computed(() => after.value?.productDataRange ? `商品售后
 const afterUpdatedAt = computed(() => after.value?.productDataRange?.dateTo)
 const skuSalesTotal = computed(() => skuSales.value.reduce((sum, s) => sum + s.sales, 0))
 const skuSalesOption = computed(() => ({ tooltip: { trigger: 'item', confine: true }, color: ['#5F8FBE', '#7EA6C9', '#AAB7C5', '#C7D3DF', '#D9E2EB', '#E14B50'], series: [{ type: 'pie', radius: ['66%', '84%'], center: ['50%', '50%'], label: { show: false }, itemStyle: { borderWidth: 2, borderColor: '#fff' }, data: skuSales.value.map(s => ({ name: s.displayName, value: s.sales })) }] }))
+const sourceSales = computed(() => [{ label: '自营销量', value: overview.value?.selfSales?.value ?? null }, { label: '达人销量', value: overview.value?.affiliateSales?.value ?? null }])
+const sourceSalesTotal = computed(() => sourceSales.value.reduce((sum, item) => sum + Math.max(Number(item.value ?? 0), 0), 0))
+const sourceSalesOption = computed(() => ({ tooltip: { trigger: 'item', confine: true }, color: ['#5F8FBE', '#E14B50'], series: [{ type: 'pie', radius: ['64%', '82%'], center: ['50%', '50%'], label: { show: false }, itemStyle: { borderWidth: 2, borderColor: '#fff' }, data: sourceSales.value.map(item => ({ name: item.label, value: Math.max(Number(item.value ?? 0), 0) })) }] }))
 let request = 0
 async function load() { const validation = dateRangeError(dates.value?.[0], dates.value?.[1]); if (validation) { ElMessage.warning(validation); return } const current = ++request; busy.value = true; error.value = null; loaded.value = false; overview.value = undefined; sales.value = []; funnel.value = undefined; ads.value = undefined; skuSales.value = []; after.value = undefined; const filters = { marketCode: marketCode.value, dateFrom: dates.value[0], dateTo: dates.value[1], comparisonPeriod: period.value }, suffix = `?${query(filters)}`; try { const values = await Promise.all([api<Overview>('/dashboard/overview' + suffix), api<Trend[]>('/dashboard/sales-trend' + suffix), api<Funnel>('/dashboard/product-funnel' + suffix), api<Ads>('/dashboard/ads' + suffix), api<SkuSales[]>('/dashboard/sku-sales' + suffix), api<AfterSales>('/dashboard/after-sales' + suffix)]); if (current !== request) return;[overview.value, sales.value, funnel.value, ads.value, skuSales.value, after.value] = values; applied.value = filters; loaded.value = true } catch (e) { if (current === request) error.value = e as Error } finally { if (current === request) busy.value = false } }
 function choosePeriod(value: string) { period.value = value; if (value === 'custom') return; dates.value = presetRange(value) as [string, string]; void load() }
@@ -85,6 +88,15 @@ onMounted(async () => { void load(); try { markets.value = await api<Market[]>('
             :option="spark(getMetric(k.key), k.key === 'refundAmount' ? '#E14B50' : k.key === 'aov' ? '#7EA6C9' : k.key === 'soldQty' ? '#8AA9C5' : '#355D86')"
             :height="43" :label="`${k.label}小趋势`" />
           <div v-else class="no-spark">{{ loaded ? '暂无趋势数据' : '等待数据加载' }}</div>
+        </article>
+        <article class="surface kpi source-kpi">
+          <div class="kpi-top"><span class="metric-icon"><el-icon :size="25"><Goods /></el-icon></span>
+            <div class="kpi-label"><span>销量来源</span><el-tooltip content="自营销量 = 订单数 - 达人销量；达人销量来自达人订单导入" placement="top"><button class="info-button" aria-label="销量来源计算说明"><el-icon><InfoFilled /></el-icon></button></el-tooltip></div>
+          </div>
+          <div v-if="sourceSalesTotal" class="status-layout source-layout">
+            <div class="donut"><Chart :option="sourceSalesOption" :height="126" label="自营与达人销量分布环形图" /><div class="donut-center"><strong class="number">{{ number(sourceSalesTotal) }}</strong><small class="muted">来源合计</small></div></div>
+            <div class="status-list"><div v-for="(item, i) in sourceSales" :key="item.label"><span class="status-dot" :class="`dot-${i}`" /><span>{{ item.label }}</span><small class="number muted">{{ pct(sourceSalesTotal ? Number(item.value ?? 0) / sourceSalesTotal : null) }}</small><b class="number">({{ number(item.value) }})</b></div></div>
+          </div><div v-else class="no-spark">{{ loaded ? '暂无销量数据' : '等待数据加载' }}</div>
         </article>
       </section>
       <section class="analysis-grid">
@@ -238,7 +250,7 @@ onMounted(async () => { void load(); try { markets.value = await api<Market[]>('
 
 .kpi-grid {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 12px;
   margin-bottom: 16px
 }
@@ -542,6 +554,35 @@ onMounted(async () => { void load(); try { markets.value = await api<Market[]>('
   font-size: 10.5px
 }
 
+.source-layout {
+  grid-template-columns: 46% 54%;
+  margin-top: -2px
+}
+
+.source-kpi .status-list {
+  gap: 8px
+}
+
+.source-kpi .status-list>div {
+  grid-template-columns: 7px 1fr;
+  gap: 5px;
+  font-size: 10.5px
+}
+
+.source-kpi .status-list small,
+.source-kpi .status-list b {
+  grid-column: 2;
+  margin-top: -4px
+}
+
+.source-kpi .donut-center strong {
+  font-size: 17px
+}
+
+.source-kpi .donut-center small {
+  font-size: 9px
+}
+
 .status-dot {
   width: 7px;
   height: 7px;
@@ -766,6 +807,10 @@ onMounted(async () => { void load(); try { markets.value = await api<Market[]>('
 
   .status-layout {
     grid-template-columns: 1fr 1fr
+  }
+
+  .source-layout {
+    grid-template-columns: 46% 54%
   }
 
   .after-grid {

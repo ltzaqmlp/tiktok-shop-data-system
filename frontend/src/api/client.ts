@@ -12,7 +12,7 @@ const _d30 = makeDates(30), _d7 = _d30.slice(-7), _yesterday = _d30[_d30.length 
 const _today = new Date().toLocaleDateString('en-CA')
 const _ok={comparePreviousStatus:'OK',compare7dAvgStatus:'OK'}
 const _dailyMarkets=[{marketCode:'MY',marketName:'马来西亚',currencyCode:'MYR'},{marketCode:'UK',marketName:'英国',currencyCode:'GBP'},{marketCode:'US',marketName:'美国',currencyCode:'USD'},{marketCode:'DE',marketName:'德国',currencyCode:'EUR'},{marketCode:'FR',marketName:'法国',currencyCode:'EUR'}]
-const _dailyReport={id:'daily-demo-1',reportDate:_today,reportType:'EDITOR',marketCode:'MY',marketName:'马来西亚',reporterName:'演示剪辑',submissionStatus:'PENDING_DEPT',rejectionReason:'',notes:'等待素材确认，已完成今日交付。',blockers:'等待素材确认。',deliveryResults:{actualNewPublish:'https://example.test/publish-001'},submittedAt:new Date().toISOString(),plannedReviewVideos:0,actualReviewVideos:0,plannedValidBenchmark:0,actualValidBenchmark:0,plannedDeconstruction:0,actualDeconstruction:0,plannedCompleteScript:0,actualCompleteScript:0,plannedReadyScript:0,actualReadyScript:0,plannedNewPublish:3,actualNewPublish:2,plannedFirstReview:4,actualFirstReview:3,plannedReworkAcceptance:2,actualReworkAcceptance:1,plannedTest:0,actualTest:0,testGap:0,newAdjustPlan:0,adSpend:0,adGmv:0,roi:0,impressions:0,clicks:0,ctr:0,orders:0,expandedMaterial:0,stoppedMaterial:0}
+const _dailyReport={id:'daily-demo-1',reportDate:_today,reportType:'EDITOR',marketCode:'MY',marketName:'马来西亚',reporterName:'演示剪辑',submissionStatus:'PENDING_DEPT',rejectionReason:'',notes:'等待素材确认，已完成今日交付。',blockers:'等待素材确认。',deliveryResults:{actualNewPublish:'https://example.test/publish-001'},editorTaskResults:{},directorTaskResults:{},submittedAt:new Date().toISOString(),plannedReviewVideos:0,actualReviewVideos:0,plannedValidBenchmark:0,actualValidBenchmark:0,plannedDeconstruction:0,actualDeconstruction:0,plannedCompleteScript:0,actualCompleteScript:0,plannedReadyScript:0,actualReadyScript:0,plannedNewPublish:3,actualNewPublish:2,plannedFirstReview:4,actualFirstReview:3,plannedReworkAcceptance:2,actualReworkAcceptance:1,plannedTest:0,actualTest:0,testGap:0,newAdjustPlan:0,adSpend:0,adGmv:0,roi:0,impressions:0,clicks:0,ctr:0,orders:0,expandedMaterial:0,stoppedMaterial:0}
 const MOCK: Record<string, unknown> = {
   '/auth/login': {},
   '/auth/session': { authenticated: true },
@@ -36,6 +36,7 @@ const MOCK: Record<string, unknown> = {
     currencyCode: 'MYR', productDataAvailable:true,
     gmv: { value: 285640.50, comparePrevious: 0.128, compare7dAvg: 0.054, ..._ok, trend: _d7.map((date, i) => ({ date, value: 240000 + [18000, 32000, 25000, 41000, 28000, 37000, 45000][i] })) },
     orderCount: { value: 1842, comparePrevious: 0.073, compare7dAvg: 0.021, ..._ok, trend: _d7.map((date, i) => ({ date, value: [1580, 1720, 1660, 1890, 1750, 1820, 1960][i] })) },
+    selfSales: { value: 1650 }, affiliateSales: { value: 192 },
     soldQty: { value: 3215, comparePrevious: 0.095, compare7dAvg: 0.031, ..._ok },
     skuOrderCount: { value: 2876, comparePrevious: 0.061, compare7dAvg: 0.018, ..._ok },
     aov: { value: 155.07, comparePrevious: 0.051, compare7dAvg: 0.022, ..._ok },
@@ -60,6 +61,7 @@ const MOCK: Record<string, unknown> = {
   '/daily-reports/market': [_dailyReport],
   '/daily-reports/ads': [{..._dailyReport,id:'ad-demo-1',reporterId:'1',reportType:'ADS_BUYER',reporterName:'演示投手',submissionStatus:'APPROVED',plannedTest:5,actualTest:3,testGap:2,newAdjustPlan:2,adSpend:12.5,adGmv:50,roi:4,impressions:1000,clicks:80,ctr:.08,orders:4,expandedMaterial:2,stoppedMaterial:1}],
   '/daily-reports/mine/content': _dailyReport,
+  '/daily-reports/director-plan': [{configured:false,directorId:'8',directorName:'演示编导',marketCode:'MY',marketName:'马来西亚',tasks:[{taskName:'复盘视频',plannedCount:0,sortOrder:0},{taskName:'有效对标',plannedCount:0,sortOrder:1},{taskName:'完成拆解',plannedCount:0,sortOrder:2},{taskName:'完整脚本',plannedCount:0,sortOrder:3},{taskName:'可开剪脚本',plannedCount:0,sortOrder:4}]}],
   '/daily-reports/mine/ads': [{..._dailyReport,id:'ad-demo-1',reportType:'ADS_BUYER',plannedTest:5,actualTest:3,testGap:2,newAdjustPlan:2,adSpend:12.5,adGmv:50,roi:4,impressions:1000,clicks:80,ctr:.08,orders:4,expandedMaterial:2,stoppedMaterial:1}],
   '/shooting-tickets/context': { role:'ADMIN', markets:_dailyMarkets, taskTypes:[{code:'SCRIPT_SHOOT',name:'脚本拍摄'},{code:'LIBRARY',name:'素材库补充'},{code:'RESHOOT',name:'补拍'}] },
   '/shooting-tickets': [{id:'shoot-demo-1',ticketNo:'PS20260909-0001',createdAt:new Date().toISOString(),marketCode:'MY',regionName:'马来西亚',taskType:'SCRIPT_SHOOT',shotRequirement:'产品正面、背面、包装开合，按脚本完成三组构图。',plannedValidShotCount:8,deadline:new Date(Date.now()+86400000).toISOString(),shooterId:null,shooterName:null,directorName:'演示编导',sku:'',actualValidShotCount:null,materialNotes:'',actualDeliveredAt:null,status:'PENDING_SHOOT',rejectionStage:null,rejectionReason:''}],

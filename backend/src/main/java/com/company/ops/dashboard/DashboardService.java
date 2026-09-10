@@ -42,6 +42,7 @@ public class DashboardService {
     public static BigDecimal change(Object now,Object previous){
         if(now==null||previous==null)return null;BigDecimal baseline=decimal(previous);return baseline.signum()==0?null:decimal(now).subtract(baseline).divide(baseline.abs(),8,RoundingMode.HALF_UP);
     }
+    private static BigDecimal subtract(Object left,Object right){return left==null||right==null?null:decimal(left).subtract(decimal(right));}
     public static String comparisonStatus(Object now,Object previous,long currentDataDays,long expectedCurrentDays,long historyDataDays,long expectedHistoryDays){
         if(currentDataDays<=0)return "CURRENT_MISSING";
         if(currentDataDays<expectedCurrentDays)return "CURRENT_PARTIAL";
@@ -92,6 +93,10 @@ public class DashboardService {
             from fact_shop_daily"""+WHERE,scope.params());
         row.put("aov",divide(row.get("gmv"),row.get("orderCount")));
         return row;
+    }
+
+    private Object affiliateSales(Scope scope){
+        return db.one("select coalesce(sum(item_qty),0) affiliate_sales from fact_affiliate_order where market_code=#{p.market} and biz_date between #{p.from} and #{p.to} and (cast(#{p.shop} as bigint) is null or shop_id=#{p.shop}) and normalized_status in ('AFFILIATE_PENDING','AFFILIATE_SETTLED')",scope.params()).get("affiliateSales");
     }
 
     public List<Map<String,Object>> daily(Scope scope){
@@ -164,10 +169,13 @@ public class DashboardService {
     public Map<String,Object> overview(Scope scope){
         long days=scope.days();var previousScope=scope.previous();var avgScope=scope.between(scope.dateFrom.minusDays(7),scope.dateFrom.minusDays(1));
         var now=shopSums(scope);var before=shopSums(previousScope);var avg=shopSums(avgScope);
+        Object influencerSales=affiliateSales(scope);
         var trendScope=days==1?scope.between(scope.dateTo.minusDays(13),scope.dateTo):scope;var trend=daily(trendScope);
         var shopTrend=db.rows("select biz_date date,case when count(*) filter(where visitor_count is null)=0 then sum(visitor_count) end visitor_count,case when count(*) filter(where visitor_count is null or conversion_rate_src is null)=0 then sum(visitor_count*conversion_rate_src)/nullif(sum(visitor_count),0) end conversion_rate from fact_shop_daily"+WHERE+" group by biz_date order by biz_date",trendScope.params());
         boolean productDataAvailable=fullProductSource(scope)!=null;
         var result=p("currencyCode",currency(scope),"comparisonLabel",scope.comparisonLabel(),"productDataAvailable",productDataAvailable,"productDataSource",Objects.toString(fullProductSource(scope),"NONE"));
+        result.put("affiliateSales",p("value",influencerSales,"trend",List.of()));
+        result.put("selfSales",p("value",subtract(now.get("orderCount"),influencerSales),"trend",List.of()));
         var coverage=p("shopAnalytics",coverage(scope,"fact_shop_daily"),"productDaily",coverage(scope,"fact_product_daily"),"productPeriod",productPeriodCoverage(scope),"orderDetail",coverage(scope,"fact_order"),"ads",coverage(scope,"fact_ad_campaign_daily"));
         result.put("dataCoverage",coverage);result.put("productDataQuality",productQuality(scope));
         for(String key:List.of("gmv","orderCount","soldQty","skuOrderCount","aov","refundAmount","visitorCount","conversionRate")){

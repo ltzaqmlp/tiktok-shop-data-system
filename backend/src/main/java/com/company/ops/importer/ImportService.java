@@ -85,7 +85,7 @@ public class ImportService {
             db.exec("update sys_import_task set status='VALIDATING',started_at=now() where id=#{p.id}",p("id",id));
             db.exec("update sys_import_task set status='IMPORTING' where id=#{p.id}",p("id",id));
             tx.executeWithoutResult(s->{
-                if(source.equals("ORDER_DETAIL"))readOrder(file,listener);
+                if(isOrderSource(source))readOrder(file,listener);
                 else if(source.equals("PRODUCT_DAILY"))readProduct(file,listener);
                 else EasyExcel.read(file.toFile(),listener).headRowNumber(0).sheet().doRead();
                 Api.require(listener.header!=null,"缺少关键表头："+String.join(", ",ImportMapping.REQUIRED.get(source)));
@@ -118,6 +118,8 @@ public class ImportService {
         db.exec("insert into sys_audit_log(user_id,module,action,target_id,request_id,success,request_summary) values(#{p.user},'import',#{p.action},#{p.target},#{p.request},#{p.success},cast(#{p.summary} as jsonb))",p("user",user,"action","SUCCESS".equals(task.get("status"))?"IMPORT_FINISH":"IMPORT_FAIL","target",String.valueOf(id),"request",UUID.randomUUID().toString(),"success","SUCCESS".equals(task.get("status")),"summary",db.json(task)));
     }
     private void finish(long id,String status,String message){db.exec("update sys_import_task set status=#{p.status},error_message=#{p.message},finished_at=now() where id=#{p.id}",p("id",id,"status",status,"message",message));}
+
+    private static boolean isOrderSource(String source){return Set.of("ORDER_DETAIL","AFFILIATE_ORDER").contains(source);}
 
     // TikTok's order export may repeat XML row nodes; the streaming fallback merges
     // fragments without changing the source file.
@@ -184,7 +186,7 @@ public class ImportService {
         @Override public void invoke(Map<Integer,String> row,AnalysisContext ctx){process(row,ctx.readRowHolder().getRowIndex()+1);}
 
         boolean isProductPeriod(){return source.equals("PRODUCT_DAILY")&&productRange!=null&&!productRange.from().equals(productRange.to());}
-        boolean affectsDailyAggregation(){return !isProductPeriod();}
+        boolean affectsDailyAggregation(){return !isProductPeriod()&&!source.equals("AFFILIATE_ORDER");}
         String targetTable(){return isProductPeriod()?"fact_product_period":ImportMapping.TABLES.get(source);}
         String keyColumns(){return isProductPeriod()?"shop_id,date_from,date_to,product_id":ImportMapping.KEYS.get(source);}
 
@@ -223,11 +225,11 @@ public class ImportService {
             count++;
             var raw=new LinkedHashMap<String,String>();header.forEach((i,k)->raw.putIfAbsent(k,Objects.toString(row.get(i),"")));
             if(source.equals("GMV_MAX_CAMPAIGN")&&raw.getOrDefault("biz_date","").trim().equals("-")){count--;return;}
-            if(source.equals("ORDER_DETAIL")&&raw.getOrDefault("order_id","").startsWith("Platform unique order ID")){count--;return;}
+                if(isOrderSource(source)&&raw.getOrDefault("order_id","").startsWith("Platform unique order ID")){count--;return;}
             try{
                 var values=new LinkedHashMap<String,Object>();
                 LocalDate date=null;
-                currentField="biz_date";currentRaw=raw.getOrDefault("biz_date","");if(source.equals("ORDER_DETAIL")){currentRaw=raw.getOrDefault("paid_time","").trim();if(currentRaw.isBlank())currentRaw=raw.getOrDefault("order_created_at","");}
+                currentField="biz_date";currentRaw=raw.getOrDefault("biz_date","");if(isOrderSource(source)){currentRaw=source.equals("AFFILIATE_ORDER")?raw.getOrDefault("order_created_at","").trim():raw.getOrDefault("paid_time","").trim();if(currentRaw.isBlank())currentRaw=source.equals("AFFILIATE_ORDER")?raw.getOrDefault("paid_time","").trim():raw.getOrDefault("order_created_at","");}
                 if(source.equals("PRODUCT_DAILY")&&productRange!=null){
                     if(!isProductPeriod())date=productRange.from();
                 }else{
@@ -246,7 +248,7 @@ public class ImportService {
                 String columns=switch(source){
                     case "SHOP_ANALYTICS" -> "gmv,order_count,sold_qty,sku_order_count,refund_amount,customer_count,page_view_count,visitor_count,conversion_rate_src,impressions,clicks,unique_impressions,unique_clicks";
                     case "PRODUCT_DAILY" -> "product_id,gmv,order_count,sku_order_count,sold_qty,estimated_customer_count,impressions,clicks,add_to_cart_count,refund_amount,refunded_qty,refund_customer_count,unique_impressions,unique_clicks,added_user_count";
-                    case "ORDER_DETAIL" -> "order_id,source_status,order_amount,item_qty,returned_qty,order_refund_amount";
+                    case "ORDER_DETAIL","AFFILIATE_ORDER" -> "order_id,source_status,order_amount,item_qty,returned_qty,order_refund_amount";
                     default -> "ad_account_key,campaign_id,campaign_name,spend,attributed_revenue,attributed_order_count,impressions,clicks";
                 };
                 Set<String> strings=Set.of("product_id","order_id","source_status","ad_account_key","campaign_id","campaign_name");
@@ -273,7 +275,7 @@ public class ImportService {
                 if(source.equals("PRODUCT_DAILY"))validateProductRatio(raw,values,"ctr_src","clicks","impressions");
                 if(source.equals("PRODUCT_DAILY"))validateProductRatio(raw,values,"add_to_cart_rate_src","add_to_cart_count","clicks");
                 if(source.equals("PRODUCT_DAILY"))validateProductRatio(raw,values,"ctor_src","sku_order_count","clicks");
-                if(source.equals("ORDER_DETAIL")){
+                if(isOrderSource(source)){
                     long quantity=nonNegativeInt(raw.getOrDefault("quantity",raw.getOrDefault("item_qty","")));
                     long returned=returnQuantity(raw.getOrDefault("return_quantity",raw.getOrDefault("returned_qty","")),rowNo);
                     if(returned>quantity&&errors.size()<1000)errors.add(p("row",rowNo,"field","return_quantity","raw",String.valueOf(returned),"code","RETURN_QTY_GT_QUANTITY","message","退货数大于 Quantity，统计时按 Quantity 上限扣减"));
@@ -281,21 +283,28 @@ public class ImportService {
                     String created=raw.getOrDefault("order_created_at","");if(!created.isBlank())values.put("order_created_at",ImportMapping.dateTime(created));
                     values.put("normalized_status",ImportMapping.status(raw.getOrDefault("source_status","")));
                     if("UNKNOWN".equals(values.get("normalized_status"))&&errors.size()<1000)errors.add(p("row",rowNo,"field","source_status","raw",raw.getOrDefault("source_status",""),"code","ORDER_STATUS_UNKNOWN","message","未知源状态，已映射为 UNKNOWN"));
-                    Map<String,Object> sku=new LinkedHashMap<>(p("shop_id",shop,"market_code",market,"biz_date",date,"order_id",raw.getOrDefault("order_id","").trim(),"sku_id",raw.getOrDefault("sku_id","").trim(),"seller_sku",raw.getOrDefault("seller_sku","").trim(),"source_status",raw.getOrDefault("source_status","").trim(),"normalized_status",values.get("normalized_status"),"quantity",quantity,"return_quantity",returned,"raw_extra",db.json(row)));
-                    String paid=raw.getOrDefault("paid_time","").trim(),createdTime=raw.getOrDefault("order_created_at","").trim();
-                    sku.put("paid_time",paid.isBlank()?null:ImportMapping.dateTime(paid));
-                    sku.put("created_time",createdTime.isBlank()?null:ImportMapping.dateTime(createdTime));
-                    String cancel=raw.getOrDefault("cancel_type","").trim();sku.put("cancel_type",cancel.isBlank()?null:cancel);
-                    sku.put("order_refund_amount",values.get("order_refund_amount"));
-                    Api.require(((String)sku.get("sku_id")).length()<=100,"sku_id 超过长度限制");Api.require(((String)sku.get("seller_sku")).length()<=100,"seller_sku 超过长度限制");
-                    String skuKey=sku.get("order_id")+"\u001f"+sku.get("sku_id");
-                    if(skuBatch.put(skuKey,sku)!=null&&errors.size()<1000)errors.add(p("row",rowNo,"field","Order ID + SKU ID","raw",skuKey,"code","ORDER_SKU_DUPLICATE","message","同一 Order ID + SKU ID 重复，已保留最后一条"));
+                    if(source.equals("AFFILIATE_ORDER")){
+                        values.put("sku_id",raw.getOrDefault("sku_id","").trim());
+                        values.put("affiliate_username",raw.getOrDefault("affiliate_username","").trim());
+                        Api.require(((String)values.get("sku_id")).length()<=100,"sku_id 超过长度限制");
+                        Api.require(((String)values.get("affiliate_username")).length()<=255,"达人用户名超过长度限制");
+                    }else{
+                        Map<String,Object> sku=new LinkedHashMap<>(p("shop_id",shop,"market_code",market,"biz_date",date,"order_id",raw.getOrDefault("order_id","").trim(),"sku_id",raw.getOrDefault("sku_id","").trim(),"seller_sku",raw.getOrDefault("seller_sku","").trim(),"source_status",raw.getOrDefault("source_status","").trim(),"normalized_status",values.get("normalized_status"),"quantity",quantity,"return_quantity",returned,"raw_extra",db.json(row)));
+                        String paid=raw.getOrDefault("paid_time","").trim(),createdTime=raw.getOrDefault("order_created_at","").trim();
+                        sku.put("paid_time",paid.isBlank()?null:ImportMapping.dateTime(paid));
+                        sku.put("created_time",createdTime.isBlank()?null:ImportMapping.dateTime(createdTime));
+                        String cancel=raw.getOrDefault("cancel_type","").trim();sku.put("cancel_type",cancel.isBlank()?null:cancel);
+                        sku.put("order_refund_amount",values.get("order_refund_amount"));
+                        Api.require(((String)sku.get("sku_id")).length()<=100,"sku_id 超过长度限制");Api.require(((String)sku.get("seller_sku")).length()<=100,"seller_sku 超过长度限制");
+                        String skuKey=sku.get("order_id")+"\u001f"+sku.get("sku_id");
+                        if(skuBatch.put(skuKey,sku)!=null&&errors.size()<1000)errors.add(p("row",rowNo,"field","Order ID + SKU ID","raw",skuKey,"code","ORDER_SKU_DUPLICATE","message","同一 Order ID + SKU ID 重复，已保留最后一条"));
+                    }
                 }
                 values.put("raw_extra",db.json(row));
                 String keys=keyColumns();String key=Arrays.stream(keys.split(",")).map(k->Objects.toString(values.get(k),"")).collect(java.util.stream.Collectors.joining("\u001f"));
                 if(!batch.containsKey(key)&&batch.size()>=500)flush();
                 var previous=batch.put(key,values);
-                if(source.equals("ORDER_DETAIL")&&previous!=null){
+                if(isOrderSource(source)&&previous!=null){
                     values.put("item_qty",asLong(previous.get("item_qty"))+asLong(values.get("item_qty")));
                     values.put("returned_qty",sumNullableLong(previous.get("returned_qty"),values.get("returned_qty")));
                     if(values.get("order_refund_amount")==null)values.put("order_refund_amount",previous.get("order_refund_amount"));
@@ -321,6 +330,10 @@ public class ImportService {
                 for(var old:db.rows("select distinct biz_date from fact_order where shop_id=#{p.shop}",p("shop",shop)))dates.add(LocalDate.parse(old.get("bizDate").toString()));
                 db.exec("delete from fact_order_sku where shop_id=#{p.shop}",p("shop",shop));
                 db.exec("delete from fact_order where shop_id=#{p.shop}",p("shop",shop));
+                snapshotReset=true;
+            }
+            if(source.equals("AFFILIATE_ORDER")&&!snapshotReset){
+                db.exec("delete from fact_affiliate_order where shop_id=#{p.shop}",p("shop",shop));
                 snapshotReset=true;
             }
             if(!batch.isEmpty()){

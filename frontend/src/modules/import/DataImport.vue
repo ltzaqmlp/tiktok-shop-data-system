@@ -12,7 +12,7 @@ import RequestError from '../../components/RequestError.vue'
 const auth=useAuth(),form=ref<FormInstance>(),busy=ref(false),loading=ref(false),error=ref<Error|null>(null),contextError=ref<Error|null>(null),detailError=ref<Error|null>(null)
 const markets=ref<Market[]>([]),shops=ref<Shop[]>([]),files=ref<UploadFile[]>([]),tasks=ref<ImportTask[]>([]),total=ref(0),page=ref(1),source=ref(''),status=ref(''),drawer=ref(false),selected=ref<ImportTask>(),errors=ref<ImportError[]>([]),errorPage=ref(1),errorTotal=ref(0),detailBusy=ref(false)
 const values=reactive({sourceType:'SHOP_ANALYTICS',marketCode:'MY',shopId:'',bizDate:''})
-const sources=[{value:'SHOP_ANALYTICS',label:'Shop Analytics · 店铺日数据'},{value:'PRODUCT_DAILY',label:'商品数据 · 历史区间/单日均支持'},{value:'ORDER_DETAIL',label:'订单明细'},{value:'GMV_MAX_CAMPAIGN',label:'GMV Max · 广告数据'}]
+const sources=[{value:'SHOP_ANALYTICS',label:'Shop Analytics · 店铺日数据'},{value:'PRODUCT_DAILY',label:'商品数据 · 历史区间/单日均支持'},{value:'ORDER_DETAIL',label:'订单明细'},{value:'AFFILIATE_ORDER',label:'达人订单 · 联盟订单'},{value:'GMV_MAX_CAMPAIGN',label:'GMV Max · 广告数据'}]
 const states=['CREATED','VALIDATING','IMPORTING','AGGREGATING','SUCCESS','FAILED','AGGREGATE_FAILED']
 let timer:ReturnType<typeof setTimeout>|undefined,alive=true
 async function context(){contextError.value=null;try{markets.value=await api<Market[]>('/system/markets');await loadShops()}catch(e){contextError.value=e as Error}}

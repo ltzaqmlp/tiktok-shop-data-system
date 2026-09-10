@@ -9,9 +9,9 @@ import java.util.*;
 public final class ImportMapping {
     private ImportMapping(){}
     public record DateRange(LocalDate from,LocalDate to){}
-    public static final Map<String,String> TABLES=Map.of("SHOP_ANALYTICS","fact_shop_daily","PRODUCT_DAILY","fact_product_daily","ORDER_DETAIL","fact_order","GMV_MAX_CAMPAIGN","fact_ad_campaign_daily");
-    public static final Map<String,List<String>> REQUIRED=Map.of("SHOP_ANALYTICS",List.of("biz_date","gmv","order_count"),"PRODUCT_DAILY",List.of("product_id","gmv","order_count","sold_qty","sku_order_count","impressions","clicks","add_to_cart_count"),"ORDER_DETAIL",List.of("order_id","sku_id","source_status","quantity"),"GMV_MAX_CAMPAIGN",List.of("biz_date","spend","attributed_revenue","attributed_order_count"));
-    public static final Map<String,String> KEYS=Map.of("SHOP_ANALYTICS","shop_id,biz_date","PRODUCT_DAILY","shop_id,biz_date,product_id","ORDER_DETAIL","shop_id,order_id","GMV_MAX_CAMPAIGN","shop_id,biz_date,ad_account_key,campaign_id");
+    public static final Map<String,String> TABLES=Map.of("SHOP_ANALYTICS","fact_shop_daily","PRODUCT_DAILY","fact_product_daily","ORDER_DETAIL","fact_order","AFFILIATE_ORDER","fact_affiliate_order","GMV_MAX_CAMPAIGN","fact_ad_campaign_daily");
+    public static final Map<String,List<String>> REQUIRED=Map.of("SHOP_ANALYTICS",List.of("biz_date","gmv","order_count"),"PRODUCT_DAILY",List.of("product_id","gmv","order_count","sold_qty","sku_order_count","impressions","clicks","add_to_cart_count"),"ORDER_DETAIL",List.of("order_id","sku_id","source_status","quantity"),"AFFILIATE_ORDER",List.of("order_id","sku_id","source_status","quantity"),"GMV_MAX_CAMPAIGN",List.of("biz_date","spend","attributed_revenue","attributed_order_count"));
+    public static final Map<String,String> KEYS=Map.of("SHOP_ANALYTICS","shop_id,biz_date","PRODUCT_DAILY","shop_id,biz_date,product_id","ORDER_DETAIL","shop_id,order_id","AFFILIATE_ORDER","shop_id,order_id,sku_id","GMV_MAX_CAMPAIGN","shop_id,biz_date,ad_account_key,campaign_id");
     public static String normalize(String value){return Objects.toString(value,"").toLowerCase(Locale.ROOT).replaceAll("[\\s_（）()\\-:：/]+","").replaceAll("[.，,]+$","").trim();}
     public static BigDecimal amount(String value){
         if(value==null||value.isBlank()||value.trim().equals("-"))return BigDecimal.ZERO;
@@ -44,6 +44,8 @@ public final class ImportMapping {
     }
     public static String status(String raw){
         return switch(normalize(raw)){
+            case "待确认","待确认订单" -> "AFFILIATE_PENDING";
+            case "已结算","已结算订单" -> "AFFILIATE_SETTLED";
             case "unpaid","awaitingpayment","未付款","待付款","未支付" -> "UNPAID";
             case "paid","awaitingshipment","toship","待发货","已付款" -> "PAID";
             case "shipped","intransit","已发货","运输中" -> "SHIPPED";

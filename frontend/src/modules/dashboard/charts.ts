@@ -31,3 +31,15 @@ export function combo(rows:Record<string,any>[],bar:string,line:string,barLabel:
     ]
   }
 }
+
+export function dynamicCombo(rows: Record<string, any>[], metrics: { key: string; label: string }[]) {
+  const axes = metrics.map((metric, i) => ({ type:'value', name:metric.label, nameTextStyle:{fontSize:10,color:HM_CHART.text}, splitLine:{lineStyle:{color:i ? 'transparent' : HM_CHART.grid}}, axisLine:{show:false}, axisTick:{show:false}, axisLabel:{fontSize:10,color:HM_CHART.text} }))
+  return {
+    tooltip,
+    legend:{data:metrics.map(metric => metric.label),bottom:0,itemWidth:10,itemHeight:6,textStyle:{color:HM_CHART.text,fontSize:10}},
+    grid:{left:44,right:40,top:30,bottom:48},
+    xAxis:{type:'category',data:rows.map(r=>r.date),axisLabel:{formatter:(v:string)=>v.slice(5),fontSize:10,color:HM_CHART.text},axisTick:{show:false},axisLine:{lineStyle:{color:HM_CHART.axis}}},
+    yAxis:axes,
+    series:metrics.map((metric, i) => ({ name:metric.label, type:i ? 'line' : 'bar', yAxisIndex:i, data:rows.map(r=>r[metric.key]), barMaxWidth:14, itemStyle:{borderRadius:[3,3,0,0],color:i ? HM_CHART.secondary : HM_CHART.primary}, lineStyle:{width:1.8,color:HM_CHART.secondary}, symbolSize:4 }))
+  }
+}

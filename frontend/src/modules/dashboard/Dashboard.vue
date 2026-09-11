@@ -9,7 +9,7 @@ import { useAuth } from '../../stores/auth'
 import Chart from '../../components/Chart.vue'
 import MetricChange from '../../components/MetricChange.vue'
 import RequestError from '../../components/RequestError.vue'
-import { spark, combo } from './charts'
+import { spark, combo, dynamicCombo } from './charts'
 const auth = useAuth(), busy = ref(false), exporting = ref(false), error = ref<Error | null>(null), markets = ref<Market[]>([]), marketCode = ref('MY')
 const initialRange = presetRange('yesterday') as [string, string], dates = ref<[string, string]>(initialRange), period = ref('yesterday')
 const overview = ref<Overview>(), sales = ref<Trend[]>([]), funnel = ref<Funnel>(), ads = ref<Ads>(), skuSales = ref<SkuSales[]>([]), after = ref<AfterSales>(), loaded = ref(false)
@@ -26,7 +26,14 @@ const funnelSourceLabel = computed(() => ({ PRODUCT_PERIOD: '商品区间报表'
 const funnelStatus = computed(() => ({ PRODUCT_PERIOD: '完整商品数据', PRODUCT_DAILY: '完整商品数据', SHOP_ANALYTICS_PARTIAL: '部分数据', NONE: '无可用数据' }[funnel.value?.source ?? 'NONE']))
 const funnelStatusType = computed(() => funnel.value?.source === 'NONE' ? 'warning' : funnel.value?.source === 'SHOP_ANALYTICS_PARTIAL' ? 'info' : 'success')
 const stages = computed(() => [{ label: '商品曝光次数', value: funnel.value?.impressions, rateLabel: '', rate: null, aux: '去重曝光', extra: funnel.value?.uniqueImpressions }, { label: '商品点击量', value: funnel.value?.clicks, rateLabel: 'CTR', rate: funnel.value?.ctr, aux: '去重点击', extra: funnel.value?.uniqueClicks }, { label: '加购次数', value: funnel.value?.addToCartCount, rateLabel: '加购率', rate: funnel.value?.addToCartRate, aux: '加购用户', extra: funnel.value?.addedUserCount }, { label: 'SKU 订单数', value: funnel.value?.skuOrderCount, rateLabel: 'CTOR', rate: funnel.value?.ctor, aux: '下单客户', extra: funnel.value?.estimatedCustomerCount }])
-const adMetrics = computed(() => [{ label: '广告花费', metric: ads.value?.spend, direction: 'neutral', money: true }, { label: '广告归因收入', metric: ads.value?.attributedRevenue, direction: 'higher', money: true }, { label: 'ROI', metric: ads.value?.roi, direction: 'higher' }, { label: 'CPO', metric: ads.value?.cpo, direction: 'lower', money: true }])
+const adMetricConfig = [{ key: 'spend', trendKey: 'spend', metricKey: 'spend', label: '广告花费', chartLabel: '广告花费', direction: 'neutral', money: true }, { key: 'totalRevenue', trendKey: 'totalRevenue', metricKey: 'attributedRevenue', label: '总收入', chartLabel: '总收入', direction: 'higher', money: true }, { key: 'roi', trendKey: 'roi', metricKey: 'roi', label: 'ROI', chartLabel: '投入产出比', direction: 'higher', money: false }, { key: 'cpo', trendKey: 'cpo', metricKey: 'cpo', label: 'CPO', chartLabel: '每单成本', direction: 'lower', money: true }] as const
+type AdMetricKey = typeof adMetricConfig[number]['key']
+const selectedAdMetricKeys = ref<AdMetricKey[]>(['spend', 'totalRevenue'])
+const adMetrics = computed(() => adMetricConfig.map(metric => ({ ...metric, metric: ads.value?.[metric.metricKey] })))
+const selectedAdMetrics = computed(() => adMetricConfig.filter(metric => selectedAdMetricKeys.value.includes(metric.key)).map(metric => ({ key: metric.trendKey, label: `${metric.chartLabel}${metric.money ? `（${ads.value?.currencyCode === 'MYR' ? 'RM' : ads.value?.currencyCode ?? currencyDisplay.value}）` : ''}` })))
+const adChartRows = computed(() => ads.value?.trend?.map(row => ({ ...row, totalRevenue: row.attributedRevenue })) ?? [])
+const adChartTitle = computed(() => selectedAdMetrics.value.map(metric => metric.label).join('与'))
+function toggleAdMetric(key: AdMetricKey) { const index = selectedAdMetricKeys.value.indexOf(key); if (index >= 0) { selectedAdMetricKeys.value = selectedAdMetricKeys.value.filter(item => item !== key); return } if (selectedAdMetricKeys.value.length < 2) { selectedAdMetricKeys.value = [...selectedAdMetricKeys.value, key]; return } ElMessage.info('图表最多同时展示两个指标，请先取消一个已选指标') }
 const currentAfterMetrics = computed(() => [{ label: '退款金额', metric: after.value?.refundAmount, money: true }, { label: '取消订单数', metric: after.value?.cancelOrderCount }])
 const cumulativeAfterMetrics = computed(() => [{ label: '已退款商品件数', metric: after.value?.refundedQty }, { label: '退款客户数', metric: after.value?.refundCustomerCount }])
 const afterSource = computed(() => after.value?.productDataRange ? `商品售后累计数据：${after.value.productDataRange.dateFrom} 至今` : '商品售后累计数据暂无可用报表')
@@ -93,8 +100,8 @@ onMounted(async () => { void load(); try { markets.value = await api<Market[]>('
           <div class="kpi-top"><span class="metric-icon"><el-icon :size="25">
                 <Goods />
               </el-icon></span>
-            <div class="kpi-label"><span>销量来源</span><el-tooltip content="自营销量 = 订单数 - 达人销量；达人销量来自达人订单导入"
-                placement="top"><button class="info-button" aria-label="销量来源计算说明"><el-icon>
+            <div class="kpi-label"><span>销量分布</span><el-tooltip content="自营销量 = 订单数 - 达人销量；达人销量来自达人订单导入"
+                placement="top"><button class="info-button" aria-label="销量分布计算说明"><el-icon>
                     <InfoFilled />
                   </el-icon></button></el-tooltip></div>
           </div>
@@ -142,19 +149,20 @@ onMounted(async () => { void load(); try { markets.value = await api<Market[]>('
         </article>
         <article class="surface panel ads-panel">
           <div class="panel-head">
-            <h2>GMV Max 广告效果 <small class="muted">仅包含已归因的广告数据</small></h2><small>币种: {{ ads?.currencyCode ?? 'USD'
+            <h2>GMV Max 广告效果 <small class="muted">广告投放数据</small></h2><small>币种: {{ ads?.currencyCode ?? 'USD'
             }}</small>
           </div>
           <div class="ad-metrics">
-            <div v-for="m in adMetrics" :key="m.label"><small class="muted">{{ m.label }}</small><strong
-                class="number">{{ number(m.metric?.value, 2) }}</strong>
+            <button v-for="m in adMetrics" :key="m.key" class="ad-metric" :class="{ selected: selectedAdMetricKeys.includes(m.key) }" type="button" :aria-pressed="selectedAdMetricKeys.includes(m.key)" @click="toggleAdMetric(m.key)"><small class="muted">{{ m.label }}</small><strong
+                class="number"><small v-if="m.money">{{ currencyDisplay }} </small>{{ number(m.metric?.value, 2) }}</strong>
               <MetricChange :value="m.metric?.comparePrevious" :status="m.metric?.comparePreviousStatus"
                 :direction="m.direction" />
-            </div>
+            </button>
           </div>
-          <Chart v-if="ads?.trend?.length"
-            :option="combo(ads.trend, 'spend', 'attributedRevenue', `Cost (${ads.currencyCode === 'MYR' ? 'RM' : ads.currencyCode})`, `Gross Revenue (${ads.currencyCode === 'MYR' ? 'RM' : ads.currencyCode})`)"
-            :height="146" label="广告花费与广告归因收入趋势" />
+          <Chart v-if="ads?.trend?.length && selectedAdMetrics.length"
+            :option="dynamicCombo(adChartRows, selectedAdMetrics)"
+            :height="146" :label="`${adChartTitle}趋势图`" />
+          <div v-else-if="ads?.trend?.length" class="empty-inline">请至少选择一个指标</div>
           <div v-else class="empty-inline">此范围暂无广告趋势</div>
         </article>
       </section>
@@ -478,20 +486,31 @@ onMounted(async () => { void load(); try { markets.value = await api<Market[]>('
 .ad-metrics {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
   margin: 3px 0 8px
 }
 
-.ad-metrics>div {
-  padding: 0 12px;
-  border-right: 1px solid var(--hm-border)
+.ad-metric {
+  appearance: none;
+  font: inherit;
+  text-align: left;
+  color: inherit;
+  background: transparent;
+  cursor: pointer;
+  border: 0;
+  border-radius: 8px;
+  padding: 8px 10px;
+  transition: background-color 150ms ease, box-shadow 150ms ease, transform 150ms ease
 }
 
-.ad-metrics>div:first-child {
-  padding-left: 0
+.ad-metric.selected {
+  background: var(--hm-accent-soft);
+  box-shadow: inset 0 2px 5px rgba(64, 95, 125, .12), inset 0 -1px 0 rgba(255, 255, 255, .6);
+  transform: translateY(1px)
 }
 
-.ad-metrics>div:last-child {
-  border: 0
+.ad-metric.selected strong {
+  color: var(--hm-accent-hover)
 }
 
 .ad-metrics small {
@@ -588,6 +607,10 @@ onMounted(async () => { void load(); try { markets.value = await api<Market[]>('
 .source-kpi .status-list b {
   grid-column: 2;
   margin-top: -4px
+}
+
+.source-kpi .status-list .dot-1 {
+  background: #E14B50
 }
 
 .source-kpi .donut-center strong {
@@ -812,8 +835,13 @@ onMounted(async () => { void load(); try { markets.value = await api<Market[]>('
     width: calc(56px - var(--stage)*7px)
   }
 
-  .ad-metrics>div {
-    padding: 0 6px
+  .ad-metrics>.ad-metric {
+    padding: 8px
+  }
+
+  .ad-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px 8px
   }
 
   .ad-metrics strong {

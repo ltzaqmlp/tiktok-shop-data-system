@@ -1,0 +1,118 @@
+- generic [ref=e3]:
+  - link "跳转到主要内容" [ref=e4] [cursor=pointer]:
+    - /url: "#main"
+  - complementary "主导航" [ref=e5]:
+    - generic [ref=e6]:
+      - img "HERBMODA" [ref=e8]
+      - generic [ref=e9]:
+        - strong [ref=e10]: HERBMODA
+        - generic [ref=e11]: Commerce Intelligence
+    - generic [ref=e12]: 工作空间
+    - navigation [ref=e40]:
+      - link "数据看板" [ref=e41] [cursor=pointer]:
+        - /url: /dashboard
+      - link "日报" [ref=e48] [cursor=pointer]:
+        - /url: /daily-reports
+      - link "拍摄工单" [ref=e53] [cursor=pointer]:
+        - /url: /shooting-tickets
+      - link "数据导入" [ref=e58] [cursor=pointer]:
+        - /url: /data-import
+      - link "用户管理" [ref=e63] [cursor=pointer]:
+        - /url: /admin/users
+      - link "角色管理" [ref=e68] [cursor=pointer]:
+        - /url: /admin/roles
+      - link "菜单管理" [ref=e73] [cursor=pointer]:
+        - /url: /admin/menus
+      - link "操作日志" [ref=e78] [cursor=pointer]:
+        - /url: /admin/audit
+      - link "登录日志" [ref=e83] [cursor=pointer]:
+        - /url: /admin/login-logs
+    - generic [ref=e13]: 内部经营系统 · V1.0
+  - generic [ref=e16]:
+    - banner [ref=e17]:
+      - generic [ref=e18]:
+        - button "收起侧栏" [ref=e19] [cursor=pointer]
+        - navigation "面包屑" [ref=e24]:
+          - generic [ref=e25]:
+            - link "工作空间" [ref=e26]
+            - text: /
+          - link "日报" [ref=e89]
+      - generic [ref=e29]:
+        - generic [ref=e30]: 演
+        - generic [ref=e90]:
+          - strong [ref=e91]: 演示管理员
+          - generic [ref=e92]: 管理员
+        - button "退出登录" [ref=e31] [cursor=pointer]
+    - main [ref=e37]:
+      - generic [ref=e93]:
+        - generic [ref=e94]:
+          - heading "日报" [level=1] [ref=e95]
+          - paragraph [ref=e96]: 按角色填报，审核通过后实时进入对应汇总。
+        - generic [ref=e97]:
+          - text: 日期
+          - combobox "日期" [ref=e104]: 2026-09-11
+      - generic [ref=e105]:
+        - tablist [ref=e109]:
+          - tab "汇总" [ref=e111]
+          - tab "马来西亚日报" [ref=e112]
+          - tab "英国日报" [ref=e113]
+          - tab "美国日报" [ref=e114]
+          - tab "德国日报" [ref=e115]
+          - tab "法国日报" [ref=e116]
+          - tab "投流日报" [active] [selected] [ref=e117] [cursor=pointer]
+          - tab "运营日报" [ref=e118]
+          - tab "技术日报" [ref=e119]
+          - tab "布置编导任务" [ref=e120]
+        - tabpanel "投流日报" [ref=e286]:
+          - generic [ref=e287]:
+            - strong [ref=e289]: 注意：投手的日报数据统计是昨日的数据
+            - generic [ref=e290]: 投手数据｜素材测试、消耗、GMV、ROI、CTR、订单 金额和 ROI 按地区账户币种查看。
+            - table [ref=e292]:
+              - rowgroup [ref=e293]:
+                - row [ref=e294]:
+                  - columnheader "地区" [ref=e295]
+                  - columnheader "填报人" [ref=e296]
+                  - columnheader "状态" [ref=e297]
+                  - columnheader "计划测试（条）" [ref=e298]
+                  - columnheader "实际测试（条）" [ref=e299]
+                  - columnheader "测试缺口（条）" [ref=e300]
+                  - columnheader "新建 / 调整计划（个）" [ref=e301]
+                  - columnheader "消耗（各市场币种）" [ref=e302]
+                  - columnheader "广告 GMV（各市场币种）" [ref=e303]
+                  - columnheader "ROI" [ref=e304]
+                  - columnheader "展现量" [ref=e305]
+                  - columnheader "点击量" [ref=e306]
+                  - columnheader "CTR" [ref=e307]
+                  - columnheader "订单（单）" [ref=e308]
+                  - columnheader "放大素材（条）" [ref=e309]
+                  - columnheader "停止素材（条）" [ref=e310]
+                  - columnheader "备注" [ref=e311]
+                  - columnheader "卡点" [ref=e312]
+                  - columnheader "退回原因" [ref=e313]
+                  - columnheader "操作" [ref=e314]
+              - rowgroup [ref=e315]:
+                - row [ref=e316]:
+                  - cell "马来西亚" [ref=e317]
+                  - cell "演示投手" [ref=e318]
+                  - cell "已通过" [ref=e319]
+                  - cell "5" [ref=e320]
+                  - cell "3" [ref=e321]
+                  - cell "2" [ref=e322]
+                  - cell "2" [ref=e323]
+                  - cell "12.5" [ref=e324]
+                  - cell "50" [ref=e325]
+                  - cell "4" [ref=e326]
+                  - cell "1,000" [ref=e327]
+                  - cell "80" [ref=e328]
+                  - cell "8.00%" [ref=e329]
+                  - cell "4" [ref=e330]
+                  - cell "2" [ref=e331]
+                  - cell "1" [ref=e332]
+                  - cell "等待素材确认，已完成今日交付。" [ref=e333]
+                  - cell "等待素材确认。" [ref=e334]
+                  - cell "—" [ref=e335]
+                  - cell "—" [ref=e336]
+            - paragraph [ref=e341]: 同一素材重复测试不累计测试素材数量；测试缺口 = max(计划测试 − 实际测试，0)，ROI 和 CTR 自动计算。
+    - contentinfo [ref=e38]:
+      - text: 跨境电商经营数据平台
+      - generic [ref=e39]: 按业务日期统计 · 金额按市场币种展示

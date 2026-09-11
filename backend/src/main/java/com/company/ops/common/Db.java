@@ -7,7 +7,7 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class Db {
-    private static final Set<String> JSON_FIELDS=Set.of("rawExtra","requestSummary","beforeData","afterData","deliveryResults");
+    private static final Set<String> JSON_FIELDS=Set.of("rawExtra","requestSummary","beforeData","afterData","deliveryResults","editorTaskResults","directorTaskResults");
     private final SqlMapper mapper;
     private final ObjectMapper json;
     public Db(SqlMapper mapper, ObjectMapper json) { this.mapper=mapper; this.json=json; }

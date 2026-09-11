@@ -653,6 +653,13 @@ small {
   color: #fff
 }
 
+.ads-table th,
+.simple-table th,
+.task-plan-table th {
+  background: #19384e;
+  color: #fff
+}
+
 .task-table td {
   vertical-align: middle
 }

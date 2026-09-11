@@ -30,7 +30,8 @@ const adMetricConfig = [{ key: 'spend', trendKey: 'spend', metricKey: 'spend', l
 type AdMetricKey = typeof adMetricConfig[number]['key']
 const selectedAdMetricKeys = ref<AdMetricKey[]>(['spend', 'totalRevenue'])
 const adMetrics = computed(() => adMetricConfig.map(metric => ({ ...metric, metric: ads.value?.[metric.metricKey] })))
-const selectedAdMetrics = computed(() => adMetricConfig.filter(metric => selectedAdMetricKeys.value.includes(metric.key)).map(metric => ({ key: metric.trendKey, label: `${metric.chartLabel}${metric.money ? `（${ads.value?.currencyCode === 'MYR' ? 'RM' : ads.value?.currencyCode ?? currencyDisplay.value}）` : ''}` })))
+const adCurrencyDisplay = 'USD'
+const selectedAdMetrics = computed(() => adMetricConfig.filter(metric => selectedAdMetricKeys.value.includes(metric.key)).map(metric => ({ key: metric.trendKey, label: `${metric.chartLabel}${metric.money ? `（${adCurrencyDisplay}）` : ''}` })))
 const adChartRows = computed(() => ads.value?.trend?.map(row => ({ ...row, totalRevenue: row.attributedRevenue })) ?? [])
 const adChartTitle = computed(() => selectedAdMetrics.value.map(metric => metric.label).join('与'))
 function toggleAdMetric(key: AdMetricKey) { const index = selectedAdMetricKeys.value.indexOf(key); if (index >= 0) { selectedAdMetricKeys.value = selectedAdMetricKeys.value.filter(item => item !== key); return } if (selectedAdMetricKeys.value.length < 2) { selectedAdMetricKeys.value = [...selectedAdMetricKeys.value, key]; return } ElMessage.info('图表最多同时展示两个指标，请先取消一个已选指标') }
@@ -149,12 +150,12 @@ onMounted(async () => { void load(); try { markets.value = await api<Market[]>('
         </article>
         <article class="surface panel ads-panel">
           <div class="panel-head">
-            <h2>GMV Max 广告效果 <small class="muted">广告投放数据</small></h2><small>币种: {{ ads?.currencyCode ?? 'USD'
+            <h2>GMV Max 广告效果 <small class="muted">广告投放数据</small></h2><small>币种: {{ adCurrencyDisplay
             }}</small>
           </div>
           <div class="ad-metrics">
             <button v-for="m in adMetrics" :key="m.key" class="ad-metric" :class="{ selected: selectedAdMetricKeys.includes(m.key) }" type="button" :aria-pressed="selectedAdMetricKeys.includes(m.key)" @click="toggleAdMetric(m.key)"><small class="muted">{{ m.label }}</small><strong
-                class="number"><small v-if="m.money">{{ currencyDisplay }} </small>{{ number(m.metric?.value, 2) }}</strong>
+                class="number"><small v-if="m.money">{{ adCurrencyDisplay }} </small>{{ number(m.metric?.value, 2) }}</strong>
               <MetricChange :value="m.metric?.comparePrevious" :status="m.metric?.comparePreviousStatus"
                 :direction="m.direction" />
             </button>

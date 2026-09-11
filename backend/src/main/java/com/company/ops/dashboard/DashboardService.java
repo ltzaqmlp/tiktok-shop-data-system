@@ -204,8 +204,14 @@ public class DashboardService {
                    count(*) shop_rows
             from fact_shop_daily"""+WHERE,scope.params());
         boolean hasShop=((Number)row.getOrDefault("shopRows",0)).longValue()>0;row.put("source",hasShop?"SHOP_ANALYTICS_PARTIAL":"NONE");row.put("complete",false);
+        var product=productAggregate(scope);
+        if(hasShop&&!product.isEmpty()){
+            row.put("addToCartCount",product.get("addToCartCount"));
+            row.put("addedUserCount",product.get("addedUserCount"));
+            row.put("addToCartRate",divide(product.get("addToCartCount"),product.get("clicks")));
+        }
         row.put("ctr",divide(row.get("clicks"),row.get("impressions")));
-        row.put("addToCartRate",divide(row.get("addToCartCount"),row.get("clicks")));
+        if(product.isEmpty())row.put("addToCartRate",null);
         row.put("ctor",divide(row.get("skuOrderCount"),row.get("clicks")));
         return row;
     }

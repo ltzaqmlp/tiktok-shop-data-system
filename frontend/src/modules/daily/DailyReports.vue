@@ -10,182 +10,975 @@ type Metric = { plan: keyof DailyMetricReport; actual: keyof DailyMetricReport; 
 type ReportMetric = { metric: Metric; plan: number; actual: number; gap: number; rate: number; delivery: string }
 type ReportRow = { report: DailyMetricReport; marketName: string; role: string; metrics: ReportMetric[] }
 type SummaryMetric = { plan: keyof DailySummary; actual: keyof DailySummary; label: string }
-const contentMetrics: Metric[]=[
-  {label:'复盘视频',plan:'plannedReviewVideos',actual:'actualReviewVideos'},{label:'有效对标',plan:'plannedValidBenchmark',actual:'actualValidBenchmark'},
-  {label:'完成拆解',plan:'plannedDeconstruction',actual:'actualDeconstruction'},{label:'完整脚本',plan:'plannedCompleteScript',actual:'actualCompleteScript'},
-  {label:'可开剪脚本',plan:'plannedReadyScript',actual:'actualReadyScript'},{label:'新增发布',plan:'plannedNewPublish',actual:'actualNewPublish'},
-  {label:'首次交审',plan:'plannedFirstReview',actual:'actualFirstReview'},{label:'返工验收',plan:'plannedReworkAcceptance',actual:'actualReworkAcceptance'},
+const contentMetrics: Metric[] = [
+  { label: '复盘视频', plan: 'plannedReviewVideos', actual: 'actualReviewVideos' }, { label: '有效对标', plan: 'plannedValidBenchmark', actual: 'actualValidBenchmark' },
+  { label: '完成拆解', plan: 'plannedDeconstruction', actual: 'actualDeconstruction' }, { label: '完整脚本', plan: 'plannedCompleteScript', actual: 'actualCompleteScript' },
+  { label: '可开剪脚本', plan: 'plannedReadyScript', actual: 'actualReadyScript' }, { label: '新增发布', plan: 'plannedNewPublish', actual: 'actualNewPublish' },
+  { label: '首次交审', plan: 'plannedFirstReview', actual: 'actualFirstReview' }, { label: '返工验收', plan: 'plannedReworkAcceptance', actual: 'actualReworkAcceptance' },
 ]
-const editorMetrics=contentMetrics.slice(5), leadMetrics=contentMetrics.slice(0,5)
-const adFields: { key:keyof DailyMetricReport; label:string; money?:boolean }[]=[
-  {key:'plannedTest',label:'计划测试（条）'},{key:'actualTest',label:'实际测试（条）'},{key:'testGap',label:'测试缺口（条）'},
-  {key:'newAdjustPlan',label:'新建 / 调整计划（个）'},{key:'adSpend',label:'消耗',money:true},{key:'adGmv',label:'广告 GMV',money:true},
-  {key:'roi',label:'ROI'},{key:'impressions',label:'展现量'},{key:'clicks',label:'点击量'},{key:'ctr',label:'CTR'},
-  {key:'orders',label:'订单（单）'},{key:'expandedMaterial',label:'放大素材（条）'},{key:'stoppedMaterial',label:'停止素材（条）'},
+const editorMetrics = contentMetrics.slice(5), leadMetrics = contentMetrics.slice(0, 5)
+const adFields: { key: keyof DailyMetricReport; label: string; money?: boolean }[] = [
+  { key: 'plannedTest', label: '计划测试（条）' }, { key: 'actualTest', label: '实际测试（条）' }, { key: 'testGap', label: '测试缺口（条）' },
+  { key: 'newAdjustPlan', label: '新建 / 调整计划（个）' }, { key: 'adSpend', label: '消耗', money: true }, { key: 'adGmv', label: '广告 GMV', money: true },
+  { key: 'roi', label: 'ROI' }, { key: 'impressions', label: '展现量' }, { key: 'clicks', label: '点击量' }, { key: 'ctr', label: 'CTR' },
+  { key: 'orders', label: '订单（单）' }, { key: 'expandedMaterial', label: '放大素材（条）' }, { key: 'stoppedMaterial', label: '停止素材（条）' },
 ]
-const summaryMetrics: SummaryMetric[]=[
-  {label:'复盘视频',plan:'plannedReviewVideos',actual:'actualReviewVideos'},{label:'有效对标',plan:'plannedValidBenchmark',actual:'actualValidBenchmark'},
-  {label:'完成拆解',plan:'plannedDeconstruction',actual:'actualDeconstruction'},{label:'完整脚本',plan:'plannedCompleteScript',actual:'actualCompleteScript'},
-  {label:'可开剪脚本',plan:'plannedReadyScript',actual:'actualReadyScript'},{label:'新增发布',plan:'plannedNewPublish',actual:'actualNewPublish'},
-  {label:'首次交审',plan:'plannedFirstReview',actual:'actualFirstReview'},{label:'返工验收',plan:'plannedReworkAcceptance',actual:'actualReworkAcceptance'},
+const summaryMetrics: SummaryMetric[] = [
+  { label: '复盘视频', plan: 'plannedReviewVideos', actual: 'actualReviewVideos' }, { label: '有效对标', plan: 'plannedValidBenchmark', actual: 'actualValidBenchmark' },
+  { label: '完成拆解', plan: 'plannedDeconstruction', actual: 'actualDeconstruction' }, { label: '完整脚本', plan: 'plannedCompleteScript', actual: 'actualCompleteScript' },
+  { label: '可开剪脚本', plan: 'plannedReadyScript', actual: 'actualReadyScript' }, { label: '新增发布', plan: 'plannedNewPublish', actual: 'actualNewPublish' },
+  { label: '首次交审', plan: 'plannedFirstReview', actual: 'actualFirstReview' }, { label: '返工验收', plan: 'plannedReworkAcceptance', actual: 'actualReworkAcceptance' },
 ]
-const today=()=>new Date().toLocaleDateString('en-CA'), selectedDate=ref(today()), tab=ref('summary'), adMarket=ref('MY')
-const auth=useAuth(), context=ref<DailyContext>(), rows=ref<DailyMetricReport[]>([]), summaryReports=ref<DailySummary[]>([]), summaryReview=ref<DailySummaryReview>(summaryBlank()), loading=ref(false), saving=ref(false), error=ref<Error|null>(null)
-const content=reactive<DailyMetricReport>(blank('EDITOR','MY')), simpleReport=reactive<DailyMetricReport>(blank('OPS','MY')), ads=ref<Record<string,DailyMetricReport>>({})
-const editorPlan=ref<EditorDailyPlan>({configured:false,tasks:[]}), editorPlans=ref<EditorDailyEditorPlan[]>([]), directorPlan=ref<DirectorDailyPlan>({configured:false,tasks:[]}), directorPlans=ref<DirectorDailyDirectorPlan[]>([])
-const viewer=computed(()=>['BOSS','DEPT_HEAD','ADMIN'].some(role=>auth.user?.roles.some(item=>item.roleCode===role)))
-const departmentReviewer=computed(()=>auth.isAdmin||auth.user?.roles.some(role=>role.roleCode==='DEPT_HEAD')||false)
-const reviewColumn=computed(()=>departmentReviewer.value||context.value?.role==='DIRECTOR')
-const contentRole=computed(()=>['EDITOR','DIRECTOR'].includes(context.value?.role??''))
-const simpleRole=computed(()=>['OPS','TECH'].includes(context.value?.role??''))
-const simpleLabel=computed(()=>context.value?.role==='TECH'?'技术':'运营')
-const ownMarket=computed(()=>context.value?.marketCode||'MY'), currentMarket=computed(()=>tab.value.startsWith('market-')?tab.value.slice(7):ownMarket.value)
-const marketTabs=computed<Market[]>(()=>context.value?.markets??[])
-const currentPlan=computed<EditorDailyPlan|DirectorDailyPlan>(()=>context.value?.role==='DIRECTOR'?directorPlan.value:editorPlan.value)
-function blank(reportType:DailyMetricReport['reportType'],marketCode:string):DailyMetricReport{return {
-  reportDate:selectedDate.value,reportType,marketCode,submissionStatus:'DRAFT',rejectionReason:'',notes:'',blockers:'',deliveryResults:{},editorTaskResults:{},directorTaskResults:{},submittedAt:null,plannedReviewVideos:0,actualReviewVideos:0,plannedValidBenchmark:0,actualValidBenchmark:0,plannedDeconstruction:0,actualDeconstruction:0,plannedCompleteScript:0,actualCompleteScript:0,plannedReadyScript:0,actualReadyScript:0,plannedNewPublish:0,actualNewPublish:0,plannedFirstReview:0,actualFirstReview:0,plannedReworkAcceptance:0,actualReworkAcceptance:0,plannedTest:0,actualTest:0,testGap:0,newAdjustPlan:0,adSpend:0,adGmv:0,roi:0,impressions:0,clicks:0,ctr:0,orders:0,expandedMaterial:0,stoppedMaterial:0,
- }}
-function summaryBlank():DailySummaryReview{return {reportDate:selectedDate.value,todayImportantResult:'',needBossSupport:'',tomorrowFocus:'',submissionStatus:'DRAFT',rejectionReason:''}}
-function assign(target:DailyMetricReport,value:DailyMetricReport){Object.assign(target,blank(value.reportType,value.marketCode),value)}
-function status(value:string){return ({DRAFT:'草稿',PENDING_MARKET:'待编导审核',PENDING_DEPT:'待部门负责人审核',APPROVED:'已通过',REJECTED:'已退回'} as Record<string,string>)[value]??value}
-function statusType(value:string){return ({APPROVED:'success',REJECTED:'danger',DRAFT:'info',PENDING_MARKET:'warning',PENDING_DEPT:'warning'} as Record<string,string>)[value]??'info'}
-function reasonText(value:string){return value?(value.startsWith('原因：')?value:`原因：${value}`):''}
-function number(value:number){return Number(value??0).toLocaleString('zh-CN',{maximumFractionDigits:2})}
-function percent(value:number){return `${(Number(value??0)*100).toFixed(2)}%`}
-function currencyForMarket(marketCode:string){return marketCode?marketTabs.value.find(item=>item.marketCode===marketCode)?.currencyCode??'账户币种':'各市场币种'}
-function currencyLabel(field:{key:keyof DailyMetricReport;label:string},marketCode:string){return field.key==='adSpend'||field.key==='adGmv'?`${field.label}（${currencyForMarket(marketCode)}）`:field.label}
-function adValue(row:DailyMetricReport,key:keyof DailyMetricReport){return key==='roi'?number(Number(row[key])):key==='ctr'?percent(Number(row[key])):number(Number(row[key]))}
-function isOwnAd(row:DailyMetricReport){return row.reporterId===auth.user?.id}
-function adLocked(marketCode:string){const row=ads.value[marketCode];return Boolean(row?.id&&!isOwnAd(row))}
-function reportRows(reports:DailyMetricReport[]):ReportRow[]{return reports.map(report=>({report,marketName:report.marketName??report.marketCode,role:report.reportType==='EDITOR'?'剪辑':'编导',metrics:(report.reportType==='EDITOR'?editorMetrics:leadMetrics).map(metric=>{const plan=Number(report[metric.plan]??0),actual=Number(report[metric.actual]??0);return {metric,plan,actual,gap:Math.max(plan-actual,0),rate:plan?actual/plan:0,delivery:report.deliveryResults?.[String(metric.actual)]??''}})}))}
-const marketReportRows=computed(()=>reportRows(rows.value))
-const summaryTotal=computed(()=>summaryMetrics.reduce((total,metric)=>{total[metric.plan]=summaryReports.value.reduce((sum,row)=>sum+Number(row[metric.plan]??0),0);total[metric.actual]=summaryReports.value.reduce((sum,row)=>sum+Number(row[metric.actual]??0),0);return total},{} as Record<string,number>))
-function submittedAt(value?:string|null){return value?new Date(value).toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}):'—'}
-function deliveryKey(metric:Metric){return String(metric.actual)}
-function contentFormMetrics(){return leadMetrics}
-function syncTextareaRows(){nextTick(()=>requestAnimationFrame(()=>{document.querySelectorAll<HTMLElement>('.summary-review,.report-note-grid').forEach(row=>{const textareas=Array.from(row.querySelectorAll<HTMLTextAreaElement>('textarea'));textareas.forEach(textarea=>{textarea.style.height='' });const maxHeight=Math.max(...textareas.map(textarea=>textarea.scrollHeight),0);textareas.forEach(textarea=>{textarea.style.height=`${maxHeight}px`})})}))}
-function taskMetric(task:EditorDailyTaskPlan){return (context.value?.role==='DIRECTOR'?leadMetrics:editorMetrics).find(metric=>metric.label===task.taskName)}
-function taskResult(task:EditorDailyTaskPlan){return context.value?.role==='DIRECTOR'?content.directorTaskResults[task.taskName]:content.editorTaskResults[task.taskName]}
-function taskActual(task:EditorDailyTaskPlan){const metric=taskMetric(task);return metric?Number(content[metric.actual]):Number(taskResult(task)?.actualCount??0)}
-function setTaskActual(task:EditorDailyTaskPlan,value:number){const metric=taskMetric(task);if(metric)Object.assign(content,{[metric.actual]:value});else{const results=context.value?.role==='DIRECTOR'?content.directorTaskResults:content.editorTaskResults;(results[task.taskName]??={actualCount:0,delivery:''}).actualCount=value}}
-function taskDelivery(task:EditorDailyTaskPlan){const metric=taskMetric(task);return metric?content.deliveryResults[String(metric.actual)]??'':taskResult(task)?.delivery??''}
-function setTaskDelivery(task:EditorDailyTaskPlan,value:string){const metric=taskMetric(task);if(metric)content.deliveryResults[String(metric.actual)]=value;else{const results=context.value?.role==='DIRECTOR'?content.directorTaskResults:content.editorTaskResults;(results[task.taskName]??={actualCount:0,delivery:''}).delivery=value}}
-function addPlanTask(plan:EditorDailyPlan|DirectorDailyPlan){plan.tasks.push({taskName:'',plannedCount:0,sortOrder:plan.tasks.length})}
-async function removePlanTask(plan:EditorDailyPlan|DirectorDailyPlan,index:number){try{await ElMessageBox.confirm('删除后该任务不会出现在日报中，是否继续？','确认删除',{type:'warning',confirmButtonText:'确认删除',cancelButtonText:'取消'});plan.tasks.splice(index,1);plan.tasks.forEach((task,sortOrder)=>task.sortOrder=sortOrder)}catch{/* 取消删除 */}}
-async function saveEditorPlan(plan:EditorDailyEditorPlan){saving.value=true;try{const result=await save<EditorDailyEditorPlan>(`/daily-reports/editor-plan/${selectedDate.value}/${plan.editorId}`,{tasks:plan.tasks},'PUT');Object.assign(plan,result);ElMessage.success(`${plan.editorName}的任务已布置`)}catch(e){ElMessage.error((e as Error).message)}finally{saving.value=false}}
-async function saveDirectorPlan(plan:DirectorDailyDirectorPlan){saving.value=true;try{const result=await save<DirectorDailyDirectorPlan>(`/daily-reports/director-plan/${selectedDate.value}/${plan.directorId}`,{tasks:plan.tasks},'PUT');Object.assign(plan,result);ElMessage.success(`${plan.directorName}的任务已布置`)}catch(e){ElMessage.error((e as Error).message)}finally{saving.value=false}}
-function canReview(row:DailyMetricReport){return (context.value?.role==='DIRECTOR'&&row.reportType==='EDITOR'&&row.submissionStatus==='PENDING_MARKET')||(departmentReviewer.value&&row.submissionStatus==='PENDING_DEPT')}
-function requireReportFields(notes:string,blockers:string){if(notes.trim()&&blockers.trim())return true;ElMessage.warning('备注和卡点均不能为空');return false}
-async function load(){
-  if(!context.value)return
-  loading.value=true;error.value=null
-  try{
-    if(tab.value==='summary'){summaryReports.value=await api<DailySummary[]>(`/daily-reports/summary?${query({date:selectedDate.value})}`);summaryReview.value=await api<DailySummaryReview>(`/daily-reports/summary/review?${query({date:selectedDate.value})}`)}
-    else if(tab.value==='ads')rows.value=await api<DailyMetricReport[]>(`/daily-reports/ads?${query({date:selectedDate.value})}`)
-    else if(tab.value==='content-submit'){const [report,plan]=await Promise.all([api<DailyMetricReport>(`/daily-reports/mine/content?${query({date:selectedDate.value})}`),context.value.role==='EDITOR'?api<EditorDailyPlan>(`/daily-reports/editor-plan?${query({date:selectedDate.value})}`):context.value.role==='DIRECTOR'?api<DirectorDailyPlan>(`/daily-reports/director-plan?${query({date:selectedDate.value})}`):Promise.resolve(null)]);assign(content,report);if(context.value.role==='EDITOR'&&plan)editorPlan.value=plan as EditorDailyPlan;if(context.value.role==='DIRECTOR'&&plan)directorPlan.value=plan as DirectorDailyPlan}
-    else if(tab.value==='editor-plan')editorPlans.value=await api<EditorDailyEditorPlan[]>(`/daily-reports/editor-plan?${query({date:selectedDate.value})}`)
-    else if(tab.value==='director-plan')directorPlans.value=await api<DirectorDailyDirectorPlan[]>(`/daily-reports/director-plan?${query({date:selectedDate.value})}`)
-    else if(tab.value==='simple-submit')assign(simpleReport,await api<DailyMetricReport>(`/daily-reports/mine/simple?${query({date:selectedDate.value})}`))
-    else if(tab.value==='ads-submit'){
-      const reports=await api<DailyMetricReport[]>(`/daily-reports/ads?${query({date:selectedDate.value})}`);ads.value=Object.fromEntries(marketTabs.value.map(m=>[m.marketCode,blank('ADS_BUYER',m.marketCode)]));for(const row of reports)ads.value[row.marketCode]=row
-    } else if(tab.value==='ops'||tab.value==='tech')rows.value=await api<DailyMetricReport[]>(`/daily-reports/simple/${tab.value.toUpperCase()}?${query({date:selectedDate.value})}`)
-    else rows.value=await api<DailyMetricReport[]>(`/daily-reports/market/${currentMarket.value}?${query({date:selectedDate.value})}`)
-  }catch(e){error.value=e as Error}finally{loading.value=false;syncTextareaRows()}
+const today = () => new Date().toLocaleDateString('en-CA'), selectedDate = ref(today()), tab = ref('summary'), adMarket = ref('MY')
+const auth = useAuth(), context = ref<DailyContext>(), rows = ref<DailyMetricReport[]>([]), summaryReports = ref<DailySummary[]>([]), summaryReview = ref<DailySummaryReview>(summaryBlank()), loading = ref(false), saving = ref(false), error = ref<Error | null>(null)
+const content = reactive<DailyMetricReport>(blank('EDITOR', 'MY')), simpleReport = reactive<DailyMetricReport>(blank('OPS', 'MY')), ads = ref<Record<string, DailyMetricReport>>({})
+const editorPlan = ref<EditorDailyPlan>({ configured: false, tasks: [] }), editorPlans = ref<EditorDailyEditorPlan[]>([]), directorPlan = ref<DirectorDailyPlan>({ configured: false, tasks: [] }), directorPlans = ref<DirectorDailyDirectorPlan[]>([])
+const viewer = computed(() => ['BOSS', 'DEPT_HEAD', 'ADMIN'].some(role => auth.user?.roles.some(item => item.roleCode === role)))
+const departmentReviewer = computed(() => auth.isAdmin || auth.user?.roles.some(role => role.roleCode === 'DEPT_HEAD') || false)
+const reviewColumn = computed(() => departmentReviewer.value || context.value?.role === 'DIRECTOR')
+const contentRole = computed(() => ['EDITOR', 'DIRECTOR'].includes(context.value?.role ?? ''))
+const simpleRole = computed(() => ['OPS', 'TECH'].includes(context.value?.role ?? ''))
+const simpleLabel = computed(() => context.value?.role === 'TECH' ? '技术' : '运营')
+const ownMarket = computed(() => context.value?.marketCode || 'MY'), currentMarket = computed(() => tab.value.startsWith('market-') ? tab.value.slice(7) : ownMarket.value)
+const marketTabs = computed<Market[]>(() => context.value?.markets ?? [])
+const currentPlan = computed<EditorDailyPlan | DirectorDailyPlan>(() => context.value?.role === 'DIRECTOR' ? directorPlan.value : editorPlan.value)
+function blank(reportType: DailyMetricReport['reportType'], marketCode: string): DailyMetricReport {
+  return {
+    reportDate: selectedDate.value, reportType, marketCode, submissionStatus: 'DRAFT', rejectionReason: '', notes: '', blockers: '', deliveryResults: {}, editorTaskResults: {}, directorTaskResults: {}, submittedAt: null, plannedReviewVideos: 0, actualReviewVideos: 0, plannedValidBenchmark: 0, actualValidBenchmark: 0, plannedDeconstruction: 0, actualDeconstruction: 0, plannedCompleteScript: 0, actualCompleteScript: 0, plannedReadyScript: 0, actualReadyScript: 0, plannedNewPublish: 0, actualNewPublish: 0, plannedFirstReview: 0, actualFirstReview: 0, plannedReworkAcceptance: 0, actualReworkAcceptance: 0, plannedTest: 0, actualTest: 0, testGap: 0, newAdjustPlan: 0, adSpend: 0, adGmv: 0, roi: 0, impressions: 0, clicks: 0, ctr: 0, orders: 0, expandedMaterial: 0, stoppedMaterial: 0,
+  }
 }
-async function saveContent(submit:boolean){if(!requireReportFields(content.notes,content.blockers))return;saving.value=true;try{assign(content,await save<DailyMetricReport>(`/daily-reports/mine/content/${selectedDate.value}${submit?'/submit':''}`,content,submit?'POST':'PUT'));ElMessage.success(submit?'日报已提交':'日报已暂存');await load()}catch(e){ElMessage.error((e as Error).message)}finally{saving.value=false}}
-async function saveSimple(submit:boolean){if(!requireReportFields(simpleReport.notes,simpleReport.blockers))return;saving.value=true;try{assign(simpleReport,await save<DailyMetricReport>(`/daily-reports/mine/simple/${selectedDate.value}${submit?'/submit':''}`,simpleReport,submit?'POST':'PUT'));ElMessage.success(submit?`${simpleLabel.value}日报已提交`:`${simpleLabel.value}日报已暂存`);await load()}catch(e){ElMessage.error((e as Error).message)}finally{saving.value=false}}
-async function saveAds(submit:boolean){const row=ads.value[adMarket.value];if(!row||!requireReportFields(row.notes,row.blockers))return;saving.value=true;try{ads.value[adMarket.value]=await save<DailyMetricReport>(`/daily-reports/mine/ads/${selectedDate.value}/${adMarket.value}${submit?'/submit':''}`,row,submit?'POST':'PUT');ElMessage.success(submit?'该地区投流日报已提交':'日报已暂存');await load()}catch(e){ElMessage.error((e as Error).message)}finally{saving.value=false}}
-async function saveSummary(){saving.value=true;try{await save<DailySummaryReview>(`/daily-reports/summary/${selectedDate.value}`,summaryReview.value,'PUT');ElMessage.success('汇总已暂存');await load()}catch(e){ElMessage.error((e as Error).message)}finally{saving.value=false}}
-async function approveSummary(){saving.value=true;try{await save<DailySummaryReview>(`/daily-reports/summary/${selectedDate.value}`,summaryReview.value,'PUT');await save<DailySummaryReview>(`/daily-reports/summary/${selectedDate.value}/approve`,{});ElMessage.success('汇总审核已通过');await load()}catch(e){ElMessage.error((e as Error).message)}finally{saving.value=false}}
-async function rejectSummary(){try{const result=await ElMessageBox.prompt('请填写退回原因，编导和剪辑将看到该原因并重新填报。','退回汇总日报',{inputPattern:/\S+/,inputErrorMessage:'退回原因不能为空',confirmButtonText:'确认退回',cancelButtonText:'取消'});saving.value=true;await save<DailySummaryReview>(`/daily-reports/summary/${selectedDate.value}`,summaryReview.value,'PUT');await save<DailySummaryReview>(`/daily-reports/summary/${selectedDate.value}/reject`,{reason:result.value});ElMessage.success('汇总日报已退回');await load()}catch(e){if(e instanceof Error&&e.message!=='cancel')ElMessage.error(e.message)}finally{saving.value=false}}
-async function review(row:DailyMetricReport,accept:boolean){
-  try{let data:Record<string,string>={};if(!accept){const result=await ElMessageBox.prompt('请填写退回原因，提交人将看到该原因并重新填报。','退回日报',{inputPattern:/\S+/,inputErrorMessage:'退回原因不能为空',confirmButtonText:'确认退回',cancelButtonText:'取消'});data={reason:result.value}}
-    await save(`/daily-reports/${row.id}/${accept?'approve':'reject'}`,data);ElMessage.success(accept?'审核已通过':'日报已退回');await load()
-  }catch(e){if(e instanceof Error&&e.message!=='cancel')ElMessage.error(e.message)}
+function summaryBlank(): DailySummaryReview { return { reportDate: selectedDate.value, todayImportantResult: '', needBossSupport: '', tomorrowFocus: '', submissionStatus: 'DRAFT', rejectionReason: '' } }
+function assign(target: DailyMetricReport, value: DailyMetricReport) { Object.assign(target, blank(value.reportType, value.marketCode), value) }
+function status(value: string) { return ({ DRAFT: '草稿', PENDING_MARKET: '待编导审核', PENDING_DEPT: '待部门负责人审核', APPROVED: '已通过', REJECTED: '已退回' } as Record<string, string>)[value] ?? value }
+function statusType(value: string) { return ({ APPROVED: 'success', REJECTED: 'danger', DRAFT: 'info', PENDING_MARKET: 'warning', PENDING_DEPT: 'warning' } as Record<string, string>)[value] ?? 'info' }
+function reasonText(value: string) { return value ? (value.startsWith('原因：') ? value : `原因：${value}`) : '' }
+function number(value: number) { return Number(value ?? 0).toLocaleString('zh-CN', { maximumFractionDigits: 2 }) }
+function percent(value: number) { return `${(Number(value ?? 0) * 100).toFixed(2)}%` }
+function currencyForMarket(marketCode: string) { return marketCode ? marketTabs.value.find(item => item.marketCode === marketCode)?.currencyCode ?? '账户币种' : '各市场币种' }
+function currencyLabel(field: { key: keyof DailyMetricReport; label: string }, marketCode: string) { return field.key === 'adSpend' || field.key === 'adGmv' ? `${field.label}（${currencyForMarket(marketCode)}）` : field.label }
+function adValue(row: DailyMetricReport, key: keyof DailyMetricReport) { return key === 'roi' ? number(Number(row[key])) : key === 'ctr' ? percent(Number(row[key])) : number(Number(row[key])) }
+function isOwnAd(row: DailyMetricReport) { return row.reporterId === auth.user?.id }
+function adLocked(marketCode: string) { const row = ads.value[marketCode]; return Boolean(row?.id && !isOwnAd(row)) }
+function reportRows(reports: DailyMetricReport[]): ReportRow[] { return reports.map(report => ({ report, marketName: report.marketName ?? report.marketCode, role: report.reportType === 'EDITOR' ? '剪辑' : '编导', metrics: (report.reportType === 'EDITOR' ? editorMetrics : leadMetrics).map(metric => { const plan = Number(report[metric.plan] ?? 0), actual = Number(report[metric.actual] ?? 0); return { metric, plan, actual, gap: Math.max(plan - actual, 0), rate: plan ? actual / plan : 0, delivery: report.deliveryResults?.[String(metric.actual)] ?? '' } }) })) }
+const marketReportRows = computed(() => reportRows(rows.value))
+const summaryTotal = computed(() => summaryMetrics.reduce((total, metric) => { total[metric.plan] = summaryReports.value.reduce((sum, row) => sum + Number(row[metric.plan] ?? 0), 0); total[metric.actual] = summaryReports.value.reduce((sum, row) => sum + Number(row[metric.actual] ?? 0), 0); return total }, {} as Record<string, number>))
+function submittedAt(value?: string | null) { return value ? new Date(value).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—' }
+function deliveryKey(metric: Metric) { return String(metric.actual) }
+function contentFormMetrics() { return leadMetrics }
+function syncTextareaRows() { nextTick(() => requestAnimationFrame(() => { document.querySelectorAll<HTMLElement>('.summary-review,.report-note-grid').forEach(row => { const textareas = Array.from(row.querySelectorAll<HTMLTextAreaElement>('textarea')); textareas.forEach(textarea => { textarea.style.height = '' }); const maxHeight = Math.max(...textareas.map(textarea => textarea.scrollHeight), 0); textareas.forEach(textarea => { textarea.style.height = `${maxHeight}px` }) }) })) }
+function taskMetric(task: EditorDailyTaskPlan) { return (context.value?.role === 'DIRECTOR' ? leadMetrics : editorMetrics).find(metric => metric.label === task.taskName) }
+function taskResult(task: EditorDailyTaskPlan) { return context.value?.role === 'DIRECTOR' ? content.directorTaskResults[task.taskName] : content.editorTaskResults[task.taskName] }
+function taskActual(task: EditorDailyTaskPlan) { const metric = taskMetric(task); return metric ? Number(content[metric.actual]) : Number(taskResult(task)?.actualCount ?? 0) }
+function setTaskActual(task: EditorDailyTaskPlan, value: number) { const metric = taskMetric(task); if (metric) Object.assign(content, { [metric.actual]: value }); else { const results = context.value?.role === 'DIRECTOR' ? content.directorTaskResults : content.editorTaskResults; (results[task.taskName] ??= { actualCount: 0, delivery: '' }).actualCount = value } }
+function taskDelivery(task: EditorDailyTaskPlan) { const metric = taskMetric(task); return metric ? content.deliveryResults[String(metric.actual)] ?? '' : taskResult(task)?.delivery ?? '' }
+function setTaskDelivery(task: EditorDailyTaskPlan, value: string) { const metric = taskMetric(task); if (metric) content.deliveryResults[String(metric.actual)] = value; else { const results = context.value?.role === 'DIRECTOR' ? content.directorTaskResults : content.editorTaskResults; (results[task.taskName] ??= { actualCount: 0, delivery: '' }).delivery = value } }
+function addPlanTask(plan: EditorDailyPlan | DirectorDailyPlan) { plan.tasks.push({ taskName: '', plannedCount: 0, sortOrder: plan.tasks.length }) }
+async function removePlanTask(plan: EditorDailyPlan | DirectorDailyPlan, index: number) { try { await ElMessageBox.confirm('删除后该任务不会出现在日报中，是否继续？', '确认删除', { type: 'warning', confirmButtonText: '确认删除', cancelButtonText: '取消' }); plan.tasks.splice(index, 1); plan.tasks.forEach((task, sortOrder) => task.sortOrder = sortOrder) } catch {/* 取消删除 */ } }
+async function saveEditorPlan(plan: EditorDailyEditorPlan) { saving.value = true; try { const result = await save<EditorDailyEditorPlan>(`/daily-reports/editor-plan/${selectedDate.value}/${plan.editorId}`, { tasks: plan.tasks }, 'PUT'); Object.assign(plan, result); ElMessage.success(`${plan.editorName}的任务已布置`) } catch (e) { ElMessage.error((e as Error).message) } finally { saving.value = false } }
+async function saveDirectorPlan(plan: DirectorDailyDirectorPlan) { saving.value = true; try { const result = await save<DirectorDailyDirectorPlan>(`/daily-reports/director-plan/${selectedDate.value}/${plan.directorId}`, { tasks: plan.tasks }, 'PUT'); Object.assign(plan, result); ElMessage.success(`${plan.directorName}的任务已布置`) } catch (e) { ElMessage.error((e as Error).message) } finally { saving.value = false } }
+function canReview(row: DailyMetricReport) { return (context.value?.role === 'DIRECTOR' && row.reportType === 'EDITOR' && row.submissionStatus === 'PENDING_MARKET') || (departmentReviewer.value && row.submissionStatus === 'PENDING_DEPT') }
+function requireReportFields(notes: string, blockers: string) { if (notes.trim() && blockers.trim()) return true; ElMessage.warning('备注和卡点均不能为空'); return false }
+async function load() {
+  if (!context.value) return
+  loading.value = true; error.value = null
+  try {
+    if (tab.value === 'summary') { summaryReports.value = await api<DailySummary[]>(`/daily-reports/summary?${query({ date: selectedDate.value })}`); summaryReview.value = await api<DailySummaryReview>(`/daily-reports/summary/review?${query({ date: selectedDate.value })}`) }
+    else if (tab.value === 'ads') rows.value = await api<DailyMetricReport[]>(`/daily-reports/ads?${query({ date: selectedDate.value })}`)
+    else if (tab.value === 'content-submit') { const [report, plan] = await Promise.all([api<DailyMetricReport>(`/daily-reports/mine/content?${query({ date: selectedDate.value })}`), context.value.role === 'EDITOR' ? api<EditorDailyPlan>(`/daily-reports/editor-plan?${query({ date: selectedDate.value })}`) : context.value.role === 'DIRECTOR' ? api<DirectorDailyPlan>(`/daily-reports/director-plan?${query({ date: selectedDate.value })}`) : Promise.resolve(null)]); assign(content, report); if (context.value.role === 'EDITOR' && plan) editorPlan.value = plan as EditorDailyPlan; if (context.value.role === 'DIRECTOR' && plan) directorPlan.value = plan as DirectorDailyPlan }
+    else if (tab.value === 'editor-plan') editorPlans.value = await api<EditorDailyEditorPlan[]>(`/daily-reports/editor-plan?${query({ date: selectedDate.value })}`)
+    else if (tab.value === 'director-plan') directorPlans.value = await api<DirectorDailyDirectorPlan[]>(`/daily-reports/director-plan?${query({ date: selectedDate.value })}`)
+    else if (tab.value === 'simple-submit') assign(simpleReport, await api<DailyMetricReport>(`/daily-reports/mine/simple?${query({ date: selectedDate.value })}`))
+    else if (tab.value === 'ads-submit') {
+      const reports = await api<DailyMetricReport[]>(`/daily-reports/ads?${query({ date: selectedDate.value })}`); ads.value = Object.fromEntries(marketTabs.value.map(m => [m.marketCode, blank('ADS_BUYER', m.marketCode)])); for (const row of reports) ads.value[row.marketCode] = row
+    } else if (tab.value === 'ops' || tab.value === 'tech') rows.value = await api<DailyMetricReport[]>(`/daily-reports/simple/${tab.value.toUpperCase()}?${query({ date: selectedDate.value })}`)
+    else rows.value = await api<DailyMetricReport[]>(`/daily-reports/market/${currentMarket.value}?${query({ date: selectedDate.value })}`)
+  } catch (e) { error.value = e as Error } finally { loading.value = false; syncTextareaRows() }
 }
-onMounted(async()=>{document.addEventListener('input',syncTextareaRows);try{context.value=await api<DailyContext>('/daily-reports/context');if(!viewer.value)tab.value=context.value.role==='ADS_BUYER'?'ads':context.value.role==='DIRECTOR'?'content-submit':simpleRole.value?'simple-submit':'market-'+ownMarket.value;await load()}catch(e){error.value=e as Error}})
-onUnmounted(()=>document.removeEventListener('input',syncTextareaRows))
-watch([selectedDate,tab],()=>void load())
+async function saveContent(submit: boolean) { if (!requireReportFields(content.notes, content.blockers)) return; saving.value = true; try { assign(content, await save<DailyMetricReport>(`/daily-reports/mine/content/${selectedDate.value}${submit ? '/submit' : ''}`, content, submit ? 'POST' : 'PUT')); ElMessage.success(submit ? '日报已提交' : '日报已暂存'); await load() } catch (e) { ElMessage.error((e as Error).message) } finally { saving.value = false } }
+async function saveSimple(submit: boolean) { if (!requireReportFields(simpleReport.notes, simpleReport.blockers)) return; saving.value = true; try { assign(simpleReport, await save<DailyMetricReport>(`/daily-reports/mine/simple/${selectedDate.value}${submit ? '/submit' : ''}`, simpleReport, submit ? 'POST' : 'PUT')); ElMessage.success(submit ? `${simpleLabel.value}日报已提交` : `${simpleLabel.value}日报已暂存`); await load() } catch (e) { ElMessage.error((e as Error).message) } finally { saving.value = false } }
+async function saveAds(submit: boolean) { const row = ads.value[adMarket.value]; if (!row || !requireReportFields(row.notes, row.blockers)) return; saving.value = true; try { ads.value[adMarket.value] = await save<DailyMetricReport>(`/daily-reports/mine/ads/${selectedDate.value}/${adMarket.value}${submit ? '/submit' : ''}`, row, submit ? 'POST' : 'PUT'); ElMessage.success(submit ? '该地区投流日报已提交' : '日报已暂存'); await load() } catch (e) { ElMessage.error((e as Error).message) } finally { saving.value = false } }
+async function saveSummary() { saving.value = true; try { await save<DailySummaryReview>(`/daily-reports/summary/${selectedDate.value}`, summaryReview.value, 'PUT'); ElMessage.success('汇总已暂存'); await load() } catch (e) { ElMessage.error((e as Error).message) } finally { saving.value = false } }
+async function approveSummary() { saving.value = true; try { await save<DailySummaryReview>(`/daily-reports/summary/${selectedDate.value}`, summaryReview.value, 'PUT'); await save<DailySummaryReview>(`/daily-reports/summary/${selectedDate.value}/approve`, {}); ElMessage.success('汇总审核已通过'); await load() } catch (e) { ElMessage.error((e as Error).message) } finally { saving.value = false } }
+async function rejectSummary() { try { const result = await ElMessageBox.prompt('请填写退回原因，编导和剪辑将看到该原因并重新填报。', '退回汇总日报', { inputPattern: /\S+/, inputErrorMessage: '退回原因不能为空', confirmButtonText: '确认退回', cancelButtonText: '取消' }); saving.value = true; await save<DailySummaryReview>(`/daily-reports/summary/${selectedDate.value}`, summaryReview.value, 'PUT'); await save<DailySummaryReview>(`/daily-reports/summary/${selectedDate.value}/reject`, { reason: result.value }); ElMessage.success('汇总日报已退回'); await load() } catch (e) { if (e instanceof Error && e.message !== 'cancel') ElMessage.error(e.message) } finally { saving.value = false } }
+async function review(row: DailyMetricReport, accept: boolean) {
+  try {
+    let data: Record<string, string> = {}; if (!accept) { const result = await ElMessageBox.prompt('请填写退回原因，提交人将看到该原因并重新填报。', '退回日报', { inputPattern: /\S+/, inputErrorMessage: '退回原因不能为空', confirmButtonText: '确认退回', cancelButtonText: '取消' }); data = { reason: result.value } }
+    await save(`/daily-reports/${row.id}/${accept ? 'approve' : 'reject'}`, data); ElMessage.success(accept ? '审核已通过' : '日报已退回'); await load()
+  } catch (e) { if (e instanceof Error && e.message !== 'cancel') ElMessage.error(e.message) }
+}
+onMounted(async () => { document.addEventListener('input', syncTextareaRows); try { context.value = await api<DailyContext>('/daily-reports/context'); if (!viewer.value) tab.value = context.value.role === 'ADS_BUYER' ? 'ads' : context.value.role === 'DIRECTOR' ? 'content-submit' : simpleRole.value ? 'simple-submit' : 'market-' + ownMarket.value; await load() } catch (e) { error.value = e as Error } })
+onUnmounted(() => document.removeEventListener('input', syncTextareaRows))
+watch([selectedDate, tab], () => void load())
 </script>
 
 <template>
-  <div class="page-head daily-head"><div><h1>日报</h1><p>按角色填报，审核通过后实时进入对应汇总。</p></div><label>日期<el-date-picker v-model="selectedDate" type="date" value-format="YYYY-MM-DD" :clearable="false"/></label></div>
-  <RequestError :error="error" @retry="load"/>
+  <div class="page-head daily-head">
+    <div>
+      <h1>日报</h1>
+      <p>按角色填报，审核通过后实时进入对应汇总。</p>
+    </div><label>日期<el-date-picker v-model="selectedDate" type="date" value-format="YYYY-MM-DD"
+        :clearable="false" /></label>
+  </div>
+  <RequestError :error="error" @retry="load" />
   <el-tabs v-model="tab" class="daily-tabs">
-     <el-tab-pane v-if="viewer" label="汇总" name="summary"><section class="surface table-panel"><div class="sheet-title">五区内容日报汇总 <span>按市场汇总各岗位已通过日报的计划与实际数据</span> <el-tag size="small" :type="statusType(summaryReview.submissionStatus)">{{ status(summaryReview.submissionStatus) }}</el-tag></div><el-alert v-if="summaryReview.rejectionReason" title="汇总日报已退回" :description="reasonText(summaryReview.rejectionReason)" type="error" :closable="false"/><div v-loading="loading" class="table-scroll"><table class="summary-table"><thead><tr><th rowspan="2">地区</th><th v-for="metric in summaryMetrics" :key="metric.label" colspan="2">{{ metric.label }}</th></tr><tr><template v-for="metric in summaryMetrics" :key="`${metric.label}-head`"><th>计划</th><th>实际</th></template></tr></thead><tbody><tr v-for="row in summaryReports" :key="row.marketCode"><td>{{ row.marketName }}</td><template v-for="metric in summaryMetrics" :key="`${row.marketCode}-${metric.label}`"><td>{{ number(Number(row[metric.plan])) }}</td><td>{{ number(Number(row[metric.actual])) }}</td></template></tr><tr v-if="!loading&&!summaryReports.length"><td :colspan="summaryMetrics.length*2+1" class="empty">该日期暂无已通过日报</td></tr><tr v-if="!loading&&summaryReports.length" class="summary-total"><td>合计</td><template v-for="metric in summaryMetrics" :key="`total-${metric.label}`"><td>{{ number(summaryTotal[metric.plan]) }}</td><td>{{ number(summaryTotal[metric.actual]) }}</td></template></tr></tbody></table></div><div class="summary-review"><label><span>今日最重要成果</span><el-input v-model="summaryReview.todayImportantResult" type="textarea" :autosize="{ minRows: 3 }" @input="syncTextareaRows" maxlength="4000" :readonly="!departmentReviewer" placeholder="请输入今日最重要成果"/></label><label><span>需老板支持</span><el-input v-model="summaryReview.needBossSupport" type="textarea" :autosize="{ minRows: 3 }" @input="syncTextareaRows" maxlength="4000" :readonly="!departmentReviewer" placeholder="请输入需要老板支持的事项"/></label><label><span>明日重点</span><el-input v-model="summaryReview.tomorrowFocus" type="textarea" :autosize="{ minRows: 3 }" @input="syncTextareaRows" maxlength="4000" :readonly="!departmentReviewer" placeholder="请输入明日重点"/></label></div><div v-if="departmentReviewer" class="summary-actions"><el-button :loading="saving" @click="saveSummary">暂存</el-button><el-button type="success" :loading="saving" @click="approveSummary">通过</el-button><el-button type="danger" :loading="saving" @click="rejectSummary">不通过</el-button></div></section></el-tab-pane>
-     <el-tab-pane v-for="market in (context?.role==='ADS_BUYER'?[]:(viewer?marketTabs:marketTabs.filter(item=>item.marketCode===ownMarket)))" :key="market.marketCode" :label="`${market.marketName}日报`" :name="`market-${market.marketCode}`"><section class="surface table-panel"><div class="sheet-title">{{ market.marketName }}区日报 <span>{{ departmentReviewer?'部门负责人可审核待处理日报。':'按个人日报展示。' }}</span></div><div v-loading="loading" class="table-scroll"><table class="task-table"><thead><tr><th>地区</th><th>每日任务</th><th>执行岗位</th><th>具体负责人</th><th>计划</th><th>实际</th><th>还差</th><th>完成率</th><th>交付链接 / 编号清单</th><th>备注</th><th>卡点</th><th>截止时间</th><th>状态</th><th v-if="reviewColumn">操作</th></tr></thead><tbody><tr v-for="item in marketReportRows" :key="item.report.id"><td>{{ item.marketName }}</td><td class="task-stack"><div v-for="metric in item.metrics" :key="metric.metric.label">{{ metric.metric.label }}</div></td><td>{{ item.role }}</td><td>{{ item.report.reporterName }}</td><td class="task-stack"><div v-for="metric in item.metrics" :key="`${metric.metric.label}-plan`">{{ number(metric.plan) }}</div></td><td class="task-stack"><div v-for="metric in item.metrics" :key="`${metric.metric.label}-actual`">{{ number(metric.actual) }}</div></td><td class="task-stack"><div v-for="metric in item.metrics" :key="`${metric.metric.label}-gap`">{{ number(metric.gap) }}</div></td><td class="task-stack"><div v-for="metric in item.metrics" :key="`${metric.metric.label}-rate`">{{ metric.plan?percent(metric.rate):'—' }}</div></td><td class="delivery-cell task-stack"><div v-for="metric in item.metrics" :key="`${metric.metric.label}-delivery`">{{ metric.delivery||'—' }}</div></td><td class="notes-cell">{{ item.report.notes||'—' }}</td><td class="notes-cell">{{ item.report.blockers||'—' }}</td><td>{{ submittedAt(item.report.submittedAt) }}</td><td><el-tag size="small" :type="statusType(item.report.submissionStatus)">{{ status(item.report.submissionStatus) }}</el-tag></td><td v-if="reviewColumn"><template v-if="canReview(item.report)"><el-button link type="success" @click="review(item.report,true)">通过</el-button><el-button link type="danger" @click="review(item.report,false)">不通过</el-button></template><span v-else>—</span></td></tr><tr v-if="!loading&&!marketReportRows.length"><td :colspan="reviewColumn?14:13" class="empty">该日期暂无日报</td></tr></tbody></table></div></section></el-tab-pane>
-     <el-tab-pane v-if="viewer||context?.role==='ADS_BUYER'" label="投流日报" name="ads"><section class="surface table-panel"><div class="sheet-title">投手数据｜素材测试、消耗、GMV、ROI、CTR、订单 <span>金额和 ROI 按地区账户币种查看。</span></div><div v-loading="loading" class="table-scroll"><table class="ads-table"><thead><tr><th>地区</th><th>填报人</th><th>状态</th><th v-for="field in adFields" :key="field.key">{{ currencyLabel(field,'') }}</th><th>备注</th><th>卡点</th><th>退回原因</th><th v-if="departmentReviewer">操作</th></tr></thead><tbody><tr v-for="row in rows" :key="row.id"><td>{{ row.marketName }}</td><td>{{ row.reporterName }}</td><td><el-tag size="small" :type="statusType(row.submissionStatus)">{{ status(row.submissionStatus) }}</el-tag></td><td v-for="field in adFields" :key="field.key">{{ adValue(row,field.key) }}</td><td class="notes-cell">{{ row.notes||'—' }}</td><td class="notes-cell">{{ row.blockers||'—' }}</td><td>{{ reasonText(row.rejectionReason)||'—' }}</td><td v-if="departmentReviewer"><template v-if="canReview(row)"><el-button link type="success" @click="review(row,true)">通过</el-button><el-button link type="danger" @click="review(row,false)">不通过</el-button></template><span v-else>—</span></td></tr><tr v-if="!loading&&!rows.length"><td :colspan="21" class="empty">该日期暂无投流日报</td></tr></tbody></table></div><p class="note">同一素材重复测试不累计测试素材数量；测试缺口 = max(计划测试 − 实际测试，0)，ROI 和 CTR 自动计算。</p></section></el-tab-pane>
-     <el-tab-pane v-if="viewer" label="运营日报" name="ops"><section class="surface table-panel"><div class="sheet-title">运营日报 <span>运营提交后由部门负责人审核，审核通过后展示给老板。</span></div><div v-loading="loading" class="table-scroll"><table class="simple-table"><thead><tr><th>填报人</th><th>备注</th><th>卡点</th><th>提交时间</th><th>状态</th><th v-if="departmentReviewer">操作</th></tr></thead><tbody><tr v-for="row in rows" :key="row.id"><td>{{ row.reporterName }}</td><td class="notes-cell">{{ row.notes||'—' }}</td><td class="notes-cell">{{ row.blockers||'—' }}</td><td>{{ submittedAt(row.submittedAt) }}</td><td><el-tag size="small" :type="statusType(row.submissionStatus)">{{ status(row.submissionStatus) }}</el-tag><div v-if="row.rejectionReason" class="reason">{{ reasonText(row.rejectionReason) }}</div></td><td v-if="departmentReviewer"><template v-if="canReview(row)"><el-button link type="success" @click="review(row,true)">通过</el-button><el-button link type="danger" @click="review(row,false)">不通过</el-button></template><span v-else>—</span></td></tr><tr v-if="!loading&&!rows.length"><td :colspan="departmentReviewer?6:5" class="empty">该日期暂无运营日报</td></tr></tbody></table></div></section></el-tab-pane>
-     <el-tab-pane v-if="viewer" label="技术日报" name="tech"><section class="surface table-panel"><div class="sheet-title">技术日报 <span>技术提交后由部门负责人审核，审核通过后展示给老板。</span></div><div v-loading="loading" class="table-scroll"><table class="simple-table"><thead><tr><th>填报人</th><th>备注</th><th>卡点</th><th>提交时间</th><th>状态</th><th v-if="departmentReviewer">操作</th></tr></thead><tbody><tr v-for="row in rows" :key="row.id"><td>{{ row.reporterName }}</td><td class="notes-cell">{{ row.notes||'—' }}</td><td class="notes-cell">{{ row.blockers||'—' }}</td><td>{{ submittedAt(row.submittedAt) }}</td><td><el-tag size="small" :type="statusType(row.submissionStatus)">{{ status(row.submissionStatus) }}</el-tag><div v-if="row.rejectionReason" class="reason">{{ reasonText(row.rejectionReason) }}</div></td><td v-if="departmentReviewer"><template v-if="canReview(row)"><el-button link type="success" @click="review(row,true)">通过</el-button><el-button link type="danger" @click="review(row,false)">不通过</el-button></template><span v-else>—</span></td></tr><tr v-if="!loading&&!rows.length"><td :colspan="departmentReviewer?6:5" class="empty">该日期暂无技术日报</td></tr></tbody></table></div></section></el-tab-pane>
-     <el-tab-pane v-if="departmentReviewer" label="布置编导任务" name="director-plan"><section class="surface form-panel" v-loading="loading"><div class="sheet-title">编导每日任务 <span>显示各市场编导，每人独立布置任务。</span></div><div v-if="!directorPlans.length" class="empty">暂无有效编导账号</div><section v-for="plan in directorPlans" :key="plan.directorId" class="editor-plan-card"><div class="editor-plan-title">{{ plan.directorName }}<span>{{ plan.marketName }}编导</span></div><div class="report-table-scroll"><table class="task-plan-table"><thead><tr><th>每日任务</th><th>计划</th></tr></thead><tbody><tr v-for="(task,index) in plan.tasks" :key="index"><td><el-input v-model="task.taskName" maxlength="100" placeholder="请输入每日任务"/></td><td><div class="plan-cell"><el-input-number v-model="task.plannedCount" :min="0" :precision="0" controls-position="right"/><el-button link type="danger" @click="removePlanTask(plan,index)">删除</el-button></div></td></tr><tr v-if="!plan.tasks.length"><td colspan="2" class="empty">暂无任务，请新增任务</td></tr></tbody></table></div><div class="submit-bar"><span>默认任务：复盘视频、有效对标、完成拆解、完整脚本、可开剪脚本。</span><div><el-button @click="addPlanTask(plan)">新增任务</el-button><el-button type="primary" :loading="saving" @click="saveDirectorPlan(plan)">确认布置</el-button></div></div></section></section></el-tab-pane>
-     <el-tab-pane v-if="context?.role==='DIRECTOR'" label="布置任务" name="editor-plan"><section class="surface form-panel" v-loading="loading"><div class="sheet-title">剪辑每日任务 <span>仅显示{{ ownMarket }}市场的剪辑，每人独立布置任务。</span></div><div v-if="!editorPlans.length" class="empty">该市场暂无有效剪辑账号</div><section v-for="plan in editorPlans" :key="plan.editorId" class="editor-plan-card"><div class="editor-plan-title">{{ plan.editorName }}<span>剪辑账号</span></div><div class="report-table-scroll"><table class="task-plan-table"><thead><tr><th>每日任务</th><th>计划</th></tr></thead><tbody><tr v-for="(task,index) in plan.tasks" :key="index"><td><el-input v-model="task.taskName" maxlength="100" placeholder="请输入每日任务"/></td><td><div class="plan-cell"><el-input-number v-model="task.plannedCount" :min="0" :precision="0" controls-position="right"/><el-button link type="danger" @click="removePlanTask(plan,index)">删除</el-button></div></td></tr><tr v-if="!plan.tasks.length"><td colspan="2" class="empty">暂无任务，请新增任务</td></tr></tbody></table></div><div class="submit-bar"><span>默认任务：新增发布、首次交审、返工验收。</span><div><el-button @click="addPlanTask(plan)">新增任务</el-button><el-button type="primary" :loading="saving" @click="saveEditorPlan(plan)">确认布置</el-button></div></div></section></section></el-tab-pane>
-     <el-tab-pane v-if="contentRole" label="新增日报" name="content-submit"><section class="surface form-panel" v-loading="loading"><div class="sheet-title">{{ context?.role==='EDITOR'?'剪辑':'编导' }}日报｜{{ content.marketCode }} <el-tag size="small" :type="statusType(content.submissionStatus)">{{ status(content.submissionStatus) }}</el-tag></div><el-alert v-if="content.rejectionReason" title="日报已退回" :description="reasonText(content.rejectionReason)" type="error" :closable="false"/><el-alert v-if="context?.role==='EDITOR'" title="计划由编导布置，剪辑不可修改" type="info" :closable="false"/><div class="report-table-scroll"><table class="report-form-table"><thead><tr><th>每日任务</th><th>计划</th><th>实际</th><th>还差</th><th>完成率</th><th>交付成果</th></tr></thead><tbody><template v-if="context?.role==='EDITOR'||context?.role==='DIRECTOR'"><tr v-for="task in currentPlan.tasks" :key="task.taskName"><td>{{ task.taskName }}</td><td><el-input-number :model-value="task.plannedCount" disabled :min="0" :precision="0" controls-position="right"/></td><td><el-input-number :model-value="taskActual(task)" @update:model-value="setTaskActual(task,Number($event))" :min="0" :precision="0" controls-position="right"/></td><td>{{ number(Math.max(task.plannedCount-taskActual(task),0)) }}</td><td>{{ task.plannedCount?percent(taskActual(task)/task.plannedCount):'—' }}</td><td><el-input :model-value="taskDelivery(task)" @update:model-value="setTaskDelivery(task,String($event))" maxlength="2000" placeholder="填写链接、编号或交付说明"/></td></tr><tr v-if="!currentPlan.tasks.length"><td colspan="6" class="empty">尚未布置任务</td></tr></template><tr v-else v-for="metric in contentFormMetrics()" :key="metric.label"><td>{{ metric.label }}</td><td><el-input-number v-model="content[metric.plan] as number" :min="0" :precision="0" controls-position="right"/></td><td><el-input-number v-model="content[metric.actual] as number" :min="0" :precision="0" controls-position="right"/></td><td>{{ number(Math.max(Number(content[metric.plan]??0)-Number(content[metric.actual]??0),0)) }}</td><td>{{ Number(content[metric.plan])?percent(Number(content[metric.actual])/Number(content[metric.plan])):'—' }}</td><td><el-input v-model="content.deliveryResults[String(metric.actual)]" maxlength="2000" placeholder="填写链接、编号或交付说明"/></td></tr></tbody></table></div><div class="report-note-grid"><label><span>备注<sup class="required-mark">*</sup></span><el-input v-model="content.notes" type="textarea" :autosize="{ minRows: 3 }" @input="syncTextareaRows" maxlength="4000" aria-required="true" placeholder="填写备注"/></label><label><span>卡点<sup class="required-mark">*</sup></span><el-input v-model="content.blockers" type="textarea" :autosize="{ minRows: 3 }" @input="syncTextareaRows" maxlength="4000" aria-required="true" placeholder="填写当前卡点"/></label></div><div class="submit-bar"><span>交付成果由填报人填写；提交成功后自动记录提交时间：{{ submittedAt(content.submittedAt) }}</span><div><el-button :loading="saving" @click="saveContent(false)">暂存</el-button><el-button type="primary" :loading="saving" @click="saveContent(true)">提交日报</el-button></div></div></section></el-tab-pane>
-     <el-tab-pane v-if="context?.role==='ADS_BUYER'" label="新增投流日报" name="ads-submit"><section class="surface form-panel" v-loading="loading"><div class="sheet-title">投流日报填报 <el-tag v-if="adLocked(adMarket)" size="small" type="info">{{ ads[adMarket].reporterName }}已填报，当前只读</el-tag></div><el-tabs v-model="adMarket" type="card" class="market-picker"><el-tab-pane v-for="market in marketTabs" :key="market.marketCode" :label="market.marketName" :name="market.marketCode"/></el-tabs><template v-if="ads[adMarket]"><el-alert v-if="adLocked(adMarket)" title="该国家日报已由其他投手填报" :description="`${ads[adMarket].reporterName} 的数据仅供查看，不能修改或提交。`" type="info" :closable="false"/><el-alert v-else-if="ads[adMarket].rejectionReason" title="该地区日报已退回" :description="reasonText(ads[adMarket].rejectionReason)" type="error" :closable="false"/><div class="metric-form ads-form" :class="{'locked-ad-form':adLocked(adMarket)}"><label v-for="field in adFields.filter(field=>!['testGap','roi','ctr'].includes(String(field.key)))" :key="field.key"><span>{{ currencyLabel(field,adMarket) }}</span><el-input-number v-model="ads[adMarket][field.key] as number" :disabled="adLocked(adMarket)" :min="0" :precision="field.money?2:0" controls-position="right"/></label><label><span>测试缺口（自动）</span><el-input :model-value="String(Math.max(ads[adMarket].plannedTest-ads[adMarket].actualTest,0))" readonly/></label><label><span>ROI（自动）</span><el-input :model-value="number(ads[adMarket].adSpend?ads[adMarket].adGmv/ads[adMarket].adSpend:0)" readonly/></label><label><span>CTR（自动）</span><el-input :model-value="percent(ads[adMarket].impressions?ads[adMarket].clicks/ads[adMarket].impressions:0)" readonly/></label></div><div class="report-note-grid"><label><span>备注<sup class="required-mark">*</sup></span><el-input v-model="ads[adMarket].notes" :disabled="adLocked(adMarket)" type="textarea" :autosize="{ minRows: 3, maxRows: 10 }" maxlength="4000" aria-required="true" placeholder="填写备注"/></label><label><span>卡点<sup class="required-mark">*</sup></span><el-input v-model="ads[adMarket].blockers" :disabled="adLocked(adMarket)" type="textarea" :autosize="{ minRows: 3, maxRows: 10 }" maxlength="4000" aria-required="true" placeholder="填写当前卡点"/></label></div><div class="submit-bar"><span>{{ adLocked(adMarket)?'该国家已由其他投手填报，当前只读。':'一名投手每天可按五个地区分别提交。' }}</span><div><el-button :disabled="adLocked(adMarket)" :loading="saving" @click="saveAds(false)">暂存</el-button><el-button :disabled="adLocked(adMarket)" type="primary" :loading="saving" @click="saveAds(true)">提交{{ marketTabs.find(item=>item.marketCode===adMarket)?.marketName }}日报</el-button></div></div></template></section></el-tab-pane>
-     <el-tab-pane v-if="simpleRole" label="新增日报" name="simple-submit"><section class="surface form-panel" v-loading="loading"><div class="sheet-title">{{ simpleLabel }}日报 <el-tag size="small" :type="statusType(simpleReport.submissionStatus)">{{ status(simpleReport.submissionStatus) }}</el-tag></div><el-alert v-if="simpleReport.rejectionReason" title="日报已退回" :description="reasonText(simpleReport.rejectionReason)" type="error" :closable="false"/><div class="report-note-grid"><label><span>备注<sup class="required-mark">*</sup></span><el-input v-model="simpleReport.notes" type="textarea" :autosize="{ minRows: 6, maxRows: 10 }" maxlength="4000" aria-required="true" placeholder="填写备注"/></label><label><span>卡点<sup class="required-mark">*</sup></span><el-input v-model="simpleReport.blockers" type="textarea" :autosize="{ minRows: 6, maxRows: 10 }" maxlength="4000" aria-required="true" placeholder="填写当前卡点"/></label></div><div class="submit-bar"><span>提交后进入部门负责人审核，审核通过后展示在老板日报中。</span><div><el-button :loading="saving" @click="saveSimple(false)">暂存</el-button><el-button type="primary" :loading="saving" @click="saveSimple(true)">提交日报</el-button></div></div></section></el-tab-pane>
+    <el-tab-pane v-if="viewer" label="汇总" name="summary">
+      <section class="surface table-panel">
+        <div class="sheet-title">五区内容日报汇总 <span>按市场汇总各岗位已通过日报的计划与实际数据</span> <el-tag size="small"
+            :type="statusType(summaryReview.submissionStatus)">{{ status(summaryReview.submissionStatus) }}</el-tag>
+        </div><el-alert v-if="summaryReview.rejectionReason" title="汇总日报已退回"
+          :description="reasonText(summaryReview.rejectionReason)" type="error" :closable="false" />
+        <div v-loading="loading" class="table-scroll">
+          <table class="summary-table">
+            <thead>
+              <tr>
+                <th rowspan="2">地区</th>
+                <th v-for="metric in summaryMetrics" :key="metric.label" colspan="2">{{ metric.label }}</th>
+              </tr>
+              <tr><template v-for="metric in summaryMetrics" :key="`${metric.label}-head`">
+                  <th>计划</th>
+                  <th>实际</th>
+                </template>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="row in summaryReports" :key="row.marketCode">
+                <td>{{ row.marketName }}</td><template v-for="metric in summaryMetrics"
+                  :key="`${row.marketCode}-${metric.label}`">
+                  <td>{{ number(Number(row[metric.plan])) }}</td>
+                  <td>{{ number(Number(row[metric.actual])) }}</td>
+                </template>
+              </tr>
+              <tr v-if="!loading && !summaryReports.length">
+                <td :colspan="summaryMetrics.length * 2 + 1" class="empty">该日期暂无已通过日报</td>
+              </tr>
+              <tr v-if="!loading && summaryReports.length" class="summary-total">
+                <td>合计</td><template v-for="metric in summaryMetrics" :key="`total-${metric.label}`">
+                  <td>{{ number(summaryTotal[metric.plan]) }}</td>
+                  <td>{{ number(summaryTotal[metric.actual]) }}</td>
+                </template>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="summary-review"><label><span>今日最重要成果</span><el-input v-model="summaryReview.todayImportantResult"
+              type="textarea" :autosize="{ minRows: 3 }" @input="syncTextareaRows" maxlength="4000"
+              :readonly="!departmentReviewer" placeholder="请输入今日最重要成果" /></label><label><span>需老板支持</span><el-input
+              v-model="summaryReview.needBossSupport" type="textarea" :autosize="{ minRows: 3 }"
+              @input="syncTextareaRows" maxlength="4000" :readonly="!departmentReviewer"
+              placeholder="请输入需要老板支持的事项" /></label><label><span>明日重点</span><el-input
+              v-model="summaryReview.tomorrowFocus" type="textarea" :autosize="{ minRows: 3 }" @input="syncTextareaRows"
+              maxlength="4000" :readonly="!departmentReviewer" placeholder="请输入明日重点" /></label></div>
+        <div v-if="departmentReviewer" class="summary-actions"><el-button :loading="saving"
+            @click="saveSummary">暂存</el-button><el-button type="success" :loading="saving"
+            @click="approveSummary">通过</el-button><el-button type="danger" :loading="saving"
+            @click="rejectSummary">不通过</el-button></div>
+      </section>
+    </el-tab-pane>
+    <el-tab-pane
+      v-for="market in (context?.role === 'ADS_BUYER' ? [] : (viewer ? marketTabs : marketTabs.filter(item => item.marketCode === ownMarket)))"
+      :key="market.marketCode" :label="`${market.marketName}日报`" :name="`market-${market.marketCode}`">
+      <section class="surface table-panel">
+        <div class="sheet-title">{{ market.marketName }}区日报 <span>{{ departmentReviewer ? '部门负责人可审核待处理日报。' : '按个人日报展示。'
+        }}</span></div>
+        <div v-loading="loading" class="table-scroll">
+          <table class="task-table">
+            <thead>
+              <tr>
+                <th>地区</th>
+                <th>每日任务</th>
+                <th>执行岗位</th>
+                <th>具体负责人</th>
+                <th>计划</th>
+                <th>实际</th>
+                <th>还差</th>
+                <th>完成率</th>
+                <th>交付链接 / 编号清单</th>
+                <th>备注</th>
+                <th>卡点</th>
+                <th>截止时间</th>
+                <th>状态</th>
+                <th v-if="reviewColumn">操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="item in marketReportRows" :key="item.report.id">
+                <td>{{ item.marketName }}</td>
+                <td class="task-stack">
+                  <div v-for="metric in item.metrics" :key="metric.metric.label">{{ metric.metric.label }}</div>
+                </td>
+                <td>{{ item.role }}</td>
+                <td>{{ item.report.reporterName }}</td>
+                <td class="task-stack">
+                  <div v-for="metric in item.metrics" :key="`${metric.metric.label}-plan`">{{ number(metric.plan) }}
+                  </div>
+                </td>
+                <td class="task-stack">
+                  <div v-for="metric in item.metrics" :key="`${metric.metric.label}-actual`">{{ number(metric.actual) }}
+                  </div>
+                </td>
+                <td class="task-stack">
+                  <div v-for="metric in item.metrics" :key="`${metric.metric.label}-gap`">{{ number(metric.gap) }}</div>
+                </td>
+                <td class="task-stack">
+                  <div v-for="metric in item.metrics" :key="`${metric.metric.label}-rate`">{{
+                    metric.plan ? percent(metric.rate) : '—' }}</div>
+                </td>
+                <td class="delivery-cell task-stack">
+                  <div v-for="metric in item.metrics" :key="`${metric.metric.label}-delivery`">{{ metric.delivery || '—'
+                  }}
+                  </div>
+                </td>
+                <td class="notes-cell">{{ item.report.notes || '—' }}</td>
+                <td class="notes-cell">{{ item.report.blockers || '—' }}</td>
+                <td>{{ submittedAt(item.report.submittedAt) }}</td>
+                <td><el-tag size="small" :type="statusType(item.report.submissionStatus)">{{
+                  status(item.report.submissionStatus) }}</el-tag></td>
+                <td v-if="reviewColumn"><template v-if="canReview(item.report)"><el-button link type="success"
+                      @click="review(item.report, true)">通过</el-button><el-button link type="danger"
+                      @click="review(item.report, false)">不通过</el-button></template><span v-else>—</span></td>
+              </tr>
+              <tr v-if="!loading && !marketReportRows.length">
+                <td :colspan="reviewColumn ? 14 : 13" class="empty">该日期暂无日报</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </el-tab-pane>
+    <el-tab-pane v-if="viewer || context?.role === 'ADS_BUYER'" label="投流日报" name="ads">
+      <section class="surface table-panel">
+        <div style="color: red;"><strong>注意：投手的日报数据统计是昨日的数据</strong></div>
+        <div class="sheet-title">投手数据｜素材测试、消耗、GMV、ROI、CTR、订单 <span>金额和 ROI 按地区账户币种查看。</span></div>
+        <div v-loading="loading" class="table-scroll">
+          <table class="ads-table">
+            <thead>
+              <tr>
+                <th>地区</th>
+                <th>填报人</th>
+                <th>状态</th>
+                <th v-for="field in adFields" :key="field.key">{{ currencyLabel(field, '') }}</th>
+                <th>备注</th>
+                <th>卡点</th>
+                <th>退回原因</th>
+                <th v-if="departmentReviewer">操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="row in rows" :key="row.id">
+                <td>{{ row.marketName }}</td>
+                <td>{{ row.reporterName }}</td>
+                <td><el-tag size="small" :type="statusType(row.submissionStatus)">{{ status(row.submissionStatus)
+                }}</el-tag></td>
+                <td v-for="field in adFields" :key="field.key">{{ adValue(row, field.key) }}</td>
+                <td class="notes-cell">{{ row.notes || '—' }}</td>
+                <td class="notes-cell">{{ row.blockers || '—' }}</td>
+                <td>{{ reasonText(row.rejectionReason) || '—' }}</td>
+                <td v-if="departmentReviewer"><template v-if="canReview(row)"><el-button link type="success"
+                      @click="review(row, true)">通过</el-button><el-button link type="danger"
+                      @click="review(row, false)">不通过</el-button></template><span v-else>—</span></td>
+              </tr>
+              <tr v-if="!loading && !rows.length">
+                <td :colspan="21" class="empty">该日期暂无投流日报</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">同一素材重复测试不累计测试素材数量；测试缺口 = max(计划测试 − 实际测试，0)，ROI 和 CTR 自动计算。</p>
+      </section>
+    </el-tab-pane>
+    <el-tab-pane v-if="viewer" label="运营日报" name="ops">
+      <section class="surface table-panel">
+        <div class="sheet-title">运营日报 <span>运营提交后由部门负责人审核，审核通过后展示给老板。</span></div>
+        <div v-loading="loading" class="table-scroll">
+          <table class="simple-table">
+            <thead>
+              <tr>
+                <th>填报人</th>
+                <th>备注</th>
+                <th>卡点</th>
+                <th>提交时间</th>
+                <th>状态</th>
+                <th v-if="departmentReviewer">操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="row in rows" :key="row.id">
+                <td>{{ row.reporterName }}</td>
+                <td class="notes-cell">{{ row.notes || '—' }}</td>
+                <td class="notes-cell">{{ row.blockers || '—' }}</td>
+                <td>{{ submittedAt(row.submittedAt) }}</td>
+                <td><el-tag size="small" :type="statusType(row.submissionStatus)">{{ status(row.submissionStatus)
+                }}</el-tag>
+                  <div v-if="row.rejectionReason" class="reason">{{ reasonText(row.rejectionReason) }}</div>
+                </td>
+                <td v-if="departmentReviewer"><template v-if="canReview(row)"><el-button link type="success"
+                      @click="review(row, true)">通过</el-button><el-button link type="danger"
+                      @click="review(row, false)">不通过</el-button></template><span v-else>—</span></td>
+              </tr>
+              <tr v-if="!loading && !rows.length">
+                <td :colspan="departmentReviewer ? 6 : 5" class="empty">该日期暂无运营日报</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </el-tab-pane>
+    <el-tab-pane v-if="viewer" label="技术日报" name="tech">
+      <section class="surface table-panel">
+        <div class="sheet-title">技术日报 <span>技术提交后由部门负责人审核，审核通过后展示给老板。</span></div>
+        <div v-loading="loading" class="table-scroll">
+          <table class="simple-table">
+            <thead>
+              <tr>
+                <th>填报人</th>
+                <th>备注</th>
+                <th>卡点</th>
+                <th>提交时间</th>
+                <th>状态</th>
+                <th v-if="departmentReviewer">操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="row in rows" :key="row.id">
+                <td>{{ row.reporterName }}</td>
+                <td class="notes-cell">{{ row.notes || '—' }}</td>
+                <td class="notes-cell">{{ row.blockers || '—' }}</td>
+                <td>{{ submittedAt(row.submittedAt) }}</td>
+                <td><el-tag size="small" :type="statusType(row.submissionStatus)">{{ status(row.submissionStatus)
+                }}</el-tag>
+                  <div v-if="row.rejectionReason" class="reason">{{ reasonText(row.rejectionReason) }}</div>
+                </td>
+                <td v-if="departmentReviewer"><template v-if="canReview(row)"><el-button link type="success"
+                      @click="review(row, true)">通过</el-button><el-button link type="danger"
+                      @click="review(row, false)">不通过</el-button></template><span v-else>—</span></td>
+              </tr>
+              <tr v-if="!loading && !rows.length">
+                <td :colspan="departmentReviewer ? 6 : 5" class="empty">该日期暂无技术日报</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </el-tab-pane>
+    <el-tab-pane v-if="departmentReviewer" label="布置编导任务" name="director-plan">
+      <section class="surface form-panel" v-loading="loading">
+        <div class="sheet-title">编导每日任务 <span>显示各市场编导，每人独立布置任务。</span></div>
+        <div v-if="!directorPlans.length" class="empty">暂无有效编导账号</div>
+        <section v-for="plan in directorPlans" :key="plan.directorId" class="editor-plan-card">
+          <div class="editor-plan-title">{{ plan.directorName }}<span>{{ plan.marketName }}编导</span></div>
+          <div class="report-table-scroll">
+            <table class="task-plan-table">
+              <thead>
+                <tr>
+                  <th>每日任务</th>
+                  <th>计划</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="(task, index) in plan.tasks" :key="index">
+                  <td><el-input v-model="task.taskName" maxlength="100" placeholder="请输入每日任务" /></td>
+                  <td>
+                    <div class="plan-cell"><el-input-number v-model="task.plannedCount" :min="0" :precision="0"
+                        controls-position="right" /><el-button link type="danger"
+                        @click="removePlanTask(plan, index)">删除</el-button></div>
+                  </td>
+                </tr>
+                <tr v-if="!plan.tasks.length">
+                  <td colspan="2" class="empty">暂无任务，请新增任务</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="submit-bar"><span>默认任务：复盘视频、有效对标、完成拆解、完整脚本、可开剪脚本。</span>
+            <div><el-button @click="addPlanTask(plan)">新增任务</el-button><el-button type="primary" :loading="saving"
+                @click="saveDirectorPlan(plan)">确认布置</el-button></div>
+          </div>
+        </section>
+      </section>
+    </el-tab-pane>
+    <el-tab-pane v-if="context?.role === 'DIRECTOR'" label="布置任务" name="editor-plan">
+      <section class="surface form-panel" v-loading="loading">
+        <div class="sheet-title">剪辑每日任务 <span>仅显示{{ ownMarket }}市场的剪辑，每人独立布置任务。</span></div>
+        <div v-if="!editorPlans.length" class="empty">该市场暂无有效剪辑账号</div>
+        <section v-for="plan in editorPlans" :key="plan.editorId" class="editor-plan-card">
+          <div class="editor-plan-title">{{ plan.editorName }}<span>剪辑账号</span></div>
+          <div class="report-table-scroll">
+            <table class="task-plan-table">
+              <thead>
+                <tr>
+                  <th>每日任务</th>
+                  <th>计划</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="(task, index) in plan.tasks" :key="index">
+                  <td><el-input v-model="task.taskName" maxlength="100" placeholder="请输入每日任务" /></td>
+                  <td>
+                    <div class="plan-cell"><el-input-number v-model="task.plannedCount" :min="0" :precision="0"
+                        controls-position="right" /><el-button link type="danger"
+                        @click="removePlanTask(plan, index)">删除</el-button></div>
+                  </td>
+                </tr>
+                <tr v-if="!plan.tasks.length">
+                  <td colspan="2" class="empty">暂无任务，请新增任务</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="submit-bar"><span>默认任务：新增发布、首次交审、返工验收。</span>
+            <div><el-button @click="addPlanTask(plan)">新增任务</el-button><el-button type="primary" :loading="saving"
+                @click="saveEditorPlan(plan)">确认布置</el-button></div>
+          </div>
+        </section>
+      </section>
+    </el-tab-pane>
+    <el-tab-pane v-if="contentRole" label="新增日报" name="content-submit">
+      <section class="surface form-panel" v-loading="loading">
+        <div class="sheet-title">{{ context?.role === 'EDITOR' ? '剪辑' : '编导' }}日报｜{{ content.marketCode }} <el-tag
+            size="small" :type="statusType(content.submissionStatus)">{{ status(content.submissionStatus) }}</el-tag>
+        </div><el-alert v-if="content.rejectionReason" title="日报已退回" :description="reasonText(content.rejectionReason)"
+          type="error" :closable="false" /><el-alert v-if="context?.role === 'EDITOR'" title="计划由编导布置，剪辑不可修改"
+          type="info" :closable="false" />
+        <div class="report-table-scroll">
+          <table class="report-form-table">
+            <thead>
+              <tr>
+                <th>每日任务</th>
+                <th>计划</th>
+                <th>实际</th>
+                <th>还差</th>
+                <th>完成率</th>
+                <th>交付成果</th>
+              </tr>
+            </thead>
+            <tbody><template v-if="context?.role === 'EDITOR' || context?.role === 'DIRECTOR'">
+                <tr v-for="task in currentPlan.tasks" :key="task.taskName">
+                  <td>{{ task.taskName }}</td>
+                  <td><el-input-number :model-value="task.plannedCount" disabled :min="0" :precision="0"
+                      controls-position="right" /></td>
+                  <td><el-input-number :model-value="taskActual(task)"
+                      @update:model-value="setTaskActual(task, Number($event))" :min="0" :precision="0"
+                      controls-position="right" /></td>
+                  <td>{{ number(Math.max(task.plannedCount - taskActual(task), 0)) }}</td>
+                  <td>{{ task.plannedCount ? percent(taskActual(task) / task.plannedCount) : '—' }}</td>
+                  <td><el-input :model-value="taskDelivery(task)"
+                      @update:model-value="setTaskDelivery(task, String($event))" maxlength="2000"
+                      placeholder="填写链接、编号或交付说明" /></td>
+                </tr>
+                <tr v-if="!currentPlan.tasks.length">
+                  <td colspan="6" class="empty">尚未布置任务</td>
+                </tr>
+              </template>
+              <tr v-else v-for="metric in contentFormMetrics()" :key="metric.label">
+                <td>{{ metric.label }}</td>
+                <td><el-input-number v-model="content[metric.plan] as number" :min="0" :precision="0"
+                    controls-position="right" /></td>
+                <td><el-input-number v-model="content[metric.actual] as number" :min="0" :precision="0"
+                    controls-position="right" /></td>
+                <td>{{ number(Math.max(Number(content[metric.plan] ?? 0) - Number(content[metric.actual] ?? 0), 0)) }}
+                </td>
+                <td>{{
+                  Number(content[metric.plan]) ? percent(Number(content[metric.actual]) /
+                    Number(content[metric.plan])) : '—'
+                }}</td>
+                <td><el-input v-model="content.deliveryResults[String(metric.actual)]" maxlength="2000"
+                    placeholder="填写链接、编号或交付说明" /></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="report-note-grid"><label><span>备注<sup class="required-mark">*</sup></span><el-input
+              v-model="content.notes" type="textarea" :autosize="{ minRows: 3 }" @input="syncTextareaRows"
+              maxlength="4000" aria-required="true" placeholder="填写备注" /></label><label><span>卡点<sup
+                class="required-mark">*</sup></span><el-input v-model="content.blockers" type="textarea"
+              :autosize="{ minRows: 3 }" @input="syncTextareaRows" maxlength="4000" aria-required="true"
+              placeholder="填写当前卡点" /></label></div>
+        <div class="submit-bar"><span>交付成果由填报人填写；提交成功后自动记录提交时间：{{ submittedAt(content.submittedAt) }}</span>
+          <div><el-button :loading="saving" @click="saveContent(false)">暂存</el-button><el-button type="primary"
+              :loading="saving" @click="saveContent(true)">提交日报</el-button></div>
+        </div>
+      </section>
+    </el-tab-pane>
+    <el-tab-pane v-if="context?.role === 'ADS_BUYER'" label="新增投流日报" name="ads-submit">
+      <section class="surface form-panel" v-loading="loading">
+        <div class="sheet-title">投流日报填报 <el-tag v-if="adLocked(adMarket)" size="small" type="info">{{
+          ads[adMarket].reporterName }}已填报，当前只读</el-tag></div><el-tabs v-model="adMarket" type="card"
+          class="market-picker"><el-tab-pane v-for="market in marketTabs" :key="market.marketCode"
+            :label="market.marketName" :name="market.marketCode" /></el-tabs><template v-if="ads[adMarket]"><el-alert
+            v-if="adLocked(adMarket)" title="该国家日报已由其他投手填报"
+            :description="`${ads[adMarket].reporterName} 的数据仅供查看，不能修改或提交。`" type="info" :closable="false" /><el-alert
+            v-else-if="ads[adMarket].rejectionReason" title="该地区日报已退回"
+            :description="reasonText(ads[adMarket].rejectionReason)" type="error" :closable="false" />
+          <div class="metric-form ads-form" :class="{ 'locked-ad-form': adLocked(adMarket) }"><label
+              v-for="field in adFields.filter(field => !['testGap', 'roi', 'ctr'].includes(String(field.key)))"
+              :key="field.key"><span>{{ currencyLabel(field, adMarket) }}</span><el-input-number
+                v-model="ads[adMarket][field.key] as number" :disabled="adLocked(adMarket)" :min="0"
+                :precision="field.money ? 2 : 0"
+                controls-position="right" /></label><label><span>测试缺口（自动）</span><el-input
+                :model-value="String(Math.max(ads[adMarket].plannedTest - ads[adMarket].actualTest, 0))"
+                readonly /></label><label><span>ROI（自动）</span><el-input
+                :model-value="number(ads[adMarket].adSpend ? ads[adMarket].adGmv / ads[adMarket].adSpend : 0)"
+                readonly /></label><label><span>CTR（自动）</span><el-input
+                :model-value="percent(ads[adMarket].impressions ? ads[adMarket].clicks / ads[adMarket].impressions : 0)"
+                readonly /></label></div>
+          <div class="report-note-grid"><label><span>备注<sup class="required-mark">*</sup></span><el-input
+                v-model="ads[adMarket].notes" :disabled="adLocked(adMarket)" type="textarea"
+                :autosize="{ minRows: 3, maxRows: 10 }" maxlength="4000" aria-required="true"
+                placeholder="填写备注" /></label><label><span>卡点<sup class="required-mark">*</sup></span><el-input
+                v-model="ads[adMarket].blockers" :disabled="adLocked(adMarket)" type="textarea"
+                :autosize="{ minRows: 3, maxRows: 10 }" maxlength="4000" aria-required="true"
+                placeholder="填写当前卡点" /></label></div>
+          <div class="submit-bar"><span>{{ adLocked(adMarket) ? '该国家已由其他投手填报，当前只读。' : '一名投手每天可按五个地区分别提交。' }}</span>
+            <div><el-button :disabled="adLocked(adMarket)" :loading="saving"
+                @click="saveAds(false)">暂存</el-button><el-button :disabled="adLocked(adMarket)" type="primary"
+                :loading="saving" @click="saveAds(true)">提交{{
+                  marketTabs.find(item => item.marketCode === adMarket)?.marketName}}日报</el-button></div>
+          </div>
+        </template>
+      </section>
+    </el-tab-pane>
+    <el-tab-pane v-if="simpleRole" label="新增日报" name="simple-submit">
+      <section class="surface form-panel" v-loading="loading">
+        <div class="sheet-title">{{ simpleLabel }}日报 <el-tag size="small"
+            :type="statusType(simpleReport.submissionStatus)">{{ status(simpleReport.submissionStatus) }}</el-tag></div>
+        <el-alert v-if="simpleReport.rejectionReason" title="日报已退回"
+          :description="reasonText(simpleReport.rejectionReason)" type="error" :closable="false" />
+        <div class="report-note-grid"><label><span>备注<sup class="required-mark">*</sup></span><el-input
+              v-model="simpleReport.notes" type="textarea" :autosize="{ minRows: 6, maxRows: 10 }" maxlength="4000"
+              aria-required="true" placeholder="填写备注" /></label><label><span>卡点<sup
+                class="required-mark">*</sup></span><el-input v-model="simpleReport.blockers" type="textarea"
+              :autosize="{ minRows: 6, maxRows: 10 }" maxlength="4000" aria-required="true"
+              placeholder="填写当前卡点" /></label>
+        </div>
+        <div class="submit-bar"><span>提交后进入部门负责人审核，审核通过后展示在老板日报中。</span>
+          <div><el-button :loading="saving" @click="saveSimple(false)">暂存</el-button><el-button type="primary"
+              :loading="saving" @click="saveSimple(true)">提交日报</el-button></div>
+        </div>
+      </section>
+    </el-tab-pane>
   </el-tabs>
 </template>
 
 <style scoped>
-.daily-head label{display:grid;grid-template-columns:auto 150px;align-items:center;gap:8px;color:var(--hm-text-secondary);font-size:12px}
-.daily-tabs{margin-top:-8px}
-.sheet-title{padding:14px 18px;font-weight:650;border-bottom:1px solid var(--hm-border)}
-.sheet-title span{margin-left:8px;color:var(--hm-text-secondary);font-weight:400;font-size:12px}
-.table-scroll{overflow:auto}
-table{width:100%;border-collapse:collapse;font-size:12px;white-space:nowrap}
-th,td{border:1px solid var(--hm-border);padding:9px;text-align:center}
-th{background:var(--hm-bg-soft);color:var(--hm-text);font-weight:650}
-small{display:block;color:var(--hm-text-secondary);font-weight:400}
-.summary-table{min-width:1770px}
-.summary-table th{background:#19384e;color:#fff}
-.summary-table tbody tr:nth-child(even):not(.summary-total){background:#f2f6f9}
-.summary-table td:first-child,.summary-total td:first-child{font-weight:650;text-align:left}
-.summary-total{background:#19384e;color:#fff}
-.summary-total td{border-color:#19384e}
-.task-table{min-width:1450px}
-.task-table th{background:#19384e;color:#fff}
-.task-table td{vertical-align:middle}
-.task-stack>div{min-height:20px;line-height:20px}
-.task-stack>div+div{border-top:1px solid var(--hm-border);margin-top:4px;padding-top:4px}
-.task-table .delivery-cell{min-width:230px;max-width:360px;white-space:normal;text-align:left;overflow-wrap:anywhere}
-.notes-cell{min-width:180px;max-width:320px;white-space:normal;text-align:left;overflow-wrap:anywhere}
-.ads-table{min-width:1800px}
-.simple-table{min-width:760px}
-.reason{margin-top:4px;color:var(--el-color-danger);white-space:normal}
-.empty{padding:28px;color:var(--hm-text-secondary)}
-.form-panel{overflow:hidden}
-.editor-plan-card{border-top:1px solid var(--hm-border)}
-.editor-plan-title{padding:14px 18px;font-weight:650;color:var(--hm-text)}
-.editor-plan-title span{margin-left:8px;color:var(--hm-text-secondary);font-size:12px;font-weight:400}
-.metric-form{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;padding:18px}
-.metric-form label{display:grid;grid-template-columns:116px minmax(0,1fr);gap:8px;align-items:center;min-width:0;min-height:40px;color:var(--hm-text-secondary);font-size:12px}
-.metric-form label>span{overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
-.metric-form :deep(.el-input),.metric-form :deep(.el-input-number){width:100%;min-width:0}
-.metric-form :deep(.el-input__wrapper){min-height:40px}
-.ads-form{grid-template-columns:repeat(3,minmax(280px,1fr))}
-.submit-bar{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:14px 18px;border-top:1px solid var(--hm-border);background:var(--hm-bg-soft);color:var(--hm-text-secondary);font-size:12px}
-.submit-bar>div{display:flex;align-items:center;gap:12px;flex-shrink:0}
-.note{padding:12px 18px;margin:0;color:var(--hm-text-secondary);font-size:12px}
-.market-picker{padding:16px 18px 0}
-.market-picker :deep(.el-tabs__header){margin-bottom:14px}
-.market-picker :deep(.el-tabs__nav-wrap::after){display:none}
-.market-picker :deep(.el-tabs__item){height:36px;margin-right:8px;border:1px solid var(--hm-border);border-radius:6px;background:#fff;color:var(--hm-text-secondary);transition:.2s}
-.market-picker :deep(.el-tabs__item:hover){color:var(--hm-text);border-color:var(--hm-accent)}
-.market-picker :deep(.el-tabs__item.is-active){background:#19384e;color:#fff;border-color:#19384e;box-shadow:0 2px 6px rgba(25,56,78,.18)}
-.report-table-scroll{overflow:auto}
-  .report-form-table{min-width:850px;table-layout:fixed}
-  .task-plan-table{min-width:520px;table-layout:fixed}.task-plan-table th:first-child{width:55%}.task-plan-table :deep(.el-select),.task-plan-table :deep(.el-input-number){width:100%}.plan-cell{display:flex;align-items:center;gap:8px}.plan-cell :deep(.el-input-number){flex:1}
-.report-form-table th:nth-child(1){width:150px}.report-form-table th:nth-child(2),.report-form-table th:nth-child(3){width:130px}.report-form-table th:nth-child(4){width:100px}.report-form-table th:nth-child(5){width:110px}.report-form-table th:nth-child(6){width:38%}
-.report-form-table th{background:var(--hm-bg-soft)}
-.report-form-table :deep(.el-input),.report-form-table :deep(.el-input-number){width:100%;min-width:0}
-.report-form-table :deep(.el-input__wrapper){min-height:40px}
-.report-note-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;padding:16px 18px;border-top:1px solid var(--hm-border);align-items:stretch}
-.report-note-grid label{display:grid;gap:7px;color:var(--hm-text-secondary);font-size:12px}
-.report-note-grid :deep(.el-textarea__inner){min-height:88px!important}
-.required-mark{color:var(--el-color-danger);font-style:normal}
-.summary-review{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;padding:18px 0 4px;align-items:stretch}
-.summary-review label{display:grid;gap:7px;color:var(--hm-text-secondary);font-size:12px}
-.summary-review :deep(.el-textarea__inner){min-height:88px!important}
-.summary-actions{display:flex;justify-content:flex-end;gap:12px;padding-top:14px}
-@media(max-width:1100px){.metric-form,.ads-form{grid-template-columns:1fr 1fr}}
-@media(max-width:600px){.daily-head,.submit-bar{align-items:stretch;flex-direction:column}.daily-head label{grid-template-columns:1fr}.metric-form,.ads-form,.summary-review,.report-note-grid{grid-template-columns:1fr}.metric-form label{grid-template-columns:116px minmax(0,1fr)}.sheet-title span{display:block;margin:5px 0 0}.report-form-table{min-width:850px}}
+.daily-head label {
+  display: grid;
+  grid-template-columns: auto 150px;
+  align-items: center;
+  gap: 8px;
+  color: var(--hm-text-secondary);
+  font-size: 12px
+}
+
+.daily-tabs {
+  margin-top: -8px
+}
+
+.sheet-title {
+  padding: 14px 18px;
+  font-weight: 650;
+  border-bottom: 1px solid var(--hm-border)
+}
+
+.sheet-title span {
+  margin-left: 8px;
+  color: var(--hm-text-secondary);
+  font-weight: 400;
+  font-size: 12px
+}
+
+.table-scroll {
+  overflow: auto
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  white-space: nowrap
+}
+
+th,
+td {
+  border: 1px solid var(--hm-border);
+  padding: 9px;
+  text-align: center
+}
+
+th {
+  background: var(--hm-bg-soft);
+  color: var(--hm-text);
+  font-weight: 650
+}
+
+small {
+  display: block;
+  color: var(--hm-text-secondary);
+  font-weight: 400
+}
+
+.summary-table {
+  min-width: 1770px
+}
+
+.summary-table th {
+  background: #19384e;
+  color: #fff
+}
+
+.summary-table tbody tr:nth-child(even):not(.summary-total) {
+  background: #f2f6f9
+}
+
+.summary-table td:first-child,
+.summary-total td:first-child {
+  font-weight: 650;
+  text-align: left
+}
+
+.summary-total {
+  background: #19384e;
+  color: #fff
+}
+
+.summary-total td {
+  border-color: #19384e
+}
+
+.task-table {
+  min-width: 1450px
+}
+
+.task-table th {
+  background: #19384e;
+  color: #fff
+}
+
+.task-table td {
+  vertical-align: middle
+}
+
+.task-stack>div {
+  min-height: 20px;
+  line-height: 20px
+}
+
+.task-stack>div+div {
+  border-top: 1px solid var(--hm-border);
+  margin-top: 4px;
+  padding-top: 4px
+}
+
+.task-table .delivery-cell {
+  min-width: 230px;
+  max-width: 360px;
+  white-space: normal;
+  text-align: left;
+  overflow-wrap: anywhere
+}
+
+.notes-cell {
+  min-width: 180px;
+  max-width: 320px;
+  white-space: normal;
+  text-align: left;
+  overflow-wrap: anywhere
+}
+
+.ads-table {
+  min-width: 1800px
+}
+
+.simple-table {
+  min-width: 760px
+}
+
+.reason {
+  margin-top: 4px;
+  color: var(--el-color-danger);
+  white-space: normal
+}
+
+.empty {
+  padding: 28px;
+  color: var(--hm-text-secondary)
+}
+
+.form-panel {
+  overflow: hidden
+}
+
+.editor-plan-card {
+  border-top: 1px solid var(--hm-border)
+}
+
+.editor-plan-title {
+  padding: 14px 18px;
+  font-weight: 650;
+  color: var(--hm-text)
+}
+
+.editor-plan-title span {
+  margin-left: 8px;
+  color: var(--hm-text-secondary);
+  font-size: 12px;
+  font-weight: 400
+}
+
+.metric-form {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  padding: 18px
+}
+
+.metric-form label {
+  display: grid;
+  grid-template-columns: 116px minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+  min-width: 0;
+  min-height: 40px;
+  color: var(--hm-text-secondary);
+  font-size: 12px
+}
+
+.metric-form label>span {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis
+}
+
+.metric-form :deep(.el-input),
+.metric-form :deep(.el-input-number) {
+  width: 100%;
+  min-width: 0
+}
+
+.metric-form :deep(.el-input__wrapper) {
+  min-height: 40px
+}
+
+.ads-form {
+  grid-template-columns: repeat(3, minmax(280px, 1fr))
+}
+
+.submit-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  border-top: 1px solid var(--hm-border);
+  background: var(--hm-bg-soft);
+  color: var(--hm-text-secondary);
+  font-size: 12px
+}
+
+.submit-bar>div {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0
+}
+
+.note {
+  padding: 12px 18px;
+  margin: 0;
+  color: var(--hm-text-secondary);
+  font-size: 12px
+}
+
+.market-picker {
+  padding: 16px 18px 0
+}
+
+.market-picker :deep(.el-tabs__header) {
+  margin-bottom: 14px
+}
+
+.market-picker :deep(.el-tabs__nav-wrap::after) {
+  display: none
+}
+
+.market-picker :deep(.el-tabs__item) {
+  height: 36px;
+  margin-right: 8px;
+  border: 1px solid var(--hm-border);
+  border-radius: 6px;
+  background: #fff;
+  color: var(--hm-text-secondary);
+  transition: .2s
+}
+
+.market-picker :deep(.el-tabs__item:hover) {
+  color: var(--hm-text);
+  border-color: var(--hm-accent)
+}
+
+.market-picker :deep(.el-tabs__item.is-active) {
+  background: #19384e;
+  color: #fff;
+  border-color: #19384e;
+  box-shadow: 0 2px 6px rgba(25, 56, 78, .18)
+}
+
+.report-table-scroll {
+  overflow: auto
+}
+
+.report-form-table {
+  min-width: 850px;
+  table-layout: fixed
+}
+
+.task-plan-table {
+  min-width: 520px;
+  table-layout: fixed
+}
+
+.task-plan-table th:first-child {
+  width: 55%
+}
+
+.task-plan-table :deep(.el-select),
+.task-plan-table :deep(.el-input-number) {
+  width: 100%
+}
+
+.plan-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px
+}
+
+.plan-cell :deep(.el-input-number) {
+  flex: 1
+}
+
+.report-form-table th:nth-child(1) {
+  width: 150px
+}
+
+.report-form-table th:nth-child(2),
+.report-form-table th:nth-child(3) {
+  width: 130px
+}
+
+.report-form-table th:nth-child(4) {
+  width: 100px
+}
+
+.report-form-table th:nth-child(5) {
+  width: 110px
+}
+
+.report-form-table th:nth-child(6) {
+  width: 38%
+}
+
+.report-form-table th {
+  background: var(--hm-bg-soft)
+}
+
+.report-form-table :deep(.el-input),
+.report-form-table :deep(.el-input-number) {
+  width: 100%;
+  min-width: 0
+}
+
+.report-form-table :deep(.el-input__wrapper) {
+  min-height: 40px
+}
+
+.report-note-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  padding: 16px 18px;
+  border-top: 1px solid var(--hm-border);
+  align-items: stretch
+}
+
+.report-note-grid label {
+  display: grid;
+  gap: 7px;
+  color: var(--hm-text-secondary);
+  font-size: 12px
+}
+
+.report-note-grid :deep(.el-textarea__inner) {
+  min-height: 88px !important
+}
+
+.required-mark {
+  color: var(--el-color-danger);
+  font-style: normal
+}
+
+.summary-review {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  padding: 18px 0 4px;
+  align-items: stretch
+}
+
+.summary-review label {
+  display: grid;
+  gap: 7px;
+  color: var(--hm-text-secondary);
+  font-size: 12px
+}
+
+.summary-review :deep(.el-textarea__inner) {
+  min-height: 88px !important
+}
+
+.summary-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding-top: 14px
+}
+
+@media(max-width:1100px) {
+
+  .metric-form,
+  .ads-form {
+    grid-template-columns: 1fr 1fr
+  }
+}
+
+@media(max-width:600px) {
+
+  .daily-head,
+  .submit-bar {
+    align-items: stretch;
+    flex-direction: column
+  }
+
+  .daily-head label {
+    grid-template-columns: 1fr
+  }
+
+  .metric-form,
+  .ads-form,
+  .summary-review,
+  .report-note-grid {
+    grid-template-columns: 1fr
+  }
+
+  .metric-form label {
+    grid-template-columns: 116px minmax(0, 1fr)
+  }
+
+  .sheet-title span {
+    display: block;
+    margin: 5px 0 0
+  }
+
+  .report-form-table {
+    min-width: 850px
+  }
+}
 </style>

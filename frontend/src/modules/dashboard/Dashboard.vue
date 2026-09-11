@@ -21,8 +21,8 @@ const metricIcons: Record<string, unknown> = { gmv: ShoppingBag, orderCount: Tic
 const kpis = computed(() => [{ key: 'gmv', label: 'GMV', hint: 'Shop Analytics 每日 GMV', money: true }, { key: 'orderCount', label: '订单数', hint: 'Shop Analytics 每日订单数' }, { key: 'soldQty', label: '商品成交件数', hint: 'Shop Analytics 每日商品成交件数' }, { key: 'aov', label: '平均订单金额', hint: 'AOV = 总 GMV ÷ 总订单数', money: true }, { key: 'refundAmount', label: '退款金额', hint: 'Shop Analytics 每日退款金额', money: true, direction: 'lower' }])
 const getMetric = (key: string) => overview.value?.[key as keyof Overview] as Metric | undefined
 const pct = (v: number | null | undefined) => v == null ? '—' : `${number(v * 100, 1)}%`
-const productNotice = computed(() => { if (!loaded.value || !funnel.value) return ''; if (funnel.value.source === 'SHOP_ANALYTICS_PARTIAL') return '当前范围没有可精确匹配的商品报表，商品漏斗暂用 Shop Analytics 的曝光、点击和 SKU 订单数据；加购相关字段需要导入与当前日期范围一致的商品报表。顶部 GMV、订单、成交件数、SKU 订单和退款金额不受影响。'; if (funnel.value.source === 'NONE') return '当前范围没有 Shop Analytics 或可精确匹配的商品报表，商品漏斗无法计算。'; return '' })
-const funnelSourceLabel = computed(() => ({ PRODUCT_PERIOD: '商品区间报表', PRODUCT_DAILY: '商品单日数据', SHOP_ANALYTICS_PARTIAL: 'Shop Analytics（部分字段）', NONE: '无可用数据' }[funnel.value?.source ?? 'NONE']))
+const productNotice = computed(() => { if (!loaded.value || !funnel.value) return ''; if (funnel.value.source === 'SHOP_ANALYTICS_PARTIAL') return '商品漏斗统一使用 Shop Analytics 店铺口径；Shop Analytics 不提供加购字段，因此加购相关指标显示为缺失。'; if (funnel.value.source === 'NONE') return '当前范围没有 Shop Analytics 数据，商品漏斗无法计算。'; return '' })
+const funnelSourceLabel = computed(() => ({ PRODUCT_PERIOD: '商品区间报表', PRODUCT_DAILY: '商品单日数据', SHOP_ANALYTICS_PARTIAL: 'Shop Analytics（店铺口径）', NONE: '无可用数据' }[funnel.value?.source ?? 'NONE']))
 const funnelStatus = computed(() => ({ PRODUCT_PERIOD: '完整商品数据', PRODUCT_DAILY: '完整商品数据', SHOP_ANALYTICS_PARTIAL: '部分数据', NONE: '无可用数据' }[funnel.value?.source ?? 'NONE']))
 const funnelStatusType = computed(() => funnel.value?.source === 'NONE' ? 'warning' : funnel.value?.source === 'SHOP_ANALYTICS_PARTIAL' ? 'info' : 'success')
 const stages = computed(() => [{ label: '商品曝光次数', value: funnel.value?.impressions, rateLabel: '', rate: null, aux: '去重曝光', extra: funnel.value?.uniqueImpressions }, { label: '商品点击量', value: funnel.value?.clicks, rateLabel: 'CTR', rate: funnel.value?.ctr, aux: '去重点击', extra: funnel.value?.uniqueClicks }, { label: '加购次数', value: funnel.value?.addToCartCount, rateLabel: '加购率', rate: funnel.value?.addToCartRate, aux: '加购用户', extra: funnel.value?.addedUserCount }, { label: 'SKU 订单数', value: funnel.value?.skuOrderCount, rateLabel: 'CTOR', rate: funnel.value?.ctor, aux: '下单客户', extra: funnel.value?.estimatedCustomerCount }])
@@ -90,13 +90,28 @@ onMounted(async () => { void load(); try { markets.value = await api<Market[]>('
           <div v-else class="no-spark">{{ loaded ? '暂无趋势数据' : '等待数据加载' }}</div>
         </article>
         <article class="surface kpi source-kpi">
-          <div class="kpi-top"><span class="metric-icon"><el-icon :size="25"><Goods /></el-icon></span>
-            <div class="kpi-label"><span>销量来源</span><el-tooltip content="自营销量 = 订单数 - 达人销量；达人销量来自达人订单导入" placement="top"><button class="info-button" aria-label="销量来源计算说明"><el-icon><InfoFilled /></el-icon></button></el-tooltip></div>
+          <div class="kpi-top"><span class="metric-icon"><el-icon :size="25">
+                <Goods />
+              </el-icon></span>
+            <div class="kpi-label"><span>销量来源</span><el-tooltip content="自营销量 = 订单数 - 达人销量；达人销量来自达人订单导入"
+                placement="top"><button class="info-button" aria-label="销量来源计算说明"><el-icon>
+                    <InfoFilled />
+                  </el-icon></button></el-tooltip></div>
           </div>
           <div v-if="sourceSalesTotal" class="status-layout source-layout">
-            <div class="donut"><Chart :option="sourceSalesOption" :height="126" label="自营与达人销量分布环形图" /><div class="donut-center"><strong class="number">{{ number(sourceSalesTotal) }}</strong><small class="muted">来源合计</small></div></div>
-            <div class="status-list"><div v-for="(item, i) in sourceSales" :key="item.label"><span class="status-dot" :class="`dot-${i}`" /><span>{{ item.label }}</span><small class="number muted">{{ pct(sourceSalesTotal ? Number(item.value ?? 0) / sourceSalesTotal : null) }}</small><b class="number">({{ number(item.value) }})</b></div></div>
-          </div><div v-else class="no-spark">{{ loaded ? '暂无销量数据' : '等待数据加载' }}</div>
+            <div class="donut">
+              <Chart :option="sourceSalesOption" :height="126" label="自营与达人销量分布环形图" />
+              <div class="donut-center"><strong class="number">{{ number(sourceSalesTotal) }}</strong><small
+                  class="muted">来源合计</small></div>
+            </div>
+            <div class="status-list">
+              <div v-for="(item, i) in sourceSales" :key="item.label"><span class="status-dot"
+                  :class="`dot-${i}`" /><span>{{ item.label }}</span><small class="number muted">{{ pct(sourceSalesTotal
+                    ? Number(item.value ?? 0) / sourceSalesTotal : null) }}</small><b class="number">({{
+                    number(item.value) }})</b></div>
+            </div>
+          </div>
+          <div v-else class="no-spark">{{ loaded ? '暂无销量数据' : '等待数据加载' }}</div>
         </article>
       </section>
       <section class="analysis-grid">
@@ -157,8 +172,8 @@ onMounted(async () => { void load(); try { markets.value = await api<Market[]>('
             <div class="status-list">
               <div v-for="(s, i) in skuSales" :key="s.sellerSku"><span class="status-dot"
                   :class="`dot-${i % 6}`" /><span>{{
-                    s.displayName }}</span><small class="number muted">{{ pct(s.ratio) }}</small><b
-                  class="number">({{ number(s.sales) }})</b></div>
+                    s.displayName }}</span><small class="number muted">{{ pct(s.ratio) }}</small><b class="number">({{
+                    number(s.sales) }})</b></div>
             </div>
           </div><el-empty v-else description="暂无已配置 SKU 销量数据" :image-size="52" />
         </article>
@@ -172,7 +187,7 @@ onMounted(async () => { void load(); try { markets.value = await api<Market[]>('
               <div><small class="muted">{{ m.label }}</small><strong class="number"><small
                     v-if="'money' in m && m.money">{{ currencyDisplay }} </small>{{ number(m.metric?.value, ('money' in
                       m
-                      && m.money)?2:0) }}</strong>
+                      && m.money) ? 2 : 0) }}</strong>
                 <MetricChange v-if="m.metric" :value="m.metric.comparePrevious" :status="m.metric.comparePreviousStatus"
                   direction="lower" :label="compare" />
               </div>

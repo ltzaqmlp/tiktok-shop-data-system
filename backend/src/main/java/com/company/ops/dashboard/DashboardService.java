@@ -191,24 +191,19 @@ public class DashboardService {
     }
 
     public Map<String,Object> funnel(Scope scope){
-        var product=productAggregate(scope);Map<String,Object> row;
-        if(!product.isEmpty()){
-            row=new LinkedHashMap<>(product);row.put("complete",true);
-        }else{
-            row=db.one("""
-                select case when count(*)=0 or count(*) filter(where impressions is null)>0 then null else sum(impressions) end impressions,
-                       case when count(*)=0 or count(*) filter(where clicks is null)>0 then null else sum(clicks) end clicks,
-                       null::bigint add_to_cart_count,
-                       case when count(*)=0 then null else sum(order_count) end order_count,
-                       case when count(*)=0 or count(*) filter(where sku_order_count is null)>0 then null else sum(sku_order_count) end sku_order_count,
-                       case when count(*)=0 or count(*) filter(where unique_impressions is null)>0 then null else sum(unique_impressions) end unique_impressions,
-                       case when count(*)=0 or count(*) filter(where unique_clicks is null)>0 then null else sum(unique_clicks) end unique_clicks,
-                       null::bigint added_user_count,
-                       case when count(*)=0 or count(*) filter(where customer_count is null)>0 then null else sum(customer_count) end estimated_customer_count,
-                       count(*) shop_rows
-                from fact_shop_daily"""+WHERE,scope.params());
-            boolean hasShop=((Number)row.getOrDefault("shopRows",0)).longValue()>0;row.put("source",hasShop?"SHOP_ANALYTICS_PARTIAL":"NONE");row.put("complete",false);
-        }
+        var row=db.one("""
+            select case when count(*)=0 or count(*) filter(where impressions is null)>0 then null else sum(impressions) end impressions,
+                   case when count(*)=0 or count(*) filter(where clicks is null)>0 then null else sum(clicks) end clicks,
+                   null::bigint add_to_cart_count,
+                   case when count(*)=0 then null else sum(order_count) end order_count,
+                   case when count(*)=0 or count(*) filter(where sku_order_count is null)>0 then null else sum(sku_order_count) end sku_order_count,
+                   case when count(*)=0 or count(*) filter(where unique_impressions is null)>0 then null else sum(unique_impressions) end unique_impressions,
+                   case when count(*)=0 or count(*) filter(where unique_clicks is null)>0 then null else sum(unique_clicks) end unique_clicks,
+                   null::bigint added_user_count,
+                   case when count(*)=0 or count(*) filter(where customer_count is null)>0 then null else sum(customer_count) end estimated_customer_count,
+                   count(*) shop_rows
+            from fact_shop_daily"""+WHERE,scope.params());
+        boolean hasShop=((Number)row.getOrDefault("shopRows",0)).longValue()>0;row.put("source",hasShop?"SHOP_ANALYTICS_PARTIAL":"NONE");row.put("complete",false);
         row.put("ctr",divide(row.get("clicks"),row.get("impressions")));
         row.put("addToCartRate",divide(row.get("addToCartCount"),row.get("clicks")));
         row.put("ctor",divide(row.get("skuOrderCount"),row.get("clicks")));

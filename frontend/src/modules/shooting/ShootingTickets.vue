@@ -13,6 +13,8 @@ const saving = ref(false)
 const error = ref<Error | null>(null)
 const createVisible = ref(false)
 const completeVisible = ref(false)
+const shotRequirementVisible = ref(false)
+const selectedShotRequirement = ref('')
 const createFormRef = ref<FormInstance>()
 const completeFormRef = ref<FormInstance>()
 
@@ -63,6 +65,7 @@ function openComplete(row: ShootingTicket) {
   Object.assign(completeForm, { id: row.id, regionName: row.regionName, taskType: taskType(row.taskType), shotRequirement: row.shotRequirement, plannedValidShotCount: row.plannedValidShotCount, deadline: dateTime(row.deadline), sku: row.sku ?? '', actualValidShotCount: row.actualValidShotCount ?? 0, materialNotes: row.materialNotes ?? '' })
   completeVisible.value = true
 }
+function openShotRequirement(value: string) { selectedShotRequirement.value = value; shotRequirementVisible.value = true }
 async function completeTicket() {
   if (!(await completeFormRef.value?.validate().catch(() => false))) return
   saving.value = true
@@ -92,9 +95,9 @@ onMounted(async () => { try { context.value = await api<ShootingContext>('/shoot
         <tbody>
           <tr v-for="row in tickets" :key="row.id">
             <td>{{ date(row.createdAt) }}</td><td>{{ row.regionName }}</td><td>{{ row.shooterName || '—' }}</td><td>{{ row.ticketNo }}</td><td>{{ row.sku || '—' }}</td><td>{{ taskType(row.taskType) }}</td>
-            <td class="requirement">{{ row.shotRequirement }}</td><td>{{ row.plannedValidShotCount }}</td><td>{{ dateTime(row.deadline) }}</td><td>{{ row.actualValidShotCount ?? '—' }}</td><td>{{ dateTime(row.actualDeliveredAt) }}</td>
+            <td class="requirement"><button v-if="row.shotRequirement" class="requirement-preview" type="button" :aria-label="`查看${row.ticketNo}的具体镜头要求`" @click="openShotRequirement(row.shotRequirement)">{{ row.shotRequirement }}</button><span v-else>—</span></td><td>{{ row.plannedValidShotCount }}</td><td>{{ dateTime(row.deadline) }}</td><td>{{ row.actualValidShotCount ?? '—' }}</td><td>{{ dateTime(row.actualDeliveredAt) }}</td>
             <td><el-tooltip v-if="row.rejectionReason" :content="reasonText(row.rejectionReason)" placement="top"><el-tag size="small" :type="statusType(row)">{{ status(row) }}</el-tag></el-tooltip><el-tag v-else size="small" :type="statusType(row)">{{ status(row) }}</el-tag></td>
-            <td class="notes">{{ row.materialNotes || '—' }}</td>
+            <td class="notes"><span>{{ row.materialNotes || '—' }}</span></td>
             <td class="actions">
               <el-button v-if="canComplete && row.status === 'PENDING_SHOOT'" link type="primary" @click="openComplete(row)">{{ row.rejectionReason ? '重新提交' : '完成拍摄' }}</el-button>
               <template v-if="canReviewEditor && row.status === 'PENDING_EDITOR_REVIEW'"><el-button link type="success" @click="review(row, 'EDITOR', true)">通过</el-button><el-button link type="danger" @click="review(row, 'EDITOR', false)">退回</el-button></template>
@@ -111,7 +114,7 @@ onMounted(async () => { try { context.value = await api<ShootingContext>('/shoot
   <el-dialog v-model="createVisible" title="新增拍摄工单" width="620px" destroy-on-close>
     <el-form ref="createFormRef" :model="createForm" :rules="createRules" label-position="top">
       <div class="form-grid"><el-form-item label="地区" prop="marketCode"><el-select v-model="createForm.marketCode" placeholder="请选择地区"><el-option v-for="item in context?.markets" :key="item.marketCode" :label="item.marketName" :value="item.marketCode" /></el-select></el-form-item><el-form-item label="任务类型" prop="taskType"><el-select v-model="createForm.taskType" placeholder="请选择任务类型"><el-option v-for="item in context?.taskTypes" :key="item.code" :label="item.name" :value="item.code" /></el-select></el-form-item><el-form-item label="计划有效镜头数" prop="plannedValidShotCount"><el-input-number v-model="createForm.plannedValidShotCount" :min="0" :precision="0" controls-position="right" /></el-form-item><el-form-item label="截止时间" prop="deadline"><el-date-picker v-model="createForm.deadline" type="datetime" value-format="YYYY-MM-DD HH:mm:ss" placeholder="请选择截止时间" /></el-form-item></div>
-      <el-form-item label="具体镜头要求" prop="shotRequirement"><el-input v-model="createForm.shotRequirement" type="textarea" :rows="5" maxlength="4000" show-word-limit placeholder="填写具体镜头、动作、构图或脚本要求" /></el-form-item>
+      <el-form-item label="具体镜头要求" prop="shotRequirement"><el-input v-model="createForm.shotRequirement" type="textarea" :autosize="{ minRows: 5, maxRows: 10 }" maxlength="4000" show-word-limit placeholder="填写具体镜头、动作、构图或脚本要求" /></el-form-item>
     </el-form>
     <template #footer><el-button @click="createVisible = false">取消</el-button><el-button type="primary" :loading="saving" @click="createTicket">提交工单</el-button></template>
   </el-dialog>
@@ -119,14 +122,19 @@ onMounted(async () => { try { context.value = await api<ShootingContext>('/shoot
   <el-dialog v-model="completeVisible" title="提交拍摄结果" width="720px" destroy-on-close>
     <el-form ref="completeFormRef" :model="completeForm" :rules="completeRules" label-position="top">
       <div class="readonly-grid"><el-form-item label="地区"><el-input :model-value="completeForm.regionName" readonly /></el-form-item><el-form-item label="任务类型"><el-input :model-value="completeForm.taskType" readonly /></el-form-item><el-form-item label="计划有效镜头数"><el-input :model-value="String(completeForm.plannedValidShotCount)" readonly /></el-form-item><el-form-item label="截止时间"><el-input :model-value="completeForm.deadline" readonly /></el-form-item></div>
-      <el-form-item label="具体镜头要求"><el-input :model-value="completeForm.shotRequirement" type="textarea" :rows="4" readonly /></el-form-item>
+      <el-form-item label="具体镜头要求"><el-input :model-value="completeForm.shotRequirement" type="textarea" :autosize="{ minRows: 4, maxRows: 10 }" readonly /></el-form-item>
       <div class="form-grid"><el-form-item label="SKU" prop="sku"><el-input v-model="completeForm.sku" maxlength="500" placeholder="填写实际拍摄 SKU" /></el-form-item><el-form-item label="实际有效镜头数" prop="actualValidShotCount"><el-input-number v-model="completeForm.actualValidShotCount" :min="0" :precision="0" controls-position="right" /></el-form-item></div>
-      <el-form-item label="素材链接／补拍与调整说明"><el-input v-model="completeForm.materialNotes" type="textarea" :rows="4" maxlength="4000" show-word-limit placeholder="填写素材链接，或补拍与调整说明" /></el-form-item>
+      <el-form-item label="素材链接／补拍与调整说明"><el-input v-model="completeForm.materialNotes" type="textarea" :autosize="{ minRows: 4, maxRows: 10 }" maxlength="4000" show-word-limit placeholder="填写素材链接，或补拍与调整说明" /></el-form-item>
     </el-form>
     <template #footer><el-button @click="completeVisible = false">取消</el-button><el-button type="primary" :loading="saving" @click="completeTicket">提交拍摄结果</el-button></template>
+  </el-dialog>
+
+  <el-dialog v-model="shotRequirementVisible" title="具体镜头要求" width="620px" destroy-on-close>
+    <div class="requirement-full">{{ selectedShotRequirement }}</div>
+    <template #footer><el-button @click="shotRequirementVisible = false">关闭</el-button></template>
   </el-dialog>
 </template>
 
 <style scoped>
-.shooting-head{align-items:center}.shooting-panel{overflow:hidden}.sheet-caption{padding:14px 18px;font-weight:650;border-bottom:1px solid var(--hm-border)}.sheet-caption span{margin-left:8px;color:var(--hm-text-secondary);font-size:12px;font-weight:400}.table-scroll{overflow:auto}.shooting-table{width:100%;min-width:1900px;border-collapse:collapse;font-size:12px}.shooting-table th,.shooting-table td{border:1px solid #B9DDE1;padding:10px 9px;text-align:center;vertical-align:middle}.shooting-table th{background:#19384E;color:#fff;font-weight:650;white-space:nowrap}.shooting-table td{background:#FFF6DB}.shooting-table .requirement,.shooting-table .notes{min-width:230px;max-width:320px;text-align:left;white-space:normal;overflow-wrap:anywhere}.shooting-table .actions{min-width:130px;white-space:nowrap}.empty{padding:32px!important;color:var(--hm-text-secondary)}.form-grid,.readonly-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 18px}.form-grid :deep(.el-select),.form-grid :deep(.el-date-editor),.form-grid :deep(.el-input-number){width:100%}.readonly-grid :deep(.el-input__wrapper){background:#F5F7FA}.shooting-table :deep(.el-tag){border:0}@media(max-width:700px){.form-grid,.readonly-grid{grid-template-columns:1fr}.shooting-head{align-items:flex-start;gap:12px;flex-direction:column}}
+.shooting-head{align-items:center}.shooting-panel{overflow:hidden}.sheet-caption{padding:14px 18px;font-weight:650;border-bottom:1px solid var(--hm-border)}.sheet-caption span{margin-left:8px;color:var(--hm-text-secondary);font-size:12px;font-weight:400}.table-scroll{overflow:auto}.shooting-table{width:100%;min-width:1900px;border-collapse:collapse;font-size:12px}.shooting-table th,.shooting-table td{border:1px solid #B9DDE1;padding:10px 9px;text-align:center;vertical-align:middle}.shooting-table th{background:#19384E;color:#fff;font-weight:650;white-space:nowrap}.shooting-table td{height:150px;max-height:150px;background:#FFF6DB;overflow:hidden}.shooting-table .requirement,.shooting-table .notes{min-width:230px;max-width:320px;text-align:left;overflow-wrap:anywhere}.requirement-preview,.notes>span{display:-webkit-box;width:100%;height:128px;max-height:128px;padding:0;border:0;background:transparent;color:inherit;text-align:left;white-space:pre-wrap;overflow:hidden;overflow-wrap:anywhere;line-height:20px;-webkit-box-orient:vertical;-webkit-line-clamp:6}.requirement-preview{cursor:pointer}.requirement-preview:hover{color:#356FAE}.shooting-table .actions{min-width:130px;white-space:nowrap}.requirement-full{max-height:min(60vh,520px);overflow:auto;padding:12px;background:var(--hm-bg-soft);border:1px solid var(--hm-border);border-radius:9px;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.7}.empty{padding:32px!important;color:var(--hm-text-secondary)}.form-grid,.readonly-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 18px}.form-grid :deep(.el-select),.form-grid :deep(.el-date-editor),.form-grid :deep(.el-input-number){width:100%}.readonly-grid :deep(.el-input__wrapper){background:#F5F7FA}.shooting-table :deep(.el-tag){border:0}@media(max-width:700px){.form-grid,.readonly-grid{grid-template-columns:1fr}.shooting-head{align-items:flex-start;gap:12px;flex-direction:column}}
 </style>

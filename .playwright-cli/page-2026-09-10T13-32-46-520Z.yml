@@ -1,0 +1,91 @@
+- generic [ref=e3]:
+  - link "跳转到主要内容" [ref=e4] [cursor=pointer]:
+    - /url: "#main"
+  - complementary "主导航" [ref=e5]:
+    - generic [ref=e6]:
+      - img "HERBMODA" [ref=e8]
+      - generic [ref=e9]:
+        - strong [ref=e10]: HERBMODA
+        - generic [ref=e11]: Commerce Intelligence
+    - generic [ref=e12]: 工作空间
+    - navigation [ref=e40]:
+      - link "数据看板" [ref=e41] [cursor=pointer]:
+        - /url: /dashboard
+      - link "日报" [ref=e48] [cursor=pointer]:
+        - /url: /daily-reports
+      - link "拍摄工单" [active] [ref=e53] [cursor=pointer]:
+        - /url: /shooting-tickets
+      - link "数据导入" [ref=e58] [cursor=pointer]:
+        - /url: /data-import
+      - link "用户管理" [ref=e63] [cursor=pointer]:
+        - /url: /admin/users
+      - link "角色管理" [ref=e68] [cursor=pointer]:
+        - /url: /admin/roles
+      - link "菜单管理" [ref=e73] [cursor=pointer]:
+        - /url: /admin/menus
+      - link "操作日志" [ref=e78] [cursor=pointer]:
+        - /url: /admin/audit
+      - link "登录日志" [ref=e83] [cursor=pointer]:
+        - /url: /admin/login-logs
+    - generic [ref=e13]: 内部经营系统 · V1.0
+  - generic [ref=e16]:
+    - banner [ref=e17]:
+      - generic [ref=e18]:
+        - button "收起侧栏" [ref=e19] [cursor=pointer]
+        - navigation "面包屑" [ref=e24]:
+          - generic [ref=e25]:
+            - link "工作空间" [ref=e26]
+            - text: /
+          - link "拍摄工单" [ref=e442]
+      - generic [ref=e29]:
+        - generic [ref=e30]: 演
+        - generic [ref=e90]:
+          - strong [ref=e91]: 演示管理员
+          - generic [ref=e92]: 管理员
+        - button "退出登录" [ref=e31] [cursor=pointer]
+    - main [ref=e37]:
+      - generic [ref=e443]:
+        - generic [ref=e444]:
+          - heading "拍摄工单" [level=1] [ref=e445]
+          - paragraph [ref=e446]: 编导派单，拍摄交付，编导与部门负责人分级审核。
+        - button "新增拍摄工单" [ref=e447] [cursor=pointer]
+      - generic [ref=e449]:
+        - generic [ref=e450]: 拍摄任务登记 每行一个任务编号，数量单位为有效镜头
+        - table [ref=e452]:
+          - rowgroup [ref=e453]:
+            - row [ref=e454]:
+              - columnheader "日期" [ref=e455]
+              - columnheader "地区" [ref=e456]
+              - columnheader "拍摄人" [ref=e457]
+              - columnheader "任务编号" [ref=e458]
+              - columnheader "SKU" [ref=e459]
+              - columnheader "任务类型" [ref=e460]
+              - columnheader "具体镜头要求" [ref=e461]
+              - columnheader "计划有效 镜头数" [ref=e462]: 计划有效镜头数
+              - columnheader "截止时间" [ref=e463]
+              - columnheader "实际有效 镜头数" [ref=e464]: 实际有效镜头数
+              - columnheader "实际交付时间" [ref=e465]
+              - columnheader "验收状态" [ref=e466]
+              - columnheader "素材链接／补拍与调整说明" [ref=e467]
+              - columnheader "操作" [ref=e468]
+          - rowgroup [ref=e469]:
+            - row [ref=e470]:
+              - cell "2026/9/10" [ref=e471]
+              - cell "马来西亚" [ref=e472]
+              - cell "—" [ref=e473]
+              - cell "PS20260909-0001" [ref=e474]
+              - cell "—" [ref=e475]
+              - cell "脚本拍摄" [ref=e476]
+              - cell [ref=e477]:
+                - button "查看PS20260909-0001的具体镜头要求" [ref=e478] [cursor=pointer]: 产品正面、背面、包装开合，按脚本完成三组构图。
+              - cell "8" [ref=e479]
+              - cell "2026/9/11 21:32:34" [ref=e480]
+              - cell "—" [ref=e481]
+              - cell "—" [ref=e482]
+              - cell "待拍摄" [ref=e483]
+              - cell "—" [ref=e486]
+              - cell [ref=e488]:
+                - button "完成拍摄" [ref=e489] [cursor=pointer]
+    - contentinfo [ref=e38]:
+      - text: 跨境电商经营数据平台
+      - generic [ref=e39]: 按业务日期统计 · 金额按市场币种展示

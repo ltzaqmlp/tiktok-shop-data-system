@@ -1,0 +1,218 @@
+- generic [ref=e3]:
+  - link "跳转到主要内容" [ref=e4] [cursor=pointer]:
+    - /url: "#main"
+  - complementary "主导航" [ref=e5]:
+    - img "HERBMODA" [ref=e8]
+    - navigation [ref=e40]:
+      - link "数据看板" [ref=e41] [cursor=pointer]:
+        - /url: /dashboard
+      - link "日报" [active] [ref=e48] [cursor=pointer]:
+        - /url: /daily-reports
+      - link "拍摄工单" [ref=e53] [cursor=pointer]:
+        - /url: /shooting-tickets
+      - link "数据导入" [ref=e58] [cursor=pointer]:
+        - /url: /data-import
+      - link "用户管理" [ref=e63] [cursor=pointer]:
+        - /url: /admin/users
+      - link "角色管理" [ref=e68] [cursor=pointer]:
+        - /url: /admin/roles
+      - link "菜单管理" [ref=e73] [cursor=pointer]:
+        - /url: /admin/menus
+      - link "操作日志" [ref=e78] [cursor=pointer]:
+        - /url: /admin/audit
+      - link "登录日志" [ref=e83] [cursor=pointer]:
+        - /url: /admin/login-logs
+  - generic [ref=e16]:
+    - banner [ref=e17]:
+      - navigation "面包屑" [ref=e24]:
+        - generic [ref=e25]:
+          - link "工作空间" [ref=e26]
+          - text: /
+        - link "日报" [ref=e505]
+      - button "退出登录" [ref=e31] [cursor=pointer]
+    - main [ref=e37]:
+      - generic [ref=e506]:
+        - generic [ref=e507]:
+          - heading "日报" [level=1] [ref=e508]
+          - paragraph [ref=e509]: 按角色填报，审核通过后实时进入对应汇总。
+        - generic [ref=e510]:
+          - text: 日期
+          - combobox "日期" [ref=e517]: 2026-09-10
+      - generic [ref=e518]:
+        - generic [ref=e520]:
+          - generic [ref=e525] [cursor=pointer]
+          - tablist [ref=e530]:
+            - tab "汇总" [selected] [ref=e532]
+            - tab "马来西亚日报" [ref=e533]
+            - tab "英国日报" [ref=e534]
+            - tab "美国日报" [ref=e535]
+            - tab "德国日报" [ref=e536]
+            - tab "法国日报" [ref=e537]
+            - tab "投流日报" [ref=e538]
+            - tab "运营日报" [ref=e539]
+            - tab "技术日报" [ref=e540]
+            - tab "布置编导任务" [ref=e541]
+        - tabpanel "汇总" [ref=e543]:
+          - generic [ref=e544]:
+            - generic [ref=e545]:
+              - text: 五区内容日报汇总
+              - generic [ref=e546]: 按市场汇总各岗位已通过日报的计划与实际数据
+              - generic [ref=e547]: 已通过
+            - table [ref=e550]:
+              - rowgroup [ref=e551]:
+                - row [ref=e552]:
+                  - columnheader "地区" [ref=e553]
+                  - columnheader "复盘视频" [ref=e554]
+                  - columnheader "有效对标" [ref=e555]
+                  - columnheader "完成拆解" [ref=e556]
+                  - columnheader "完整脚本" [ref=e557]
+                  - columnheader "可开剪脚本" [ref=e558]
+                  - columnheader "新增发布" [ref=e559]
+                  - columnheader "首次交审" [ref=e560]
+                  - columnheader "返工验收" [ref=e561]
+                - row [ref=e562]:
+                  - columnheader "计划" [ref=e563]
+                  - columnheader "实际" [ref=e564]
+                  - columnheader "计划" [ref=e565]
+                  - columnheader "实际" [ref=e566]
+                  - columnheader "计划" [ref=e567]
+                  - columnheader "实际" [ref=e568]
+                  - columnheader "计划" [ref=e569]
+                  - columnheader "实际" [ref=e570]
+                  - columnheader "计划" [ref=e571]
+                  - columnheader "实际" [ref=e572]
+                  - columnheader "计划" [ref=e573]
+                  - columnheader "实际" [ref=e574]
+                  - columnheader "计划" [ref=e575]
+                  - columnheader "实际" [ref=e576]
+                  - columnheader "计划" [ref=e577]
+                  - columnheader "实际" [ref=e578]
+              - rowgroup [ref=e579]:
+                - row [ref=e580]:
+                  - cell "马来西亚" [ref=e581]
+                  - cell "0" [ref=e582]
+                  - cell "0" [ref=e583]
+                  - cell "0" [ref=e584]
+                  - cell "0" [ref=e585]
+                  - cell "0" [ref=e586]
+                  - cell "0" [ref=e587]
+                  - cell "0" [ref=e588]
+                  - cell "0" [ref=e589]
+                  - cell "0" [ref=e590]
+                  - cell "0" [ref=e591]
+                  - cell "3" [ref=e592]
+                  - cell "2" [ref=e593]
+                  - cell "4" [ref=e594]
+                  - cell "3" [ref=e595]
+                  - cell "2" [ref=e596]
+                  - cell "1" [ref=e597]
+                - row [ref=e598]:
+                  - cell "英国" [ref=e599]
+                  - cell "0" [ref=e600]
+                  - cell "0" [ref=e601]
+                  - cell "0" [ref=e602]
+                  - cell "0" [ref=e603]
+                  - cell "0" [ref=e604]
+                  - cell "0" [ref=e605]
+                  - cell "0" [ref=e606]
+                  - cell "0" [ref=e607]
+                  - cell "0" [ref=e608]
+                  - cell "0" [ref=e609]
+                  - cell "0" [ref=e610]
+                  - cell "0" [ref=e611]
+                  - cell "0" [ref=e612]
+                  - cell "0" [ref=e613]
+                  - cell "0" [ref=e614]
+                  - cell "0" [ref=e615]
+                - row [ref=e616]:
+                  - cell "美国" [ref=e617]
+                  - cell "0" [ref=e618]
+                  - cell "0" [ref=e619]
+                  - cell "0" [ref=e620]
+                  - cell "0" [ref=e621]
+                  - cell "0" [ref=e622]
+                  - cell "0" [ref=e623]
+                  - cell "0" [ref=e624]
+                  - cell "0" [ref=e625]
+                  - cell "0" [ref=e626]
+                  - cell "0" [ref=e627]
+                  - cell "0" [ref=e628]
+                  - cell "0" [ref=e629]
+                  - cell "0" [ref=e630]
+                  - cell "0" [ref=e631]
+                  - cell "0" [ref=e632]
+                  - cell "0" [ref=e633]
+                - row [ref=e634]:
+                  - cell "德国" [ref=e635]
+                  - cell "0" [ref=e636]
+                  - cell "0" [ref=e637]
+                  - cell "0" [ref=e638]
+                  - cell "0" [ref=e639]
+                  - cell "0" [ref=e640]
+                  - cell "0" [ref=e641]
+                  - cell "0" [ref=e642]
+                  - cell "0" [ref=e643]
+                  - cell "0" [ref=e644]
+                  - cell "0" [ref=e645]
+                  - cell "0" [ref=e646]
+                  - cell "0" [ref=e647]
+                  - cell "0" [ref=e648]
+                  - cell "0" [ref=e649]
+                  - cell "0" [ref=e650]
+                  - cell "0" [ref=e651]
+                - row [ref=e652]:
+                  - cell "法国" [ref=e653]
+                  - cell "0" [ref=e654]
+                  - cell "0" [ref=e655]
+                  - cell "0" [ref=e656]
+                  - cell "0" [ref=e657]
+                  - cell "0" [ref=e658]
+                  - cell "0" [ref=e659]
+                  - cell "0" [ref=e660]
+                  - cell "0" [ref=e661]
+                  - cell "0" [ref=e662]
+                  - cell "0" [ref=e663]
+                  - cell "0" [ref=e664]
+                  - cell "0" [ref=e665]
+                  - cell "0" [ref=e666]
+                  - cell "0" [ref=e667]
+                  - cell "0" [ref=e668]
+                  - cell "0" [ref=e669]
+                - row [ref=e670]:
+                  - cell "合计" [ref=e671]
+                  - cell "0" [ref=e672]
+                  - cell "0" [ref=e673]
+                  - cell "0" [ref=e674]
+                  - cell "0" [ref=e675]
+                  - cell "0" [ref=e676]
+                  - cell "0" [ref=e677]
+                  - cell "0" [ref=e678]
+                  - cell "0" [ref=e679]
+                  - cell "0" [ref=e680]
+                  - cell "0" [ref=e681]
+                  - cell "3" [ref=e682]
+                  - cell "2" [ref=e683]
+                  - cell "4" [ref=e684]
+                  - cell "3" [ref=e685]
+                  - cell "2" [ref=e686]
+                  - cell "1" [ref=e687]
+            - generic [ref=e692]:
+              - generic [ref=e693]:
+                - generic [ref=e694]: 今日最重要成果
+                - textbox "今日最重要成果" [ref=e696]:
+                  - /placeholder: 请输入今日最重要成果
+                  - text: 完成本日重点内容交付
+              - generic [ref=e697]:
+                - generic [ref=e698]: 需老板支持
+                - textbox "需老板支持" [ref=e700]:
+                  - /placeholder: 请输入需要老板支持的事项
+              - generic [ref=e701]:
+                - generic [ref=e702]: 明日重点
+                - textbox "明日重点" [ref=e704]:
+                  - /placeholder: 请输入明日重点
+                  - text: 推进明日排期
+            - generic [ref=e705]:
+              - button "暂存" [ref=e706] [cursor=pointer]
+              - button "通过" [ref=e708] [cursor=pointer]
+              - button "不通过" [ref=e710] [cursor=pointer]
+    - contentinfo [ref=e38]: 跨境电商经营数据平台

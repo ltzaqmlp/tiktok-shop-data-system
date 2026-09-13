@@ -34,13 +34,14 @@ const auth = useAuth(), context = ref<DailyContext>(), rows = ref<DailyMetricRep
 const content = reactive<DailyMetricReport>(blank('EDITOR', 'MY')), simpleReport = reactive<DailyMetricReport>(blank('OPS', 'MY')), ads = ref<Record<string, DailyMetricReport>>({})
 const editorPlan = ref<EditorDailyPlan>({ configured: false, tasks: [] }), editorPlans = ref<EditorDailyEditorPlan[]>([]), directorPlan = ref<DirectorDailyPlan>({ configured: false, tasks: [] }), directorPlans = ref<DirectorDailyDirectorPlan[]>([])
 const viewer = computed(() => ['BOSS', 'DEPT_HEAD', 'ADMIN'].some(role => auth.user?.roles.some(item => item.roleCode === role)))
-const departmentReviewer = computed(() => auth.isAdmin || auth.user?.roles.some(role => role.roleCode === 'DEPT_HEAD') || false)
+const departmentReviewer = computed(() => auth.user?.roles.some(role => ['ADMIN', 'DEPT_HEAD'].includes(role.roleCode)) || false)
 const reviewColumn = computed(() => departmentReviewer.value || context.value?.role === 'DIRECTOR')
 const contentRole = computed(() => ['EDITOR', 'DIRECTOR'].includes(context.value?.role ?? ''))
 const simpleRole = computed(() => ['OPS', 'TECH'].includes(context.value?.role ?? ''))
 const simpleLabel = computed(() => context.value?.role === 'TECH' ? '技术' : '运营')
 const ownMarket = computed(() => context.value?.marketCode || 'MY'), currentMarket = computed(() => tab.value.startsWith('market-') ? tab.value.slice(7) : ownMarket.value)
 const marketTabs = computed<Market[]>(() => context.value?.markets ?? [])
+const visibleMarketTabs = computed(() => simpleRole.value || context.value?.role === 'ADS_BUYER' ? [] : viewer.value ? marketTabs.value : marketTabs.value.filter(item => item.marketCode === ownMarket.value))
 const currentPlan = computed<EditorDailyPlan | DirectorDailyPlan>(() => context.value?.role === 'DIRECTOR' ? directorPlan.value : editorPlan.value)
 function blank(reportType: DailyMetricReport['reportType'], marketCode: string): DailyMetricReport {
   return {
@@ -175,7 +176,7 @@ watch([selectedDate, tab], () => void load())
       </section>
     </el-tab-pane>
     <el-tab-pane
-      v-for="market in (context?.role === 'ADS_BUYER' ? [] : (viewer ? marketTabs : marketTabs.filter(item => item.marketCode === ownMarket)))"
+      v-for="market in visibleMarketTabs"
       :key="market.marketCode" :label="`${market.marketName}日报`" :name="`market-${market.marketCode}`">
       <section class="surface table-panel">
         <div class="sheet-title">{{ market.marketName }}区日报 <span>{{ departmentReviewer ? '部门负责人可审核待处理日报。' : '按个人日报展示。'
@@ -272,7 +273,7 @@ watch([selectedDate, tab], () => void load())
                 <td v-for="field in adFields" :key="field.key">{{ adValue(row, field.key) }}</td>
                 <td class="notes-cell">{{ row.notes || '—' }}</td>
                 <td class="notes-cell">{{ row.blockers || '—' }}</td>
-                <td>{{ reasonText(row.rejectionReason) || '—' }}</td>
+                <td class="reason-cell">{{ reasonText(row.rejectionReason) || '—' }}</td>
                 <td v-if="departmentReviewer"><template v-if="canReview(row)"><el-button link type="success"
                       @click="review(row, true)">通过</el-button><el-button link type="danger"
                       @click="review(row, false)">不通过</el-button></template><span v-else>—</span></td>
@@ -686,7 +687,7 @@ small {
 .notes-cell {
   min-width: 180px;
   max-width: 320px;
-  white-space: normal;
+  white-space: pre-wrap;
   text-align: left;
   overflow-wrap: anywhere
 }
@@ -702,7 +703,14 @@ small {
 .reason {
   margin-top: 4px;
   color: var(--el-color-danger);
-  white-space: normal
+  white-space: pre-wrap;
+  overflow-wrap: anywhere
+}
+
+.reason-cell {
+  white-space: pre-wrap;
+  text-align: left;
+  overflow-wrap: anywhere
 }
 
 .empty {
@@ -939,6 +947,11 @@ small {
 
 .summary-review :deep(.el-textarea__inner) {
   min-height: 88px !important
+}
+
+:deep(.el-alert__description) {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere
 }
 
 .summary-actions {

@@ -47,7 +47,8 @@ public class Security {
                     req.setAttribute("actor",user);
                     if(Boolean.TRUE.equals(user.get("mustChangePassword"))&&!Set.of("/api/v1/auth/me","/api/v1/auth/change-password","/api/v1/auth/logout").contains(path))throw new Api.Problem(403,"AUTH_PASSWORD_CHANGE_REQUIRED","必须先修改初始密码");
                     boolean allowed=true;
-                    if(path.startsWith("/api/v1/admin/")||path.endsWith("/reaggregate"))allowed=Identity.role(user,"ADMIN");
+                    if(path.startsWith("/api/v1/admin/"))allowed=Identity.role(user,"ADMIN");
+                    else if(path.endsWith("/reaggregate"))allowed=Identity.role(user,"ADMIN");
                     else if(path.startsWith("/api/v1/dashboard/"))allowed=identity.hasMenu(user,"dashboard.overview");
                     else if(path.startsWith("/api/v1/daily-reports"))allowed=identity.hasMenu(user,"daily.report");
                     else if(path.startsWith("/api/v1/shooting-tickets"))allowed=identity.hasMenu(user,"shooting.ticket");

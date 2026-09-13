@@ -1,6 +1,7 @@
 package com.company.ops.daily;
 
 import com.company.ops.common.Api;
+import com.company.ops.auth.Identity;
 import java.time.LocalDate;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
@@ -11,6 +12,9 @@ class DailyReportControllerTest {
         assertEquals(LocalDate.of(2026,9,7),DailyReportController.day("2026-09-07"));
         assertThrows(Api.Problem.class,()->DailyReportController.day("07/09/2026"));
         assertTrue(DailyReportController.leader(Map.of("roles",java.util.List.of(Map.of("roleCode","DEPT_HEAD")))));
+        assertTrue(Identity.role(Map.of("roles",java.util.List.of(Map.of("roleCode","BOSS"))),"ADMIN"));
+        assertFalse(Identity.exactRole(Map.of("roles",java.util.List.of(Map.of("roleCode","BOSS"))),"ADMIN"));
+        assertTrue(DailyReportController.leader(Map.of("roles",java.util.List.of(Map.of("roleCode","BOSS")))));
         assertFalse(DailyReportController.leader(Map.of("roles",java.util.List.of(Map.of("roleCode","MARKET_MEMBER")))));
     }
     @Test void directorUsesTheContentDailyReportFlow(){
@@ -24,7 +28,7 @@ class DailyReportControllerTest {
         assertEquals("OPS",DailyReportController.dailyRole(Map.of("roles",java.util.List.of(Map.of("roleCode","OPS")))));
         assertEquals("TECH",DailyReportController.dailyRole(Map.of("roles",java.util.List.of(Map.of("roleCode","TECH")))));
         assertThrows(Api.Problem.class,()->DailyReportController.metrics(Map.of(),"OPS",true));
-        assertEquals("已处理接口故障",DailyReportController.metrics(Map.of("notes","已处理接口故障","blockers","无"),"TECH",true).get("notes"));
+        assertEquals(" 已处理接口故障\n第二行 ",DailyReportController.metrics(Map.of("notes"," 已处理接口故障\n第二行 ","blockers","无"),"TECH",true).get("notes"));
         assertThrows(Api.Problem.class,()->DailyReportController.metrics(Map.of("notes","已处理接口故障"),"TECH",true));
         assertThrows(Api.Problem.class,()->DailyReportController.metrics(Map.of("notes","已处理接口故障","blockers",""),"OPS",false));
     }

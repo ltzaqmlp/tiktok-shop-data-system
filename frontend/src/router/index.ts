@@ -23,11 +23,11 @@ router.beforeEach(async to => {
   let added = false
   for (const menu of auth.allMenus) {
     const path = menu.routePath
-    if (path && pages[path] && (!path.startsWith('/admin/') || auth.isAdmin) && !router.hasRoute(path)) { router.addRoute({ path, name: path, component: pages[path], meta: { title: menu.name } }); added = true }
+    if (path && pages[path] && (!path.startsWith('/admin/') || auth.canManage) && !router.hasRoute(path)) { router.addRoute({ path, name: path, component: pages[path], meta: { title: menu.name } }); added = true }
   }
   if (['/', '/login', '/force-change-password'].includes(to.path)) return '/dashboard'
   if (pages[to.path] && !auth.allMenus.some(m => m.routePath === to.path)) return '/no-access'
-  if (to.path.startsWith('/admin/') && !auth.isAdmin) return '/no-access'
+  if (to.path.startsWith('/admin/') && !auth.canManage) return '/no-access'
   if (added && pages[to.path]) return to.fullPath
   return true
 })

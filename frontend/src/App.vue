@@ -12,7 +12,7 @@ const auth = useAuth(), route = useRoute(), router = useRouter(), collapsed = re
 const publicPage = computed(() => ['/login','/force-change-password'].includes(route.path))
 const icons: Record<string, unknown> = { DataBoard, Upload, User, Key, Menu: MenuIcon, Document, Connection, Goods }
 const fallback: Record<string,string> = { '/dashboard':'DataBoard','/data-import':'Upload','/admin/users':'User','/admin/roles':'Key','/admin/menus':'Menu','/admin/sku-config':'Goods','/admin/audit':'Document','/admin/login-logs':'Connection' }
-const entries = computed(() => navigationMenus(auth.allMenus, supportedPaths, auth.isAdmin))
+const entries = computed(() => navigationMenus(auth.allMenus, supportedPaths, auth.canManage))
 async function logout() { loggingOut.value = true; try { await api('/auth/logout',{method:'POST'}); clearSession(); await router.replace('/login') } catch(e) { ElMessage.error((e as Error).message) } finally { loggingOut.value = false } }
 </script>
 <template>

@@ -18,8 +18,10 @@ public class Identity {
         user.put("permissions",canExport(user)?List.of("export"):List.of());return user;
     }
     @SuppressWarnings("unchecked")
-    public static boolean role(Map<String,Object> user,String code){return ((List<Map<String,Object>>)user.getOrDefault("roles",List.of())).stream().anyMatch(r->code.equals(r.get("roleCode")));}
-    public boolean canExport(Map<String,Object> user){return role(user,"ADMIN")||role(user,"BOSS")||hasMenu(user,"export.details");}
+    public static boolean role(Map<String,Object> user,String code){return ((List<Map<String,Object>>)user.getOrDefault("roles",List.of())).stream().anyMatch(r->code.equals(r.get("roleCode"))||("ADMIN".equals(code)&&"BOSS".equals(r.get("roleCode"))));}
+    @SuppressWarnings("unchecked")
+    public static boolean exactRole(Map<String,Object> user,String code){return ((List<Map<String,Object>>)user.getOrDefault("roles",List.of())).stream().anyMatch(r->code.equals(r.get("roleCode")));}
+    public boolean canExport(Map<String,Object> user){return role(user,"ADMIN")||hasMenu(user,"export.details");}
     public boolean hasMenu(Map<String,Object> user,String code){return role(user,"ADMIN")||db.count("select count(*) from sys_role_menu rm join sys_user_role ur on ur.role_id=rm.role_id join sys_role r on r.id=rm.role_id join sys_menu m on m.id=rm.menu_id join sys_module md on md.id=m.module_id where ur.user_id=#{p.id} and m.menu_code=#{p.code} and r.enabled and m.enabled and md.status='ONLINE'",p("id",Long.valueOf(user.get("id").toString()),"code",code))>0;}
     public List<Map<String,Object>> menus(Map<String,Object> user){
         String scope=role(user,"ADMIN")?"":" and m.id in (with recursive visible(id) as (select rm.menu_id from sys_role_menu rm join sys_user_role ur on ur.role_id=rm.role_id join sys_role r on r.id=rm.role_id where ur.user_id=#{p.id} and r.enabled union select parent.parent_id from sys_menu parent join visible v on parent.id=v.id where parent.parent_id is not null) select id from visible)";

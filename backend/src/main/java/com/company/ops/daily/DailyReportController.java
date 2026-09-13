@@ -72,7 +72,7 @@ public class DailyReportController {
     public Object saveSummary(@PathVariable String date,@RequestBody Map<String,Object> body,HttpServletRequest req){
         requireRole(Identity.actor(req),"DEPT_HEAD");
         LocalDate reportDate=day(date); Map<String,Object> result=tx.execute(s->{
-            var values=p("date",reportDate,"today",Api.text(body,"todayImportantResult",4000,false),"support",Api.text(body,"needBossSupport",4000,false),"tomorrow",Api.text(body,"tomorrowFocus",4000,false));
+            var values=p("date",reportDate,"today",formattedText(body,"todayImportantResult",4000,false),"support",formattedText(body,"needBossSupport",4000,false),"tomorrow",formattedText(body,"tomorrowFocus",4000,false));
             var old=db.one("select id from daily_report_summary where report_date=#{p.date} for update",p("date",reportDate));
             if(old.isEmpty()) db.insert(summaryInsertSql(),values);
             else db.exec("update daily_report_summary set today_important_result=#{p.today},need_boss_support=#{p.support},tomorrow_focus=#{p.tomorrow},submission_status=case when submission_status='APPROVED' then 'APPROVED' else 'DRAFT' end,rejection_reason='',updated_at=now() where id=#{p.id}",p("today",values.get("today"),"support",values.get("support"),"tomorrow",values.get("tomorrow"),"id",old.get("id")));
@@ -85,7 +85,7 @@ public class DailyReportController {
     public Object approveSummary(@PathVariable String date,HttpServletRequest req){return reviewSummary(day(date),null,req);}
 
     @PostMapping("/summary/{date}/reject")
-    public Object rejectSummary(@PathVariable String date,@RequestBody Map<String,Object> body,HttpServletRequest req){return reviewSummary(day(date),Api.text(body,"reason",2000,true),req);}
+    public Object rejectSummary(@PathVariable String date,@RequestBody Map<String,Object> body,HttpServletRequest req){return reviewSummary(day(date),formattedText(body,"reason",2000,true),req);}
 
     @GetMapping("/summary/details")
     public Object summaryDetails(@RequestParam String date,HttpServletRequest req){
@@ -97,7 +97,7 @@ public class DailyReportController {
     public Object market(@PathVariable String market,@RequestParam String date,HttpServletRequest req){
         market=market(market);var actor=Identity.actor(req);var args=p("date",day(date),"market",market,"user",Identity.uid(req));String where="r.report_date=#{p.date} and r.market_code=#{p.market} and r.report_type in ('EDITOR','DIRECTOR')";
         if(Identity.role(actor,"BOSS"))where+=" and r.submission_status='APPROVED'";
-        else if(Identity.role(actor,"DEPT_HEAD")||Identity.role(actor,"ADMIN"))where+=" and r.submission_status<>'DRAFT'";
+        else if(Identity.role(actor,"DEPT_HEAD")||Identity.exactRole(actor,"ADMIN"))where+=" and r.submission_status<>'DRAFT'";
         else if(marketReviewer(actor,market))where+=" and (r.report_type='EDITOR' or r.reporter_id=#{p.user}) and r.submission_status<>'DRAFT'";
         else if(Identity.role(actor,"DIRECTOR")&&market.equals(actor.get("marketCode")))where+=" and r.reporter_id=#{p.user}";
         else if(Identity.role(actor,"MARKET_MEMBER")&&market.equals(actor.get("marketCode")))where+=" and r.reporter_id=#{p.user}";
@@ -109,7 +109,7 @@ public class DailyReportController {
     public Object ads(@RequestParam String date,HttpServletRequest req){
         var actor=Identity.actor(req);var args=p("date",day(date),"user",Identity.uid(req));String where="r.report_date=#{p.date} and r.report_type='ADS_BUYER'";
         if(Identity.role(actor,"BOSS")||Identity.role(actor,"ADS_BUYER")){}
-        else if(Identity.role(actor,"DEPT_HEAD")||Identity.role(actor,"ADMIN"))where+=" and r.submission_status<>'DRAFT'";
+        else if(Identity.role(actor,"DEPT_HEAD")||Identity.exactRole(actor,"ADMIN"))where+=" and r.submission_status<>'DRAFT'";
         else throw forbidden();
         return Api.ok(req,rows(where,args));
     }
@@ -119,7 +119,7 @@ public class DailyReportController {
         type=simpleType(type);var actor=Identity.actor(req);var args=p("date",day(date),"user",Identity.uid(req),"type",type);
         String where="r.report_date=#{p.date} and r.report_type=#{p.type}";
         if(Identity.role(actor,"BOSS"))where+=" and r.submission_status='APPROVED'";
-        else if(Identity.role(actor,"DEPT_HEAD")||Identity.role(actor,"ADMIN")){where+=" and r.submission_status<>'DRAFT'";}
+        else if(Identity.role(actor,"DEPT_HEAD")||Identity.exactRole(actor,"ADMIN")){where+=" and r.submission_status<>'DRAFT'";}
         else if(simpleRole(actor).equals(type))where+=" and r.reporter_id=#{p.user}";
         else throw forbidden();
         return Api.ok(req,rows(where,args));
@@ -188,7 +188,7 @@ public class DailyReportController {
     @PostMapping("/mine/simple/{date}/submit") public Object submitSimple(@PathVariable String date,@RequestBody Map<String,Object> body,HttpServletRequest req){return storeSimple(date,body,req,true);}
 
     @PostMapping("/{id}/approve") public Object approve(@PathVariable long id,HttpServletRequest req){return review(id,null,req);}
-    @PostMapping("/{id}/reject") public Object reject(@PathVariable long id,@RequestBody Map<String,Object> body,HttpServletRequest req){return review(id,Api.text(body,"reason",2000,true),req);}
+    @PostMapping("/{id}/reject") public Object reject(@PathVariable long id,@RequestBody Map<String,Object> body,HttpServletRequest req){return review(id,formattedText(body,"reason",2000,true),req);}
 
     private Object storeContent(String value,Map<String,Object> body,HttpServletRequest req,boolean submit){var actor=Identity.actor(req);return store(day(value),contentRole(actor),ownMarket(actor),body,req,submit);}
     private Object storeAds(String value,String valueMarket,Map<String,Object> body,HttpServletRequest req,boolean submit){requireRole(Identity.actor(req),"ADS_BUYER");return store(day(value),"ADS_BUYER",market(valueMarket),body,req,submit);}
@@ -211,7 +211,7 @@ public class DailyReportController {
 
     private Object review(long id,String reason,HttpServletRequest req){
         var actor=Identity.actor(req);Map<String,Object> result=tx.execute(s->{
-            var report=db.one("select * from daily_metric_report where id=#{p.id} for update",p("id",id));Api.require(!report.isEmpty(),"日报不存在");String state=report.get("submissionStatus").toString();String type=report.get("reportType").toString();String reportMarket=report.get("marketCode").toString();long user=Identity.uid(req);boolean marketReview="PENDING_MARKET".equals(state)&&"EDITOR".equals(type)&&(marketReviewer(actor,reportMarket)||Identity.role(actor,"ADMIN"));boolean deptReview="PENDING_DEPT".equals(state)&&(Identity.role(actor,"DEPT_HEAD")||Identity.role(actor,"ADMIN"));if(!marketReview&&!deptReview)throw forbidden();
+            var report=db.one("select * from daily_metric_report where id=#{p.id} for update",p("id",id));Api.require(!report.isEmpty(),"日报不存在");String state=report.get("submissionStatus").toString();String type=report.get("reportType").toString();String reportMarket=report.get("marketCode").toString();long user=Identity.uid(req);boolean marketReview="PENDING_MARKET".equals(state)&&"EDITOR".equals(type)&&(marketReviewer(actor,reportMarket)||Identity.exactRole(actor,"ADMIN"));boolean deptReview="PENDING_DEPT".equals(state)&&(Identity.role(actor,"DEPT_HEAD")||Identity.exactRole(actor,"ADMIN"));if(!marketReview&&!deptReview)throw forbidden();
             String next=reason==null?(marketReview?"PENDING_DEPT":"APPROVED"):"REJECTED";String stage=marketReview?"MARKET":"DEPT";
             db.exec("update daily_metric_report set submission_status=#{p.status},rejection_stage=#{p.stage},rejection_reason=#{p.reason},market_reviewer_id=case when #{p.market} then #{p.user} else market_reviewer_id end,market_reviewed_at=case when #{p.market} then now() else market_reviewed_at end,dept_reviewer_id=case when #{p.dept} then #{p.user} else dept_reviewer_id end,dept_reviewed_at=case when #{p.dept} then now() else dept_reviewed_at end,updated_at=now() where id=#{p.id}",p("status",next,"stage",reason==null?null:stage,"reason",Objects.toString(reason,""),"market",marketReview,"dept",deptReview,"user",user,"id",id));return db.one(select()+" where r.id=#{p.id}",p("id",id));
         });
@@ -240,7 +240,7 @@ public class DailyReportController {
     static Map<String,Object> metrics(Map<String,Object> body,String type,boolean required){
         var values=p();for(String key:EDITOR)values.put(camelToSnake(key),0);for(String key:LEAD)values.put(camelToSnake(key),0);for(String key:ADS)values.put(camelToSnake(key),key.equals("adSpend")||key.equals("adGmv")?BigDecimal.ZERO:0);
         List<String> fields="EDITOR".equals(type)?EDITOR:"DIRECTOR".equals(type)?LEAD:"ADS_BUYER".equals(type)?ADS:SIMPLE;
-        for(String key:fields)values.put(camelToSnake(key),(key.equals("adSpend")||key.equals("adGmv"))?money(body,key,required):number(body,key,required));values.put("notes",Api.text(body,"notes",4000,true));values.put("blockers",Api.text(body,"blockers",4000,true));return values;
+        for(String key:fields)values.put(camelToSnake(key),(key.equals("adSpend")||key.equals("adGmv"))?money(body,key,required):number(body,key,required));values.put("notes",formattedText(body,"notes",4000,true));values.put("blockers",formattedText(body,"blockers",4000,true));return values;
     }
     private static Map<String,Object> taskResults(Map<String,Object> body,String type,String field){
         if(!Set.of("EDITOR","DIRECTOR").contains(type))return new LinkedHashMap<>();Object raw=body.get(field);if(raw==null)return new LinkedHashMap<>();Api.require(raw instanceof Map,"自定义任务结果格式无效");var result=new LinkedHashMap<String,Object>();for(var entry:((Map<?,?>)raw).entrySet()){String name=Objects.toString(entry.getKey(),"").trim();Api.require(!name.isBlank()&&name.length()<=100,"任务名称格式无效");Api.require(entry.getValue() instanceof Map,"自定义任务结果格式无效");var value=(Map<?,?>)entry.getValue();long actual=number(Map.of("actualCount",value.get("actualCount")),"actualCount",true);String delivery=Objects.toString(value.get("delivery"),"").trim();Api.require(delivery.length()<=2000,"交付成果不能超过 2000 个字符");result.put(name,p("actualCount",actual,"delivery",delivery));}return result;
@@ -293,12 +293,13 @@ public class DailyReportController {
     private static String summarySelect(){return "select s.*,u.display_name reviewer_name from daily_report_summary s left join sys_user u on u.id=s.reviewer_id";}
     private static String summaryInsertSql(){return "insert into daily_report_summary(report_date,today_important_result,need_boss_support,tomorrow_focus) values(#{p.date},#{p.today},#{p.support},#{p.tomorrow})";}
     private static Map<String,Object> summaryBlank(LocalDate date){return p("reportDate",date.toString(),"todayImportantResult","","needBossSupport","","tomorrowFocus","","submissionStatus","DRAFT","rejectionReason","");}
+    private static String formattedText(Map<String,Object> body,String key,int max,boolean required){String value=Objects.toString(body.get(key),"");Api.require(!required||!value.trim().isEmpty(),key+" 不能为空");Api.require(value.length()<=max,key+" 超过长度限制");return value;}
     static LocalDate day(String value){try{return LocalDate.parse(value);}catch(Exception e){throw new Api.Problem(400,"VALIDATION_ERROR","日期格式无效");}}
     static boolean leader(Map<String,Object> user){return Identity.role(user,"ADMIN")||Identity.role(user,"BOSS")||Identity.role(user,"DEPT_HEAD");}
     private static String camelToSnake(String value){return value.replaceAll("([a-z])([A-Z])","$1_$2").toLowerCase(Locale.ROOT);}
     private static String market(String value){String code=Objects.toString(value,"").toUpperCase(Locale.ROOT);Api.require(MARKETS.contains(code),"市场无效");return code;}
     private static Api.Problem forbidden(){return new Api.Problem(403,"AUTH_FORBIDDEN","没有此操作的权限");}
-    private static void requireRole(Map<String,Object> actor,String role){if(!Identity.role(actor,role)&&!Identity.role(actor,"ADMIN"))throw forbidden();}
+    private static void requireRole(Map<String,Object> actor,String role){if(!Identity.exactRole(actor,role)&&!Identity.exactRole(actor,"ADMIN"))throw forbidden();}
     private static void requireViewer(Map<String,Object> actor){if(!leader(actor))throw forbidden();}
     private static String ownMarket(Map<String,Object> actor){String code=Objects.toString(actor.get("marketCode"),"");Api.require(MARKETS.contains(code),"账号尚未配置负责市场");return code;}
     static String dailyRole(Map<String,Object> actor){if(Identity.role(actor,"MARKET_MEMBER"))return "EDITOR";if(Identity.role(actor,"DIRECTOR"))return "DIRECTOR";if(Identity.role(actor,"ADS_BUYER"))return "ADS_BUYER";if(Identity.role(actor,"OPS"))return "OPS";if(Identity.role(actor,"TECH"))return "TECH";return "VIEWER";}

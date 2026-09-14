@@ -133,15 +133,15 @@ public class DashboardService {
         long rows=productPeriodRows(scope);var latest=db.one("select max(date_to) latest_biz_date from fact_product_period"+MARKET_SHOP,scope.params());
         return p("rowsInRange",rows,"daysInRange",rows>0?scope.days():0,"firstBizDate",rows>0?scope.dateFrom:null,"lastBizDate",rows>0?scope.dateTo:null,"latestBizDate",latest.get("latestBizDate"));
     }
-    private String fullProductSource(Scope scope){
+    private String productSource(Scope scope){
         if(productPeriodRows(scope)>0)return "PRODUCT_PERIOD";
-        if(dataDays(scope,"fact_product_daily")>=scope.days())return "PRODUCT_DAILY";
+        if(dataDays(scope,"fact_product_daily")>0)return "PRODUCT_DAILY";
         return null;
     }
     private long productCoverageDays(Scope scope){return productPeriodRows(scope)>0?scope.days():dataDays(scope,"fact_product_daily");}
 
     private Map<String,Object> productAggregate(Scope scope){
-        String source=fullProductSource(scope);if(source==null)return new LinkedHashMap<>();
+        String source=productSource(scope);if(source==null)return new LinkedHashMap<>();
         String table=source.equals("PRODUCT_PERIOD")?"fact_product_period":"fact_product_daily";
         String where=source.equals("PRODUCT_PERIOD")?PERIOD_EXACT:WHERE;
         var row=db.one("""
@@ -172,8 +172,8 @@ public class DashboardService {
         Object influencerSales=affiliateSales(scope);
         var trendScope=days==1?scope.between(scope.dateTo.minusDays(13),scope.dateTo):scope;var trend=daily(trendScope);
         var shopTrend=db.rows("select biz_date date,case when count(*) filter(where visitor_count is null)=0 then sum(visitor_count) end visitor_count,case when count(*) filter(where visitor_count is null or conversion_rate_src is null)=0 then sum(visitor_count*conversion_rate_src)/nullif(sum(visitor_count),0) end conversion_rate from fact_shop_daily"+WHERE+" group by biz_date order by biz_date",trendScope.params());
-        boolean productDataAvailable=fullProductSource(scope)!=null;
-        var result=p("currencyCode",currency(scope),"comparisonLabel",scope.comparisonLabel(),"productDataAvailable",productDataAvailable,"productDataSource",Objects.toString(fullProductSource(scope),"NONE"));
+        boolean productDataAvailable=productSource(scope)!=null;
+        var result=p("currencyCode",currency(scope),"comparisonLabel",scope.comparisonLabel(),"productDataAvailable",productDataAvailable,"productDataSource",Objects.toString(productSource(scope),"NONE"));
         result.put("affiliateSales",p("value",influencerSales,"trend",List.of()));
         result.put("selfSales",p("value",subtract(now.get("orderCount"),influencerSales),"trend",List.of()));
         var coverage=p("shopAnalytics",coverage(scope,"fact_shop_daily"),"productDaily",coverage(scope,"fact_product_daily"),"productPeriod",productPeriodCoverage(scope),"orderDetail",coverage(scope,"fact_order"),"ads",coverage(scope,"fact_ad_campaign_daily"));

@@ -3,7 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import { Coin, Goods, InfoFilled, Refresh, ShoppingBag, Tickets, View } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { api, query, download } from '../../api/client'
-import type { Overview, Trend, Funnel, Ads, SkuSales, AfterSales, Metric, Market } from '../../api/types'
+import type { Overview, Trend, Funnel, Ads, SkuSales, SkuAdMetric, AfterSales, Metric, Market } from '../../api/types'
 import { comparisonLabel, dateRangeError, presetRange, number } from '../../api/format.mjs'
 import { useAuth } from '../../stores/auth'
 import Chart from '../../components/Chart.vue'
@@ -12,7 +12,7 @@ import RequestError from '../../components/RequestError.vue'
 import { spark, combo, dynamicCombo } from './charts'
 const auth = useAuth(), busy = ref(false), exporting = ref(false), error = ref<Error | null>(null), markets = ref<Market[]>([]), marketCode = ref('MY')
 const initialRange = presetRange('yesterday') as [string, string], dates = ref<[string, string]>(initialRange), period = ref('yesterday')
-const overview = ref<Overview>(), sales = ref<Trend[]>([]), funnel = ref<Funnel>(), ads = ref<Ads>(), skuSales = ref<SkuSales[]>([]), after = ref<AfterSales>(), loaded = ref(false)
+const overview = ref<Overview>(), sales = ref<Trend[]>([]), funnel = ref<Funnel>(), ads = ref<Ads>(), skuSales = ref<SkuSales[]>([]), skuAdMetrics = ref<SkuAdMetric[]>([]), after = ref<AfterSales>(), loaded = ref(false)
 const applied = ref({ marketCode: 'MY', dateFrom: initialRange[0], dateTo: initialRange[1], comparisonPeriod: 'yesterday' })
 const single = computed(() => applied.value.dateFrom === applied.value.dateTo), compare = computed(() => overview.value?.comparisonLabel ?? comparisonLabel(applied.value.comparisonPeriod))
 const currency = computed(() => overview.value?.currencyCode ?? markets.value.find(m => m.marketCode === marketCode.value)?.currencyCode ?? 'MYR')
@@ -44,9 +44,22 @@ const skuSalesOption = computed(() => ({ tooltip: { trigger: 'item', confine: tr
 const sourceSales = computed(() => [{ label: '自营销量', value: overview.value?.selfSales?.value ?? null }, { label: '达人销量', value: overview.value?.affiliateSales?.value ?? null }])
 const sourceSalesTotal = computed(() => sourceSales.value.reduce((sum, item) => sum + Math.max(Number(item.value ?? 0), 0), 0))
 const sourceSalesOption = computed(() => ({ tooltip: { trigger: 'item', confine: true }, color: ['#5F8FBE', '#E14B50'], series: [{ type: 'pie', radius: ['64%', '82%'], center: ['50%', '50%'], label: { show: false }, itemStyle: { borderWidth: 2, borderColor: '#fff' }, data: sourceSales.value.map(item => ({ name: item.label, value: Math.max(Number(item.value ?? 0), 0) })) }] }))
+const skuAdRows = computed(() => [...skuAdMetrics.value].sort((a, b) => b.roi - a.roi))
 let request = 0
-async function load() { const validation = dateRangeError(dates.value?.[0], dates.value?.[1]); if (validation) { ElMessage.warning(validation); return } const current = ++request; busy.value = true; error.value = null; loaded.value = false; overview.value = undefined; sales.value = []; funnel.value = undefined; ads.value = undefined; skuSales.value = []; after.value = undefined; const filters = { marketCode: marketCode.value, dateFrom: dates.value[0], dateTo: dates.value[1], comparisonPeriod: period.value }, suffix = `?${query(filters)}`; try { const values = await Promise.all([api<Overview>('/dashboard/overview' + suffix), api<Trend[]>('/dashboard/sales-trend' + suffix), api<Funnel>('/dashboard/product-funnel' + suffix), api<Ads>('/dashboard/ads' + suffix), api<SkuSales[]>('/dashboard/sku-sales' + suffix), api<AfterSales>('/dashboard/after-sales' + suffix)]); if (current !== request) return;[overview.value, sales.value, funnel.value, ads.value, skuSales.value, after.value] = values; applied.value = filters; loaded.value = true } catch (e) { if (current === request) error.value = e as Error } finally { if (current === request) busy.value = false } }
-function choosePeriod(value: string) { period.value = value; if (value === 'custom') return; dates.value = presetRange(value) as [string, string]; void load() }
+async function load() {
+  const validation = dateRangeError(dates.value?.[0], dates.value?.[1]); if (validation) { ElMessage.warning(validation); return }
+  const current = ++request; busy.value = true; error.value = null; loaded.value = false
+  overview.value = undefined; sales.value = []; funnel.value = undefined; ads.value = undefined; skuSales.value = []; skuAdMetrics.value = []; after.value = undefined
+  const filters = { marketCode: marketCode.value, dateFrom: dates.value[0], dateTo: dates.value[1], comparisonPeriod: period.value }, suffix = `?${query(filters)}`
+  try {
+    const values = await Promise.all([api<Overview>('/dashboard/overview' + suffix), api<Trend[]>('/dashboard/sales-trend' + suffix), api<Funnel>('/dashboard/product-funnel' + suffix), api<Ads>('/dashboard/ads' + suffix), api<SkuSales[]>('/dashboard/sku-sales' + suffix), api<AfterSales>('/dashboard/after-sales' + suffix)])
+    if (current !== request) return
+    ;[overview.value, sales.value, funnel.value, ads.value, skuSales.value, after.value] = values
+    try { skuAdMetrics.value = await api<SkuAdMetric[]>('/dashboard/sku-ad-metrics' + suffix) } catch { skuAdMetrics.value = [] }
+    applied.value = filters; loaded.value = true
+  } catch (e) { if (current === request) error.value = e as Error } finally { if (current === request) busy.value = false }
+}
+function choosePeriod(value: string) { period.value = value; dates.value = presetRange(value) as [string, string]; void load() }
 async function exportData(type: string) { exporting.value = true; try { await download(`/exports/${type}`, applied.value); ElMessage.success('导出文件已下载') } catch (e) { ElMessage.error((e as Error).message) } finally { exporting.value = false } }
 onMounted(async () => { void load(); try { markets.value = await api<Market[]>('/system/markets') } catch {/* MY is the documented initial market; no invented additional markets. */ } })
 </script>
@@ -56,11 +69,10 @@ onMounted(async () => { void load(); try { markets.value = await api<Market[]>('
     <div class="surface dashboard-filters">
       <div class="actions"><label class="inline-filter"><span>业务日期</span><el-radio-group v-model="period" size="small"
             aria-label="业务日期快捷选择" @change="choosePeriod"><el-radio-button
-              value="today">今日</el-radio-button><el-radio-button value="yesterday">昨日</el-radio-button><el-radio-button
-              value="week">本周</el-radio-button><el-radio-button value="month">本月</el-radio-button><el-radio-button
-              value="custom">自定义</el-radio-button></el-radio-group><el-date-picker v-if="period === 'custom'"
+            value="today">今日</el-radio-button><el-radio-button value="yesterday">昨日</el-radio-button><el-radio-button
+              value="week">本周</el-radio-button><el-radio-button value="month">本月</el-radio-button></el-radio-group><el-date-picker
             v-model="dates" type="daterange" value-format="YYYY-MM-DD" format="YYYY/MM/DD" start-placeholder="开始日期"
-            end-placeholder="结束日期" :clearable="false" /></label><label class="inline-filter"><span>市场</span><el-select
+            end-placeholder="结束日期" :clearable="false" @change="period = 'custom'" /></label><label class="inline-filter"><span>市场</span><el-select
             v-model="marketCode" aria-label="市场" style="width:170px"><el-option
               v-for="m in markets.length ? markets : [{ marketCode: 'MY', marketName: '马来西亚', currencyCode: 'MYR' }]"
               :key="m.marketCode" :value="m.marketCode"
@@ -225,6 +237,22 @@ onMounted(async () => { void load(); try { markets.value = await api<Market[]>('
             </div>
           </div>
         </article>
+      </section>
+      <section class="surface panel sku-ad-panel">
+        <div class="panel-head">
+          <h2>各 SKU 投流指标</h2>
+        </div>
+        <el-table v-if="skuAdRows.length" :data="skuAdRows" size="small" class="sku-ad-table">
+          <el-table-column prop="displayName" label="SKU配置" min-width="320" show-overflow-tooltip />
+          <el-table-column label="广告花费" min-width="145"><template #default="{ row }"><span class="number">USD {{ number(row.adSpend, 2) }}</span></template></el-table-column>
+          <el-table-column label="广告收入" min-width="145"><template #default="{ row }"><span class="number">USD {{ number(row.adRevenue, 2) }}</span></template></el-table-column>
+          <el-table-column label="ROI" min-width="100"><template #default="{ row }"><span class="number" :class="{ 'roi-low': row.roi < 1 }">{{ number(row.roi, 2) }}</span></template></el-table-column>
+          <el-table-column label="CPO" min-width="120"><template #default="{ row }"><span class="number">USD {{ number(row.cpo, 2) }}</span></template></el-table-column>
+          <!-- 订单数暂时隐藏，后续取消注释即可恢复展示。
+          <el-table-column prop="orders" label="订单数" min-width="100" />
+          -->
+        </el-table>
+        <el-empty v-else description="暂无 SKU 投流数据" :image-size="52" />
       </section>
     </template>
   </div>
@@ -534,6 +562,19 @@ onMounted(async () => { void load(); try { markets.value = await api<Market[]>('
   display: grid;
   grid-template-columns: .92fr .88fr 1.8fr;
   gap: 16px
+}
+
+.sku-ad-panel {
+  margin-top: 16px;
+  overflow: hidden
+}
+
+.sku-ad-table {
+  width: 100%
+}
+
+.roi-low {
+  color: #E14B50
 }
 
 .status-layout {

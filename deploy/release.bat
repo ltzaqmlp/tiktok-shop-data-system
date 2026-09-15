@@ -5,12 +5,12 @@ cd /d "%~dp0"
 
 echo.
 echo TikTok Shop 数据平台一键发版
-echo 1. 发布测试环境
-echo 2. 发布生产环境
-echo 3. 先测试，成功后发布生产
-echo 0. 退出
+echo 1. Deploy test environment
+echo 2. Deploy production environment
+echo 3. Test first, then deploy production
+echo 0. Exit
 echo.
-choice /c 1230 /n /m "请选择："
+choice /c 1230 /n /m "Select: "
 
 if errorlevel 4 exit /b 0
 if errorlevel 3 goto both

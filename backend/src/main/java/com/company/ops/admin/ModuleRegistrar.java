@@ -53,6 +53,19 @@ public class ModuleRegistrar implements ApplicationRunner {
             where s.market_code='MY' and s.shop_key=#{p.key}
             on conflict(shop_id,seller_sku) do nothing
             """,p("key",shopKey));
+        db.exec("""
+            insert into product_sku_mapping(shop_id,product_id,display_name,seller_sku,sort_order)
+            select s.id,v.product_id,v.display_name,v.seller_sku,v.sort_order
+            from dim_shop s cross join (values
+              ('1736479479514957476','1瓶精华','12320JN-1',100),
+              ('1736479479514957476','2瓶精华','12320JN-11',200),
+              ('1736671468388976292','1瓶精华+刮痧板','12320JN-GS',300),
+              ('1736690508665489060','1瓶精华','12320JN-1',100),
+              ('1736690508665489060','刮痧板','12320FJGSS-1',200)
+            ) v(product_id,display_name,seller_sku,sort_order)
+            where s.market_code='MY' and s.shop_key=#{p.key}
+            on conflict(shop_id,product_id,seller_sku) do nothing
+            """,p("key",shopKey));
         // Interrupted facts transaction rolls back; aggregate-only failures remain explicitly retryable.
         db.exec("update sys_import_task set status=case when status='AGGREGATING' then 'AGGREGATE_FAILED' else 'FAILED' end,error_message='服务重启中断任务，请重新导入或重算',finished_at=now() where status in ('CREATED','VALIDATING','IMPORTING','AGGREGATING')",Map.of());
     }

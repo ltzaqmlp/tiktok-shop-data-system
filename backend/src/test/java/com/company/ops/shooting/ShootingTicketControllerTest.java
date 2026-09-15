@@ -15,4 +15,8 @@ class ShootingTicketControllerTest {
         assertEquals(3L,ShootingTicketController.number(Map.of("plannedValidShotCount",3),"plannedValidShotCount",true));
         assertThrows(Api.Problem.class,()->ShootingTicketController.number(Map.of("actualValidShotCount",-1),"actualValidShotCount",true));
     }
+    @Test void formattedTextKeepsLineBreaksAndSpaces(){
+        var value="1、测试1\n2、测试2 \n3、测试3 ";
+        assertEquals(value,ShootingTicketController.formattedText(Map.of("text",value),"text",4000,true));
+    }
 }

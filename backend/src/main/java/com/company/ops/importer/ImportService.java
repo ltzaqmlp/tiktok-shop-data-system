@@ -52,6 +52,7 @@ public class ImportService {
         var context=db.one("select s.id,s.shop_key,m.currency_code from dim_shop s join dim_market m on m.market_code=s.market_code where s.id=#{p.shop} and s.market_code=#{p.market} and s.enabled and m.enabled",p("shop",shop,"market",market));
         Api.require(!context.isEmpty(),"店铺与市场不匹配或已停用");
         LocalDate date=bizDate==null||bizDate.isBlank()?null:ImportMapping.date(bizDate);
+        if(source.equals("GMV_MAX_PRODUCT"))ImportMapping.productAdDate(filename,date);
         Path folder=Path.of(fileRoot,"raw",source,LocalDate.now().toString().substring(0,7)).toAbsolutePath().normalize();
         Files.createDirectories(folder);
         Path stored=folder.resolve(UUID.randomUUID()+(filename.toLowerCase().endsWith(".xlsx")?".xlsx":".xls"));
@@ -74,19 +75,22 @@ public class ImportService {
                     throw new Api.Problem(409,"IMPORT_FILE_DUPLICATE","文件已导入，请查看历史或由管理员重跑");
                 return db.insert("insert into sys_import_task(source_type,market_code,shop_id,biz_date_from,biz_date_to,original_filename,stored_path,file_hash,status,created_by) values(#{p.source},#{p.market},#{p.shop},#{p.date},#{p.date},#{p.filename},#{p.path},#{p.hash},'CREATED',#{p.user})",p("source",source,"market",market,"shop",shop,"date",date,"filename",filename,"path",stored.toString(),"hash",hash,"user",user));
             });
-            worker.submit(()->run(Long.parseLong(id),source,market,shop,date,stored,context,user));
+            worker.submit(()->run(Long.parseLong(id),source,market,shop,date,stored,filename,context,user));
             return id;
         }catch(Exception e){Files.deleteIfExists(stored);throw e;}
     }
 
-    private void run(long id,String source,String market,long shop,LocalDate chosen,Path file,Map<String,Object> context,long user){
-        var listener=new Reader(id,source,market,shop,chosen,context);String finalStatus="FAILED",finalMessage=null;
+    private void run(long id,String source,String market,long shop,LocalDate chosen,Path file,String originalFilename,Map<String,Object> context,long user){
+        LocalDate fileDate=source.equals("GMV_MAX_PRODUCT")?ImportMapping.productAdDate(originalFilename,chosen):chosen;
+        var listener=new Reader(id,source,market,shop,fileDate,originalFilename,context);String finalStatus="FAILED",finalMessage=null;
         try{
             db.exec("update sys_import_task set status='VALIDATING',started_at=now() where id=#{p.id}",p("id",id));
             db.exec("update sys_import_task set status='IMPORTING' where id=#{p.id}",p("id",id));
             tx.executeWithoutResult(s->{
                 if(isOrderSource(source))readOrder(file,listener);
-                else if(source.equals("PRODUCT_DAILY"))readProduct(file,listener);
+                else if(source.equals("PRODUCT_DAILY")||source.equals("GMV_MAX_PRODUCT"))readProduct(file,listener);
+                else if(source.equals("SHOP_ANALYTICS"))readShopAnalytics(file,listener);
+                else if(source.equals("GMV_MAX_CAMPAIGN"))readGmvMaxCampaign(file,listener);
                 else EasyExcel.read(file.toFile(),listener).headRowNumber(0).sheet().doRead();
                 Api.require(listener.header!=null,"缺少关键表头："+String.join(", ",ImportMapping.REQUIRED.get(source)));
                 Api.require(listener.count>0,"工作簿没有数据行");
@@ -130,6 +134,110 @@ public class ImportService {
     private void readProduct(Path file,Reader listener){
         // TikTok product exports can declare dimension=A1 even when rows 3+ contain the report.
         readPoi(file,listener,"商品工作簿无法读取");
+    }
+    private void readShopAnalytics(Path file,Reader listener){
+        var rows=readRows(file,"店铺数据工作簿无法读取");
+        int datedHeader=-1,metricHeader=-1;Map<Integer,String> metricFields=Map.of();
+        for(int i=0;i<rows.size();i++){
+            var fields=headerFields("SHOP_ANALYTICS",rows.get(i));
+            if(fields.values().containsAll(ImportMapping.REQUIRED.get("SHOP_ANALYTICS"))&&fields.containsValue("biz_date"))datedHeader=i;
+            if(fields.values().contains("gmv")&&fields.values().contains("order_count")){metricHeader=i;metricFields=fields;}
+        }
+        if(datedHeader>=0){
+            for(int i=0;i<rows.size();i++)listener.process(rows.get(i),i+1);
+            return;
+        }
+        Api.require(metricHeader>=0,"缺少关键表头："+String.join(", ",ImportMapping.REQUIRED.get("SHOP_ANALYTICS")));
+        var titleDate=singleShopAnalyticsDate(rows);
+        Api.require(titleDate!=null,"无法确定单日店铺数据的业务日期");
+        var header=new LinkedHashMap<>(rows.get(metricHeader));
+        int dateColumn=metricFields.entrySet().stream().filter(e->e.getValue().equals("biz_date")).map(Map.Entry::getKey).findFirst().orElse(0);
+        header.put(dateColumn,"日期");
+        listener.process(header,metricHeader+1);
+        var indexes=new HashMap<String,Integer>();metricFields.forEach((i,k)->indexes.put(k,i));
+        Map<Integer,String> summary=null;
+        for(int i=0;i<metricHeader;i++)if(ImportMapping.normalize(Objects.toString(rows.get(i).get(0),"")).equals("总计值")){summary=rows.get(i);break;}
+        var sumFields=Set.of("gmv","order_count","sold_qty","sku_order_count","refund_amount","customer_count","page_view_count","visitor_count","impressions","clicks","unique_impressions","unique_clicks");
+        var sums=new TreeMap<LocalDate,Map<String,java.math.BigDecimal>>();
+        for(int i=metricHeader+1;i<rows.size();i++){
+            var row=rows.get(i);String rawDate=Objects.toString(row.get(dateColumn),"").trim();if(rawDate.isBlank())continue;
+            LocalDate date;try{date=ImportMapping.date(rawDate);}catch(Exception e){continue;}
+            var day=sums.computeIfAbsent(date,d->new HashMap<>());
+            for(String field:sumFields)if(indexes.containsKey(field))day.putIfAbsent(field,java.math.BigDecimal.ZERO);
+            for(String field:sumFields){Integer column=indexes.get(field);if(column==null)continue;String raw=Objects.toString(row.get(column),"").trim();if(raw.isBlank()||raw.equals("/")||raw.equals("-"))continue;day.merge(field,ImportMapping.amount(raw),java.math.BigDecimal::add);}
+            if(summary!=null)for(String field:Set.of("customer_count","visitor_count","unique_impressions","unique_clicks")){
+                Integer column=indexes.get(field);if(column==null)continue;String raw=Objects.toString(summary.get(column),"").trim();if(!raw.isBlank()&&!raw.equals("/")&&!raw.equals("-"))day.put(field,ImportMapping.amount(raw));
+            }
+        }
+        for(var entry:sums.entrySet()){
+            var row=new LinkedHashMap<Integer,String>();row.put(dateColumn,entry.getKey().toString());
+            entry.getValue().forEach((field,value)->row.put(indexes.get(field),value.stripTrailingZeros().toPlainString()));
+            var day=entry.getValue();var orders=day.get("order_count");var visitors=day.get("visitor_count");
+            if(orders!=null&&visitors!=null&&visitors.signum()>0)row.put(indexes.get("conversion_rate_src"),orders.divide(visitors,8,java.math.RoundingMode.HALF_UP).toPlainString());
+            listener.process(row,metricHeader+2);
+        }
+    }
+    private void readGmvMaxCampaign(Path file,Reader listener){
+        var rows=readRows(file,"广告系列工作簿无法读取");
+        int headerRow=-1;Map<Integer,String> fields=Map.of();
+        for(int i=0;i<rows.size();i++){
+            var candidate=campaignHeaderFields(rows.get(i));
+            if(candidate.values().containsAll(ImportMapping.REQUIRED.get("GMV_MAX_CAMPAIGN"))){headerRow=i;fields=candidate;break;}
+        }
+        Api.require(headerRow>=0,"缺少关键表头："+String.join(", ",ImportMapping.REQUIRED.get("GMV_MAX_CAMPAIGN")));
+        int dateColumn=fields.entrySet().stream().filter(e->e.getValue().equals("biz_date")).map(Map.Entry::getKey).findFirst().orElseThrow();
+        String dateLabel=ImportMapping.normalize(Objects.toString(rows.get(headerRow).get(dateColumn),""));
+        boolean hourly=dateLabel.equals("时间")||dateLabel.startsWith("时间")||dateLabel.equals("time")||dateLabel.startsWith("time");
+        if(!hourly){for(int i=0;i<rows.size();i++)listener.process(rows.get(i),i+1);return;}
+
+        var sums=new TreeMap<LocalDate,Map<String,BigDecimal>>();var currencies=new TreeMap<LocalDate,String>();
+        int currencyColumn=fields.entrySet().stream().filter(e->e.getValue().equals("currency_code")).map(Map.Entry::getKey).findFirst().orElse(-1);
+        var header=new LinkedHashMap<>(rows.get(headerRow));header.put(dateColumn,"日期");listener.process(header,headerRow+1);
+        for(int i=headerRow+1;i<rows.size();i++){
+            var row=rows.get(i);String rawDate=Objects.toString(row.get(dateColumn),"").trim();if(rawDate.isBlank()||rawDate.equals("-"))continue;
+            LocalDate date;try{date=ImportMapping.date(rawDate);}catch(Exception e){continue;}
+            var day=sums.computeIfAbsent(date,d->new HashMap<>());
+            for(String field:List.of("spend","attributed_revenue","attributed_order_count")){
+                Integer column=fields.entrySet().stream().filter(e->e.getValue().equals(field)).map(Map.Entry::getKey).findFirst().orElse(null);if(column==null)continue;
+                day.putIfAbsent(field,BigDecimal.ZERO);
+                String raw=Objects.toString(row.get(column),"").trim();if(raw.isBlank()||raw.equals("-"))continue;
+                day.merge(field,ImportMapping.amount(raw),BigDecimal::add);
+            }
+            if(currencyColumn>=0){String currency=Objects.toString(row.get(currencyColumn),"").trim().toUpperCase(Locale.ROOT);if(!currency.isBlank()){
+                String previous=currencies.putIfAbsent(date,currency);Api.require(previous==null||previous.equals(currency),"同一天包含多个币种，无法汇总");
+            }}
+        }
+        for(var entry:sums.entrySet()){
+            var row=new LinkedHashMap<Integer,String>();row.put(dateColumn,entry.getKey().toString());
+            for(var total:entry.getValue().entrySet())for(var field:fields.entrySet())if(field.getValue().equals(total.getKey())){row.put(field.getKey(),total.getValue().stripTrailingZeros().toPlainString());break;}
+            if(currencyColumn>=0&&currencies.containsKey(entry.getKey()))row.put(currencyColumn,currencies.get(entry.getKey()));
+            listener.process(row,headerRow+2);
+        }
+    }
+    private Map<Integer,String> campaignHeaderFields(Map<Integer,String> row){
+        var fields=headerFields("GMV_MAX_CAMPAIGN",row);
+        row.forEach((i,v)->{String normalized=ImportMapping.normalize(v);if(normalized.equals("时间")||normalized.startsWith("时间")||normalized.equals("time")||normalized.startsWith("time"))fields.put(i,"biz_date");});
+        return fields;
+    }
+    private Map<Integer,String> headerFields(String source,Map<Integer,String> row){
+        var fields=new LinkedHashMap<Integer,String>();row.forEach((i,v)->{String key=ImportMapping.fieldForSource(source,aliases.get(ImportMapping.normalize(v)));if(key!=null)fields.put(i,key);});return fields;
+    }
+    private LocalDate singleShopAnalyticsDate(List<Map<Integer,String>> rows){
+        var matcher=java.util.regex.Pattern.compile("(?<!\\d)(\\d{1,2}/\\d{1,2}/\\d{4})(?!\\d)");
+        for(var row:rows)for(String text:row.values()){
+            var m=matcher.matcher(Objects.toString(text,""));var found=new ArrayList<String>();while(m.find())found.add(m.group(1));
+            if(!found.isEmpty())return found.size()==1?ImportMapping.date(found.getFirst()):null;
+        }
+        return null;
+    }
+    private List<Map<Integer,String>> readRows(Path file,String errorMessage){
+        try(var book=org.apache.poi.ss.usermodel.WorkbookFactory.create(file.toFile())){
+            var formatter=new org.apache.poi.ss.usermodel.DataFormatter(Locale.ROOT);var rows=new ArrayList<Map<Integer,String>>();
+            for(var sourceRow:book.getSheetAt(0)){
+                var row=new LinkedHashMap<Integer,String>();for(var cell:sourceRow)row.put(cell.getColumnIndex(),formatter.formatCellValue(cell));rows.add(row);
+            }
+            return rows;
+        }catch(IOException e){throw new Api.Problem(400,"IMPORT_FILE_INVALID",errorMessage);}
     }
     private void readPoi(Path file,Reader listener,String errorMessage){
         try(var book=org.apache.poi.ss.usermodel.WorkbookFactory.create(file.toFile())){
@@ -175,18 +283,18 @@ public class ImportService {
     }
 
     private class Reader extends AnalysisEventListener<Map<Integer,String>> {
-        final long task,shop;final String source,market;final LocalDate chosen;final Map<String,Object> context;
+        final long task,shop;final String source,market;final LocalDate chosen;final String originalFilename;final Map<String,Object> context;
         Map<Integer,String> header;String signature;int count,failed;String currentField="";String currentRaw="";
         ImportMapping.DateRange productRange;
         final LinkedHashMap<String,Map<String,Object>> batch=new LinkedHashMap<>();
         final LinkedHashMap<String,Map<String,Object>> skuBatch=new LinkedHashMap<>();
         final List<Map<String,Object>> errors=new ArrayList<>();final TreeSet<LocalDate> dates=new TreeSet<>();Set<String> bestFields=Set.of();
         boolean snapshotReset;
-        Reader(long task,String source,String market,long shop,LocalDate chosen,Map<String,Object> context){this.task=task;this.source=source;this.market=market;this.shop=shop;this.chosen=chosen;this.context=context;}
+        Reader(long task,String source,String market,long shop,LocalDate chosen,String originalFilename,Map<String,Object> context){this.task=task;this.source=source;this.market=market;this.shop=shop;this.chosen=chosen;this.originalFilename=originalFilename;this.context=context;}
         @Override public void invoke(Map<Integer,String> row,AnalysisContext ctx){process(row,ctx.readRowHolder().getRowIndex()+1);}
 
         boolean isProductPeriod(){return source.equals("PRODUCT_DAILY")&&productRange!=null&&!productRange.from().equals(productRange.to());}
-        boolean affectsDailyAggregation(){return !isProductPeriod()&&!source.equals("AFFILIATE_ORDER");}
+        boolean affectsDailyAggregation(){return !isProductPeriod()&&!source.equals("AFFILIATE_ORDER")&&!source.equals("GMV_MAX_PRODUCT");}
         String targetTable(){return isProductPeriod()?"fact_product_period":ImportMapping.TABLES.get(source);}
         String keyColumns(){return isProductPeriod()?"shop_id,date_from,date_to,product_id":ImportMapping.KEYS.get(source);}
 
@@ -210,7 +318,7 @@ public class ImportService {
             if(header==null){
                 captureProductRange(row);
                 var candidate=new LinkedHashMap<Integer,String>();
-                row.forEach((i,v)->{String key=aliases.get(ImportMapping.normalize(v));if(key!=null)candidate.put(i,key);});
+                row.forEach((i,v)->{String key=ImportMapping.fieldForSource(source,aliases.get(ImportMapping.normalize(v)));if(key!=null)candidate.put(i,key);});
                 if(candidate.size()>bestFields.size())bestFields=new HashSet<>(candidate.values());
                 if(candidate.values().containsAll(ImportMapping.REQUIRED.get(source))){
                     header=candidate;
@@ -224,6 +332,10 @@ public class ImportService {
             if(row.values().stream().allMatch(v->v==null||v.isBlank()))return;
             count++;
             var raw=new LinkedHashMap<String,String>();header.forEach((i,k)->raw.putIfAbsent(k,Objects.toString(row.get(i),"")));
+            if(source.equals("GMV_MAX_PRODUCT")){
+                raw.put("campaign_id",ImportMapping.productAdCampaignId(originalFilename));
+                raw.put("biz_date",chosen.toString());
+            }
             if(source.equals("GMV_MAX_CAMPAIGN")&&raw.getOrDefault("biz_date","").trim().equals("-")){count--;return;}
                 if(isOrderSource(source)&&raw.getOrDefault("order_id","").startsWith("Platform unique order ID")){count--;return;}
             try{
@@ -240,7 +352,7 @@ public class ImportService {
                 if(raw.containsKey("shop_id")&&!raw.get("shop_id").isBlank()&&!raw.get("shop_id").equals(context.get("shopKey"))&&!raw.get("shop_id").equals(String.valueOf(shop)))throw new Api.Problem(400,"IMPORT_SHOP_MISMATCH","文件店铺与选择店铺不一致");
                 if(raw.containsKey("market_code")&&!raw.get("market_code").isBlank()&&!raw.get("market_code").equalsIgnoreCase(market))throw new Api.Problem(400,"IMPORT_SHOP_MISMATCH","文件市场与选择市场不一致");
                 String currency=raw.getOrDefault("currency_code","").trim().toUpperCase(Locale.ROOT);if(currency.isBlank())currency=context.get("currencyCode").toString();if(currency.equals("RM"))currency="MYR";
-                Api.require(currency.matches("[A-Z]{3}"),"币种代码无效");if(!source.equals("GMV_MAX_CAMPAIGN"))Api.require(currency.equals(context.get("currencyCode")),"文件币种与市场币种不一致");
+                Api.require(currency.matches("[A-Z]{3}"),"币种代码无效");if(!Set.of("GMV_MAX_CAMPAIGN","GMV_MAX_PRODUCT").contains(source))Api.require(currency.equals(context.get("currencyCode")),"文件币种与市场币种不一致");
                 values.putAll(p("shop_id",shop,"market_code",market,"currency_code",currency));
                 if(isProductPeriod()){values.put("date_from",productRange.from());values.put("date_to",productRange.to());}
                 else values.put("biz_date",date);
@@ -248,6 +360,7 @@ public class ImportService {
                 String columns=switch(source){
                     case "SHOP_ANALYTICS" -> "gmv,order_count,sold_qty,sku_order_count,refund_amount,customer_count,page_view_count,visitor_count,conversion_rate_src,impressions,clicks,unique_impressions,unique_clicks";
                     case "PRODUCT_DAILY" -> "product_id,gmv,order_count,sku_order_count,sold_qty,estimated_customer_count,impressions,clicks,add_to_cart_count,refund_amount,refunded_qty,refund_customer_count,unique_impressions,unique_clicks,added_user_count";
+                    case "GMV_MAX_PRODUCT" -> "product_id,campaign_id,spend,attributed_revenue,attributed_order_count";
                     case "ORDER_DETAIL","AFFILIATE_ORDER" -> "order_id,source_status,order_amount,item_qty,returned_qty,order_refund_amount";
                     default -> "ad_account_key,campaign_id,campaign_name,spend,attributed_revenue,attributed_order_count,impressions,clicks";
                 };

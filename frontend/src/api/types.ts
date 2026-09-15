@@ -12,6 +12,8 @@ export interface Ads { currencyCode: string; spend: Metric; attributedRevenue: M
 export interface OrderStatus { status: string; count: number; ratio: number }
 export interface SkuSales { displayName: string; sellerSku: string; sales: number; ratio: number }
 export interface SkuConfig { id: string; shopId: string; displayName: string; sellerSku: string; enabled: boolean; sortOrder: number }
+export interface ProductSkuMapping { id: string; shopId: string; productId: string; displayName: string; sellerSku: string; enabled: boolean; sortOrder: number }
+export interface SkuAdMetric { productId: string; displayName: string; adSpend: number; adRevenue: number; roi: number; cpo: number; orders: number }
 export interface AfterSales { refundAmount: Metric; refundedQty: Metric; refundCustomerCount: Metric; cancelOrderCount: Metric; productDataRange?: { dateFrom: string; dateTo: string } }
 export interface ImportTask { id: string; sourceType: string; marketCode: string; shopId: string; shopName?: string; bizDateFrom: string; bizDateTo: string; originalFilename: string; status: string; totalRows: number; successRows: number; failedRows: number; createdBy: string; startedAt: string; finishedAt?: string; errorMessage?: string }
 export interface ImportError { rowNo: number; fieldName: string; rawValue: string; errorCode: string; message: string }

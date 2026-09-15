@@ -35,6 +35,9 @@ class RulesTest {
         assertEquals(LocalDate.of(2026,9,5),ImportMapping.date("05/09/2026"));
         assertEquals(LocalDate.of(2026,10,9),ImportMapping.date("09/10/2026"));
         assertEquals(LocalDate.of(2026,9,5),ImportMapping.dateTime("05/09/2026 14:08:11").toLocalDate());
+        var productAdFile="Product data 2026-09-13 - 2026-09-13 - Campaign 1871234567890123456.xlsx";
+        assertEquals(LocalDate.of(2026,9,13),ImportMapping.productAdDate(productAdFile,null));
+        assertEquals("1871234567890123456",ImportMapping.productAdCampaignId(productAdFile));
         var productRange=ImportMapping.dateRange("数据分析日期: 30/08/2026~05/09/2026").orElseThrow();
         assertEquals(LocalDate.of(2026,8,30),productRange.from());
         assertEquals(LocalDate.of(2026,9,5),productRange.to());
@@ -62,6 +65,8 @@ class RulesTest {
         assertEquals(LocalDate.of(2026,2,28),month.previous().dateTo());
         assertEquals("较上周同期",week.comparisonLabel());
         assertEquals("skuorders",ImportMapping.normalize("SKU Orders:"));
+        assertEquals("attributed_order_count",ImportMapping.fieldForSource("GMV_MAX_PRODUCT","sku_order_count"));
+        assertEquals("sku_order_count",ImportMapping.fieldForSource("PRODUCT_DAILY","sku_order_count"));
         assertThrows(RuntimeException.class,()->AuthController.validatePassword("1234567890"));
         assertDoesNotThrow(()->AuthController.validatePassword("StrongPass12!"));
     }

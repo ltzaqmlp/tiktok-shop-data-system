@@ -9,10 +9,11 @@ import java.util.*;
 public final class ImportMapping {
     private ImportMapping(){}
     public record DateRange(LocalDate from,LocalDate to){}
-    public static final Map<String,String> TABLES=Map.of("SHOP_ANALYTICS","fact_shop_daily","PRODUCT_DAILY","fact_product_daily","ORDER_DETAIL","fact_order","AFFILIATE_ORDER","fact_affiliate_order","GMV_MAX_CAMPAIGN","fact_ad_campaign_daily");
-    public static final Map<String,List<String>> REQUIRED=Map.of("SHOP_ANALYTICS",List.of("biz_date","gmv","order_count"),"PRODUCT_DAILY",List.of("product_id","gmv","order_count","sold_qty","sku_order_count","impressions","clicks","add_to_cart_count"),"ORDER_DETAIL",List.of("order_id","sku_id","source_status","quantity"),"AFFILIATE_ORDER",List.of("order_id","sku_id","source_status","quantity"),"GMV_MAX_CAMPAIGN",List.of("biz_date","spend","attributed_revenue","attributed_order_count"));
-    public static final Map<String,String> KEYS=Map.of("SHOP_ANALYTICS","shop_id,biz_date","PRODUCT_DAILY","shop_id,biz_date,product_id","ORDER_DETAIL","shop_id,order_id","AFFILIATE_ORDER","shop_id,order_id,sku_id","GMV_MAX_CAMPAIGN","shop_id,biz_date,ad_account_key,campaign_id");
+    public static final Map<String,String> TABLES=Map.of("SHOP_ANALYTICS","fact_shop_daily","PRODUCT_DAILY","fact_product_daily","ORDER_DETAIL","fact_order","AFFILIATE_ORDER","fact_affiliate_order","GMV_MAX_CAMPAIGN","fact_ad_campaign_daily","GMV_MAX_PRODUCT","fact_ad_product_daily");
+    public static final Map<String,List<String>> REQUIRED=Map.of("SHOP_ANALYTICS",List.of("biz_date","gmv","order_count"),"PRODUCT_DAILY",List.of("product_id","gmv","order_count","sold_qty","sku_order_count","impressions","clicks","add_to_cart_count"),"ORDER_DETAIL",List.of("order_id","sku_id","source_status","quantity"),"AFFILIATE_ORDER",List.of("order_id","sku_id","source_status","quantity"),"GMV_MAX_CAMPAIGN",List.of("biz_date","spend","attributed_revenue","attributed_order_count"),"GMV_MAX_PRODUCT",List.of("product_id","spend","attributed_revenue","attributed_order_count"));
+    public static final Map<String,String> KEYS=Map.of("SHOP_ANALYTICS","shop_id,biz_date","PRODUCT_DAILY","shop_id,biz_date,product_id","ORDER_DETAIL","shop_id,order_id","AFFILIATE_ORDER","shop_id,order_id,sku_id","GMV_MAX_CAMPAIGN","shop_id,biz_date,ad_account_key,campaign_id","GMV_MAX_PRODUCT","shop_id,biz_date,campaign_id,product_id");
     public static String normalize(String value){return Objects.toString(value,"").toLowerCase(Locale.ROOT).replaceAll("[\\s_（）()\\-:：/]+","").replaceAll("[.，,]+$","").trim();}
+    public static String fieldForSource(String source,String field){return "GMV_MAX_PRODUCT".equals(source)&&"sku_order_count".equals(field)?"attributed_order_count":field;}
     public static BigDecimal amount(String value){
         if(value==null||value.isBlank()||value.trim().equals("-"))return BigDecimal.ZERO;
         String v=value.trim().replace(",","").replaceAll("(?i)^(MYR|RM|USD|THB|VND|PHP|SGD|IDR|GBP|EUR|[$€£¥])\\s*","").replace(" ","");
@@ -35,6 +36,15 @@ public final class ImportMapping {
         LocalDate from=date(matcher.group(1)),to=date(matcher.group(2));
         Api.require(!from.isAfter(to),"业务日期范围无效");
         return Optional.of(new DateRange(from,to));
+    }
+    public static LocalDate productAdDate(String filename,LocalDate fallback){
+        var matcher=java.util.regex.Pattern.compile("(?<!\\d)(\\d{4}-\\d{2}-\\d{2})(?!\\d)").matcher(Objects.toString(filename,""));
+        if(matcher.find())return LocalDate.parse(matcher.group(1));
+        Api.require(fallback!=null,"商品投流文件名缺少业务日期");return fallback;
+    }
+    public static String productAdCampaignId(String filename){
+        var matcher=java.util.regex.Pattern.compile("(?i)Campaign\\s+([A-Za-z0-9_-]+)").matcher(Objects.toString(filename,""));
+        Api.require(matcher.find(),"商品投流文件名缺少 Campaign ID");return matcher.group(1);
     }
     public static OffsetDateTime dateTime(String value){
         String v=Objects.toString(value,"").trim();

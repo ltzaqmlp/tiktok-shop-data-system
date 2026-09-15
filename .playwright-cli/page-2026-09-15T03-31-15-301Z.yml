@@ -1,0 +1,346 @@
+- generic [ref=f2e3]:
+  - link "跳转到主要内容" [ref=f2e4] [cursor=pointer]:
+    - /url: "#main"
+  - complementary "主导航" [ref=f2e5]:
+    - generic [ref=f2e6]:
+      - img "HERBMODA" [ref=f2e8]
+      - generic [ref=f2e9]:
+        - strong [ref=f2e10]: HERBMODA
+        - generic [ref=f2e11]: Commerce Intelligence
+    - generic [ref=f2e12]: 工作空间
+    - navigation [ref=f2e40]:
+      - link "数据看板" [ref=f2e41] [cursor=pointer]:
+        - /url: /dashboard
+      - link "日报" [ref=f2e48] [cursor=pointer]:
+        - /url: /daily-reports
+      - link "拍摄工单" [ref=f2e53] [cursor=pointer]:
+        - /url: /shooting-tickets
+      - link "数据导入" [ref=f2e58] [cursor=pointer]:
+        - /url: /data-import
+      - link "用户管理" [ref=f2e63] [cursor=pointer]:
+        - /url: /admin/users
+      - link "角色管理" [ref=f2e68] [cursor=pointer]:
+        - /url: /admin/roles
+      - link "菜单管理" [ref=f2e73] [cursor=pointer]:
+        - /url: /admin/menus
+      - link "操作日志" [ref=f2e78] [cursor=pointer]:
+        - /url: /admin/audit
+      - link "登录日志" [ref=f2e83] [cursor=pointer]:
+        - /url: /admin/login-logs
+    - generic [ref=f2e13]: 内部经营系统 · V1.0
+  - generic [ref=f2e16]:
+    - banner [ref=f2e17]:
+      - generic [ref=f2e18]:
+        - button "收起侧栏" [ref=f2e19] [cursor=pointer]
+        - navigation "面包屑" [ref=f2e24]:
+          - generic [ref=f2e25]:
+            - link "工作空间" [ref=f2e26]
+            - text: /
+          - link "数据看板" [ref=f2e89]
+      - generic [ref=f2e29]:
+        - generic [ref=f2e30]: 演
+        - generic [ref=f2e90]:
+          - strong [ref=f2e91]: 演示管理员
+          - generic [ref=f2e92]: 管理员
+        - button "退出登录" [ref=f2e31] [cursor=pointer]
+    - main [ref=f2e37]:
+      - generic [ref=f2e93]:
+        - heading "数据看板" [level=1] [ref=f2e94]
+        - generic [ref=f2e95]:
+          - generic [ref=f2e96]:
+            - generic [ref=f2e97]:
+              - generic [ref=f2e98]: 业务日期
+              - radiogroup "业务日期快捷选择" [ref=f2e99]:
+                - generic [ref=f2e100]:
+                  - radio "业务日期 业务日期快捷选择 2026/09/14 - 2026/09/14 今日" [ref=f2e832]
+                  - generic [ref=f2e102] [cursor=pointer]: 今日
+                - generic [ref=f2e103]:
+                  - radio "昨日" [checked] [active] [ref=f2e104]
+                  - generic [ref=f2e105] [cursor=pointer]: 昨日
+                - generic [ref=f2e106]:
+                  - radio "本周" [ref=f2e107]
+                  - generic [ref=f2e108] [cursor=pointer]: 本周
+                - generic [ref=f2e109]:
+                  - radio "本月" [ref=f2e110]
+                  - generic [ref=f2e111] [cursor=pointer]: 本月
+              - generic [ref=f2e112]:
+                - combobox "开始日期" [ref=f2e116]: 2026/09/14
+                - generic [ref=f2e117]: "-"
+                - combobox "结束日期" [ref=f2e118]: 2026/09/14
+            - generic [ref=f2e119]:
+              - generic [ref=f2e120]: 市场
+              - generic [ref=f2e122] [cursor=pointer]:
+                - generic:
+                  - combobox "市场" [ref=f2e124]
+                  - generic [ref=f2e125]: 马来西亚 (MY)
+            - button "查询" [ref=f2e130] [cursor=pointer]
+          - button "刷新数据" [ref=f2e132] [cursor=pointer]
+        - region "核心经营指标" [ref=f2e833]:
+          - article [ref=f2e834]:
+            - generic [ref=f2e841]:
+              - generic [ref=f2e842]: GMV
+              - button "Shop Analytics 每日 GMV" [ref=f2e843] [cursor=pointer]
+            - generic [ref=f2e847]:
+              - generic [ref=f2e848]: RM
+              - text: 285,640.50
+            - generic [ref=f2e849]:
+              - generic [ref=f2e850]: ↑ 12.8%
+              - generic [ref=f2e851]: 较前日
+            - generic [ref=f2e852]:
+              - generic [ref=f2e853]: ↑ 5.4%
+              - generic [ref=f2e854]: 较前 7 日均值
+            - img "这是一个图表，图表类型是折线图。其数据是——2026-09-08的数据是0，258000，2026-09-09的数据是1，272000，2026-09-10的数据是2，265000，2026-09-11的数据是3，281000，2026-09-12的数据是4，268000，2026-09-13的数据是5，277000，2026-09-14的数据是6，285000。" [ref=f2e855]
+          - article [ref=f2e858]:
+            - generic [ref=f2e864]:
+              - generic [ref=f2e865]: 订单数
+              - button "Shop Analytics 每日订单数" [ref=f2e866] [cursor=pointer]
+            - generic [ref=f2e870]: 1,842
+            - generic [ref=f2e871]:
+              - generic [ref=f2e872]: ↑ 7.3%
+              - generic [ref=f2e873]: 较前日
+            - generic [ref=f2e874]:
+              - generic [ref=f2e875]: ↑ 2.1%
+              - generic [ref=f2e876]: 较前 7 日均值
+            - img "这是一个图表，图表类型是折线图。其数据是——2026-09-08的数据是0，1580，2026-09-09的数据是1，1720，2026-09-10的数据是2，1660，2026-09-11的数据是3，1890，2026-09-12的数据是4，1750，2026-09-13的数据是5，1820，2026-09-14的数据是6，1960。" [ref=f2e877]
+          - article [ref=f2e880]:
+            - generic [ref=f2e886]:
+              - generic [ref=f2e887]: 商品成交件数
+              - button "Shop Analytics 每日商品成交件数" [ref=f2e888] [cursor=pointer]
+            - generic [ref=f2e892]: 3,215
+            - generic [ref=f2e893]:
+              - generic [ref=f2e894]: ↑ 9.5%
+              - generic [ref=f2e895]: 较前日
+            - generic [ref=f2e896]:
+              - generic [ref=f2e897]: ↑ 3.1%
+              - generic [ref=f2e898]: 较前 7 日均值
+            - generic [ref=f2e899]: 暂无趋势数据
+          - article [ref=f2e900]:
+            - generic [ref=f2e908]:
+              - generic [ref=f2e909]: 平均订单金额
+              - button "AOV = 总 GMV ÷ 总订单数" [ref=f2e910] [cursor=pointer]
+            - generic [ref=f2e914]:
+              - generic [ref=f2e915]: RM
+              - text: "155.07"
+            - generic [ref=f2e916]:
+              - generic [ref=f2e917]: ↑ 5.1%
+              - generic [ref=f2e918]: 较前日
+            - generic [ref=f2e919]:
+              - generic [ref=f2e920]: ↑ 2.2%
+              - generic [ref=f2e921]: 较前 7 日均值
+            - generic [ref=f2e922]: 暂无趋势数据
+          - article [ref=f2e923]:
+            - generic [ref=f2e929]:
+              - generic [ref=f2e930]: 退款金额
+              - button "Shop Analytics 每日退款金额" [ref=f2e931] [cursor=pointer]
+            - generic [ref=f2e935]:
+              - generic [ref=f2e936]: RM
+              - text: 8,430.00
+            - generic [ref=f2e937]:
+              - generic [ref=f2e938]: ↓ 8.2%
+              - generic [ref=f2e939]: 较前日
+            - generic [ref=f2e940]:
+              - generic [ref=f2e941]: ↓ 3.4%
+              - generic [ref=f2e942]: 较前 7 日均值
+            - generic [ref=f2e943]: 暂无趋势数据
+          - article [ref=f2e944]:
+            - generic [ref=f2e950]:
+              - generic [ref=f2e951]: 销量分布
+              - button "销量分布计算说明" [ref=f2e952] [cursor=pointer]
+            - generic [ref=f2e956]:
+              - generic [ref=f2e957]:
+                - img "这是一个图表，图表类型是饼图。其数据是——自营销量的数据是1650，达人销量的数据是192。" [ref=f2e958]
+                - generic:
+                  - strong: 1,842
+                  - generic: 来源合计
+              - generic [ref=f2e961]:
+                - generic [ref=f2e962]:
+                  - generic [ref=f2e964]: 自营销量
+                  - generic [ref=f2e965]: 89.6%
+                  - generic [ref=f2e966]: (1,650)
+                - generic [ref=f2e967]:
+                  - generic [ref=f2e969]: 达人销量
+                  - generic [ref=f2e970]: 10.4%
+                  - generic [ref=f2e971]: (192)
+        - generic [ref=f2e972]:
+          - article [ref=f2e973]:
+            - generic [ref=f2e974]:
+              - heading "销售趋势" [level=2] [ref=f2e975]
+              - generic [ref=f2e976]: ■ GMV (RM)
+              - generic [ref=f2e977]: ● 订单数
+            - img "这是一个图表，它由2个图表系列组成。第0个系列是一个表示GMV (RM)的柱状图，其中，前10项是——2026-08-16的数据是0，220000，2026-08-17的数据是1，237979.9，2026-08-18的数据是2，251851.5，2026-08-19的数据是3，258512.3，2026-08-20的数据是4，256625.4，2026-08-21的数据是5，246946.5，2026-08-22的数据是6，232139.2，2026-08-23的数据是7，216122.6，2026-08-24的数据是8，203111.9，2026-08-25的数据是9，196586.4；第1个系列是一个表示订单数的折线图，其中，前10项是——2026-08-16的数据是0，1500，2026-08-17的数据是1，1617，2026-08-18的数据是2，1717，2026-08-19的数据是3，1785，2026-08-20的数据是4，1812，2026-08-21的数据是5，1795，2026-08-22的数据是6，1737，2026-08-23的数据是7，1650，2026-08-24的数据是8，1548，2026-08-25的数据是9，1448。" [ref=f2e978]
+          - article [ref=f2e981]:
+            - heading "商品转化漏斗 从曝光到下单的转化表现" [level=2] [ref=f2e983]
+            - generic [ref=f2e984]:
+              - generic [ref=f2e985]:
+                - generic [ref=f2e987]:
+                  - generic [ref=f2e988]: 商品曝光次数
+                  - strong [ref=f2e989]: 312,450
+                - generic [ref=f2e990]:
+                  - generic [ref=f2e991]: 去重曝光
+                  - generic [ref=f2e992]: 195,600
+              - generic [ref=f2e993]:
+                - generic [ref=f2e995]:
+                  - generic [ref=f2e996]: 商品点击量
+                  - strong [ref=f2e997]: 28,960
+                - generic [ref=f2e998]:
+                  - generic [ref=f2e999]: CTR
+                  - generic [ref=f2e1000]: 9.3%
+                - generic [ref=f2e1001]:
+                  - generic [ref=f2e1002]: 去重点击
+                  - generic [ref=f2e1003]: 19,840
+              - generic [ref=f2e1004]:
+                - generic [ref=f2e1006]:
+                  - generic [ref=f2e1007]: 加购次数
+                  - strong [ref=f2e1008]: 8,420
+                - generic [ref=f2e1009]:
+                  - generic [ref=f2e1010]: 加购率
+                  - generic [ref=f2e1011]: 29.1%
+                - generic [ref=f2e1012]:
+                  - generic [ref=f2e1013]: 加购用户
+                  - generic [ref=f2e1014]: 6,210
+              - generic [ref=f2e1015]:
+                - generic [ref=f2e1017]:
+                  - generic [ref=f2e1018]: SKU 订单数
+                  - strong [ref=f2e1019]: —
+                - generic [ref=f2e1020]:
+                  - generic [ref=f2e1021]: CTOR
+                  - generic [ref=f2e1022]: 21.9%
+                - generic [ref=f2e1023]:
+                  - generic [ref=f2e1024]: 下单客户
+                  - generic [ref=f2e1025]: 1,654
+          - article [ref=f2e1026]:
+            - generic [ref=f2e1027]:
+              - heading "GMV Max 广告效果 广告投放数据" [level=2] [ref=f2e1028]
+              - generic [ref=f2e1029]: "币种: USD"
+            - generic [ref=f2e1030]:
+              - button "广告花费 USD18,640.00 ↑ 5.4%" [pressed] [ref=f2e1031] [cursor=pointer]:
+                - text: 广告花费
+                - strong [ref=f2e1032]: USD18,640.00
+                - generic [ref=f2e1033]: ↑ 5.4%
+              - button "总收入 USD94,820.00 ↑ 13.2%" [pressed] [ref=f2e1035] [cursor=pointer]:
+                - text: 总收入
+                - strong [ref=f2e1036]: USD94,820.00
+                - generic [ref=f2e1037]: ↑ 13.2%
+              - button "ROI 5.09 ↑ 7.3%" [ref=f2e1039] [cursor=pointer]:
+                - text: ROI
+                - strong [ref=f2e1040]: "5.09"
+                - generic [ref=f2e1041]: ↑ 7.3%
+              - button "CPO USD10.12 ↓ 3.6%" [ref=f2e1043] [cursor=pointer]:
+                - text: CPO
+                - strong [ref=f2e1044]: USD10.12
+                - generic [ref=f2e1045]: ↓ 3.6%
+            - img "这是一个图表，它由2个图表系列组成。第0个系列是一个表示广告花费（USD）的柱状图，其中，前10项是——2026-09-01的数据是0，1100，2026-09-02的数据是1，1425，2026-09-03的数据是2，1478，2026-09-04的数据是3，1239，2026-09-05的数据是4，955，2026-09-06的数据是5，914，2026-09-07的数据是6，1182，2026-09-08的数据是7，1540，2026-09-09的数据是8，1686，2026-09-10的数据是9，1514；第1个系列是一个表示总收入（USD）的折线图，其中，前10项是——2026-09-01的数据是0，5800，2026-09-02的数据是1，7120，2026-09-03的数据是2，7894，2026-09-04的数据是3，7834，2026-09-05的数据是4，7043，2026-09-06的数据是5，5969，2026-09-07的数据是6，5191，2026-09-08的数据是7，5152，2026-09-09的数据是8，5944，2026-09-10的数据是9，7270。" [ref=f2e1047]
+        - generic [ref=f2e1050]:
+          - article [ref=f2e1051]:
+            - heading "SKU销量分布" [level=2] [ref=f2e1053]
+            - generic [ref=f2e1054]:
+              - generic [ref=f2e1055]:
+                - img "这是一个图表，图表类型是饼图。其数据是——1瓶精华液的数据是94，2瓶精华液的数据是130，1瓶精华液+刮痧板的数据是42，刮痧板的数据是2。" [ref=f2e1056]
+                - generic:
+                  - strong: "268"
+                  - generic: 有效销量
+              - generic [ref=f2e1059]:
+                - generic [ref=f2e1060]:
+                  - generic [ref=f2e1062]: 1瓶精华液
+                  - generic [ref=f2e1063]: 35.1%
+                  - generic [ref=f2e1064]: (94)
+                - generic [ref=f2e1065]:
+                  - generic [ref=f2e1067]: 2瓶精华液
+                  - generic [ref=f2e1068]: 48.5%
+                  - generic [ref=f2e1069]: (130)
+                - generic [ref=f2e1070]:
+                  - generic [ref=f2e1072]: 1瓶精华液+刮痧板
+                  - generic [ref=f2e1073]: 15.7%
+                  - generic [ref=f2e1074]: (42)
+                - generic [ref=f2e1075]:
+                  - generic [ref=f2e1077]: 刮痧板
+                  - generic [ref=f2e1078]: 0.8%
+                  - generic [ref=f2e1079]: (2)
+          - article [ref=f2e1080]:
+            - heading "售后情况 基于订单数据统计" [level=2] [ref=f2e1082]
+            - generic [ref=f2e1083]:
+              - generic [ref=f2e1084]:
+                - generic [ref=f2e1085]: ×
+                - generic [ref=f2e1086]:
+                  - text: 退款金额
+                  - strong [ref=f2e1087]: RM8,430.00
+                  - generic [ref=f2e1088]:
+                    - generic [ref=f2e1089]: ↓ 8.2%
+                    - generic [ref=f2e1090]: 较前日
+              - generic [ref=f2e1091]:
+                - generic [ref=f2e1092]: ×
+                - generic [ref=f2e1093]:
+                  - text: 取消订单数
+                  - strong [ref=f2e1094]: "92"
+                  - generic [ref=f2e1095]:
+                    - generic [ref=f2e1096]: ↑ 4.3%
+                    - generic [ref=f2e1097]: 较前日
+              - generic [ref=f2e1098]:
+                - generic [ref=f2e1099]: ×
+                - generic [ref=f2e1100]:
+                  - text: 已退款商品件数
+                  - strong [ref=f2e1101]: "124"
+                  - generic [ref=f2e1102]:
+                    - generic [ref=f2e1103]: ↓ 6.4%
+                    - generic [ref=f2e1104]: 较前日
+              - generic [ref=f2e1105]:
+                - generic [ref=f2e1106]: ×
+                - generic [ref=f2e1107]:
+                  - text: 退款客户数
+                  - strong [ref=f2e1108]: "89"
+                  - generic [ref=f2e1109]:
+                    - generic [ref=f2e1110]: ↓ 7.1%
+                    - generic [ref=f2e1111]: 较前日
+          - article [ref=f2e1112]:
+            - heading "商品访客与转化" [level=2] [ref=f2e1114]
+            - generic [ref=f2e1115]:
+              - generic [ref=f2e1116]:
+                - generic [ref=f2e1121]:
+                  - text: 商品访客数
+                  - strong [ref=f2e1122]: 24,680
+                  - generic [ref=f2e1123]:
+                    - generic [ref=f2e1124]: ↑ 11.2%
+                    - generic [ref=f2e1125]: 较前日
+                - img "这是一个图表，图表类型是折线图。其数据是——2026-09-08的数据是0，20100，2026-09-09的数据是1，22400，2026-09-10的数据是2，21800，2026-09-11的数据是3，25600，2026-09-12的数据是4，23900，2026-09-13的数据是5，24100，2026-09-14的数据是6，26800。" [ref=f2e1126]
+              - generic [ref=f2e1129]:
+                - generic [ref=f2e1134]:
+                  - text: 店铺转化率
+                  - strong [ref=f2e1135]: 7.5%
+                  - generic [ref=f2e1136]:
+                    - generic [ref=f2e1137]: ↓ 1.2%
+                    - generic [ref=f2e1138]: 较前日
+                - img "这是一个图表，图表类型是折线图。其数据是——2026-09-08的数据是0，0.071，2026-09-09的数据是1，0.074，2026-09-10的数据是2，0.072，2026-09-11的数据是3，0.078，2026-09-12的数据是4，0.073，2026-09-13的数据是5，0.075，2026-09-14的数据是6，0.079。" [ref=f2e1139]
+        - generic [ref=f2e1142]:
+          - heading "各 SKU 投流指标" [level=2] [ref=f2e1144]
+          - generic [ref=f2e1146]:
+            - table [ref=f2e1148]:
+              - rowgroup [ref=f2e1155]:
+                - row [ref=f2e1156]:
+                  - columnheader "SKU配置" [ref=f2e1157]
+                  - columnheader "广告花费" [ref=f2e1159]
+                  - columnheader "广告收入" [ref=f2e1161]
+                  - columnheader "ROI" [ref=f2e1163]
+                  - columnheader "CPO" [ref=f2e1165]
+            - table [ref=f2e1171]:
+              - rowgroup [ref=f2e1178]:
+                - row [ref=f2e1179]:
+                  - cell "1瓶精华+刮痧板(12320JN-GS)" [ref=f2e1180]
+                  - cell "USD 321.16" [ref=f2e1182]
+                  - cell "USD 275.52" [ref=f2e1184]
+                  - cell "0.86" [ref=f2e1186]
+                  - cell "USD 20.07" [ref=f2e1188]
+                - row [ref=f2e1190]:
+                  - cell "1瓶精华(12320JN-1) / 2瓶精华(12320JN-11)" [ref=f2e1191]
+                  - cell "USD 402.12" [ref=f2e1193]
+                  - cell "USD 318.44" [ref=f2e1195]
+                  - cell "0.79" [ref=f2e1197]
+                  - cell "USD 18.28" [ref=f2e1199]
+                - row [ref=f2e1201]:
+                  - cell "1瓶精华(12320JN-1) / 刮痧板(12320FJGSS-1)" [ref=f2e1202]
+                  - cell "USD 150.53" [ref=f2e1204]
+                  - cell "USD 49.37" [ref=f2e1206]
+                  - cell "0.33" [ref=f2e1208]
+                  - cell "USD 37.63" [ref=f2e1210]
+    - contentinfo [ref=f2e38]:
+      - text: 跨境电商经营数据平台
+      - generic [ref=f2e39]: 按业务日期统计 · 金额按市场币种展示

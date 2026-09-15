@@ -45,8 +45,8 @@ class DailyReportControllerTest {
         assertThrows(Api.Problem.class,()->DailyReportController.metrics(Map.ofEntries(Map.entry("plannedTest","1.5"),Map.entry("actualTest",3),Map.entry("newAdjustPlan",2),Map.entry("adSpend","12.50"),Map.entry("adGmv","42.10"),Map.entry("impressions",100),Map.entry("clicks",8),Map.entry("orders",2),Map.entry("expandedMaterial",1),Map.entry("stoppedMaterial",0),Map.entry("notes","完成测试"),Map.entry("blockers","无")),"ADS_BUYER",true));
     }
     @Test void deliveryResultsAreBoundedAndKeptByMetric(){
-        var values=DailyReportController.deliveryResults(Map.of("deliveryResults",Map.of("actualNewPublish","https://example.test/1")),"EDITOR");
-        assertEquals("https://example.test/1",values.get("actualNewPublish"));
+        var values=DailyReportController.deliveryResults(Map.of("deliveryResults",Map.of("actualNewPublish","1、测试1\n2、测试2 \n3、测试3 ")),"EDITOR");
+        assertEquals("1、测试1\n2、测试2 \n3、测试3 ",values.get("actualNewPublish"));
         assertThrows(Api.Problem.class,()->DailyReportController.deliveryResults(Map.of("deliveryResults",Map.of("actualNewPublish","x".repeat(2001))),"EDITOR"));
     }
     @Test void editorPlanOnlyAcceptsUniqueNamedTasksWithWholeNumberPlans(){

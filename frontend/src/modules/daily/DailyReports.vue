@@ -679,7 +679,7 @@ small {
 .task-table .delivery-cell {
   min-width: 230px;
   max-width: 360px;
-  white-space: normal;
+  white-space: break-spaces;
   text-align: left;
   overflow-wrap: anywhere
 }
@@ -687,7 +687,7 @@ small {
 .notes-cell {
   min-width: 180px;
   max-width: 320px;
-  white-space: pre-wrap;
+  white-space: break-spaces;
   text-align: left;
   overflow-wrap: anywhere
 }
@@ -703,7 +703,7 @@ small {
 .reason {
   margin-top: 4px;
   color: var(--el-color-danger);
-  white-space: pre-wrap;
+  white-space: break-spaces;
   overflow-wrap: anywhere
 }
 
@@ -922,7 +922,8 @@ small {
 }
 
 .report-note-grid :deep(.el-textarea__inner) {
-  min-height: 88px !important
+  min-height: 88px !important;
+  white-space: break-spaces;
 }
 
 .required-mark {
@@ -946,11 +947,12 @@ small {
 }
 
 .summary-review :deep(.el-textarea__inner) {
-  min-height: 88px !important
+  min-height: 88px !important;
+  white-space: break-spaces
 }
 
 :deep(.el-alert__description) {
-  white-space: pre-wrap;
+  white-space: break-spaces;
   overflow-wrap: anywhere
 }
 

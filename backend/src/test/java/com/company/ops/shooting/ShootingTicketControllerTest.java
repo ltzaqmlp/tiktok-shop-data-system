@@ -6,6 +6,19 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class ShootingTicketControllerTest {
+    @Test void euRegionRespectsCountryPermissionsAndBossCannotCreate(){
+        var director=Map.<String,Object>of("marketCodes",java.util.List.of("FR","US"),"roles",java.util.List.of(Map.of("roleCode","DIRECTOR")));
+        assertEquals("EU",ShootingTicketController.allowedMarket(director,"EU"));
+        assertEquals("FR",ShootingTicketController.allowedMarket(director,"FR"));
+        assertThrows(Api.Problem.class,()->ShootingTicketController.allowedMarket(director,"DE"));
+        var usOnly=Map.<String,Object>of("marketCode","US");
+        assertThrows(Api.Problem.class,()->ShootingTicketController.allowedMarket(usOnly,"EU"));
+        var boss=Map.<String,Object>of("roles",java.util.List.of(Map.of("roleCode","BOSS")));
+        assertEquals("BOSS",ShootingTicketController.role(boss));
+        var req=new org.springframework.mock.web.MockHttpServletRequest();req.setAttribute("actor",boss);
+        var controller=new ShootingTicketController(null,org.mockito.Mockito.mock(org.springframework.transaction.PlatformTransactionManager.class));
+        assertEquals(403,assertThrows(Api.Problem.class,()->controller.create(Map.of(),req)).status);
+    }
     @Test void validatesTicketInputsAndRoles(){
         assertEquals("MY",ShootingTicketController.market("my"));
         assertEquals("SCRIPT_SHOOT",ShootingTicketController.taskType("SCRIPT_SHOOT"));

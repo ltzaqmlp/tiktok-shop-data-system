@@ -8,6 +8,25 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class DailyReportControllerTest {
+    @Test void plansMatchAllDirectorMarketsAndSaveToTheSelectedMarket(){
+        var db=org.mockito.Mockito.mock(com.company.ops.common.Db.class);
+        var manager=org.mockito.Mockito.mock(org.springframework.transaction.PlatformTransactionManager.class);
+        var controller=new DailyReportController(db,manager);
+        var req=new org.springframework.mock.web.MockHttpServletRequest();
+        req.setAttribute("actor",Map.of("id","1","marketCodes",java.util.List.of("DE","FR","US"),"roles",java.util.List.of(Map.of("roleCode","DIRECTOR"))));
+        org.mockito.Mockito.when(db.rows(org.mockito.ArgumentMatchers.contains("from dim_market m"),org.mockito.ArgumentMatchers.anyMap())).thenReturn(java.util.List.of(Map.of("marketCode","DE"),Map.of("marketCode","FR"),Map.of("marketCode","US")));
+        org.mockito.Mockito.when(db.rows(org.mockito.ArgumentMatchers.contains("from sys_user u"),org.mockito.ArgumentMatchers.anyMap())).thenAnswer(call->"US".equals(((Map<?,?>)call.getArgument(1)).get("market"))?java.util.List.of(Map.of("editorId","2","editorName","美国剪辑")):java.util.List.of());
+        org.mockito.Mockito.when(db.one(org.mockito.ArgumentMatchers.anyString(),org.mockito.ArgumentMatchers.anyMap())).thenReturn(Map.of());
+        var result=(Api.Envelope)controller.editorPlan("2026-09-16",null,req);
+        var plans=(java.util.List<?>)result.data();
+        assertEquals(1,plans.size());assertEquals("US",((Map<?,?>)plans.getFirst()).get("marketCode"));
+        controller.saveEditorPlan("2026-09-16",2L,Map.of("marketCode","US","tasks",java.util.List.of(Map.of("taskName","新增发布","plannedCount",3))),req);
+        org.mockito.Mockito.verify(db).exec(org.mockito.ArgumentMatchers.startsWith("insert into editor_daily_task_plan_setting"),org.mockito.ArgumentMatchers.argThat(args->"US".equals(args.get("market"))&&Long.valueOf(2).equals(args.get("editor"))));
+        assertThrows(Api.Problem.class,()->controller.saveEditorPlan("2026-09-16",2L,Map.of("marketCode","UK"),req));
+        assertThrows(Api.Problem.class,()->controller.saveEditorPlan("2026-09-16",2L,Map.of("marketCode","FR"),req));
+        org.mockito.Mockito.when(db.rows(org.mockito.ArgumentMatchers.contains("from sys_user u"),org.mockito.ArgumentMatchers.anyMap())).thenReturn(java.util.List.of(Map.of("editorId","2","editorName","多市场剪辑")));
+        assertEquals(3,((java.util.List<?>)((Api.Envelope)controller.editorPlan("2026-09-16",null,req)).data()).size());
+    }
     @Test void datesAndReviewRolesAreStrict(){
         assertEquals(LocalDate.of(2026,9,7),DailyReportController.day("2026-09-07"));
         assertThrows(Api.Problem.class,()->DailyReportController.day("07/09/2026"));
@@ -18,11 +37,12 @@ class DailyReportControllerTest {
         assertFalse(DailyReportController.leader(Map.of("roles",java.util.List.of(Map.of("roleCode","MARKET_MEMBER")))));
     }
     @Test void directorUsesTheContentDailyReportFlow(){
-        var actor=Map.<String,Object>of("marketCode","MY","roles",java.util.List.of(Map.of("roleCode","DIRECTOR")));
+        var actor=Map.<String,Object>of("marketCode","MY","marketCodes",java.util.List.of("MY","UK"),"roles",java.util.List.of(Map.of("roleCode","DIRECTOR")));
         assertEquals("DIRECTOR",DailyReportController.dailyRole(actor));
         assertEquals("DIRECTOR",DailyReportController.contentRole(actor));
         assertTrue(DailyReportController.marketReviewer(actor,"MY"));
-        assertFalse(DailyReportController.marketReviewer(actor,"UK"));
+        assertTrue(DailyReportController.marketReviewer(actor,"UK"));
+        assertFalse(DailyReportController.marketReviewer(actor,"US"));
     }
     @Test void operationsAndTechnicalReportsRequireNotesAndBlockers(){
         assertEquals("OPS",DailyReportController.dailyRole(Map.of("roles",java.util.List.of(Map.of("roleCode","OPS")))));

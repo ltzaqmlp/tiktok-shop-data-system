@@ -18,7 +18,7 @@ const selectedShotRequirement = ref('')
 const createFormRef = ref<FormInstance>()
 const completeFormRef = ref<FormInstance>()
 
-const createForm = reactive({ marketCode: 'MY', taskType: 'SCRIPT_SHOOT', shotRequirement: '', plannedValidShotCount: 1, deadline: '' })
+const createForm = reactive({ marketCode: 'MY', countryCode: '', taskType: 'SCRIPT_SHOOT', shotRequirement: '', plannedValidShotCount: 1, deadline: '' })
 const completeForm = reactive({ id: '', regionName: '', taskType: '', shotRequirement: '', plannedValidShotCount: 0, deadline: '', sku: '', actualValidShotCount: 0, materialNotes: '' })
 const createRules: FormRules = {
   marketCode: [{ required: true, message: '请选择地区', trigger: 'change' }],
@@ -32,10 +32,15 @@ const completeRules: FormRules = {
   actualValidShotCount: [{ required: true, message: '请填写实际有效镜头数', trigger: 'change' }],
 }
 const role = computed(() => context.value?.role ?? 'VIEWER')
+const euCountries = computed(() => context.value?.markets.filter(item => ['FR', 'DE'].includes(item.marketCode)) ?? [])
+const regions = computed(() => {
+  const markets = context.value?.markets ?? []
+  return [...markets.filter(item => !['FR', 'DE'].includes(item.marketCode)), ...(euCountries.value.length ? [{ marketCode: 'EU', marketName: '欧盟', currencyCode: 'EUR' }] : [])]
+})
 const canCreate = computed(() => role.value === 'DIRECTOR' || role.value === 'ADMIN')
-const canComplete = computed(() => role.value === 'SHOOTER' || role.value === 'ADMIN')
-const canReviewEditor = computed(() => role.value === 'DIRECTOR' || role.value === 'ADMIN')
-const canReviewDept = computed(() => role.value === 'DEPT_HEAD' || role.value === 'ADMIN')
+const canComplete = computed(() => role.value === 'SHOOTER' || ['ADMIN', 'BOSS'].includes(role.value))
+const canReviewEditor = computed(() => role.value === 'DIRECTOR' || ['ADMIN', 'BOSS'].includes(role.value))
+const canReviewDept = computed(() => role.value === 'DEPT_HEAD' || ['ADMIN', 'BOSS'].includes(role.value))
 
 function taskType(code: string) { return context.value?.taskTypes.find(item => item.code === code)?.name ?? code }
 function status(row: ShootingTicket) {
@@ -53,13 +58,13 @@ async function load() {
   try { tickets.value = await api<ShootingTicket[]>('/shooting-tickets') } catch (e) { error.value = e as Error } finally { loading.value = false }
 }
 function openCreate() {
-  Object.assign(createForm, { marketCode: context.value?.markets[0]?.marketCode ?? 'MY', taskType: 'SCRIPT_SHOOT', shotRequirement: '', plannedValidShotCount: 1, deadline: '' })
+  Object.assign(createForm, { marketCode: regions.value[0]?.marketCode ?? '', countryCode: '', taskType: 'SCRIPT_SHOOT', shotRequirement: '', plannedValidShotCount: 1, deadline: '' })
   createVisible.value = true
 }
 async function createTicket() {
   if (!(await createFormRef.value?.validate().catch(() => false))) return
   saving.value = true
-  try { await save('/shooting-tickets', { ...createForm, deadline: deadlineIso(createForm.deadline) }); ElMessage.success('拍摄工单已提交'); createVisible.value = false; await load() } catch (e) { ElMessage.error((e as Error).message) } finally { saving.value = false }
+  try { await save('/shooting-tickets', { ...createForm, marketCode: createForm.marketCode === 'EU' ? createForm.countryCode || 'EU' : createForm.marketCode, deadline: deadlineIso(createForm.deadline) }); ElMessage.success('拍摄工单已提交'); createVisible.value = false; await load() } catch (e) { ElMessage.error((e as Error).message) } finally { saving.value = false }
 }
 function openComplete(row: ShootingTicket) {
   Object.assign(completeForm, { id: row.id, regionName: row.regionName, taskType: taskType(row.taskType), shotRequirement: row.shotRequirement, plannedValidShotCount: row.plannedValidShotCount, deadline: dateTime(row.deadline), sku: row.sku ?? '', actualValidShotCount: row.actualValidShotCount ?? 0, materialNotes: row.materialNotes ?? '' })
@@ -91,10 +96,10 @@ onMounted(async () => { try { context.value = await api<ShootingContext>('/shoot
     <div class="sheet-caption">拍摄任务登记 <span>每行一个任务编号，数量单位为有效镜头</span></div>
     <div v-loading="loading" class="table-scroll">
       <table class="shooting-table">
-        <thead><tr><th>日期</th><th>地区</th><th>拍摄人</th><th>任务编号</th><th>SKU</th><th>任务类型</th><th>具体镜头要求</th><th>计划有效<br>镜头数</th><th>截止时间</th><th>实际有效<br>镜头数</th><th>实际交付时间</th><th>验收状态</th><th>素材链接／补拍与调整说明</th><th>操作</th></tr></thead>
+        <thead><tr><th>日期</th><th>地区</th><th>编导</th><th>拍摄人</th><th>任务编号</th><th>SKU</th><th>任务类型</th><th>具体镜头要求</th><th>计划有效<br>镜头数</th><th>截止时间</th><th>实际有效<br>镜头数</th><th>实际交付时间</th><th>验收状态</th><th>素材链接／补拍与调整说明</th><th>操作</th></tr></thead>
         <tbody>
           <tr v-for="row in tickets" :key="row.id">
-            <td>{{ date(row.createdAt) }}</td><td>{{ row.regionName }}</td><td>{{ row.shooterName || '—' }}</td><td>{{ row.ticketNo }}</td><td>{{ row.sku || '—' }}</td><td>{{ taskType(row.taskType) }}</td>
+            <td>{{ date(row.createdAt) }}</td><td>{{ row.regionName }}</td><td>{{ row.creatorName || '—' }}</td><td>{{ row.shooterName || '—' }}</td><td>{{ row.ticketNo }}</td><td>{{ row.sku || '—' }}</td><td>{{ taskType(row.taskType) }}</td>
             <td class="requirement"><button v-if="row.shotRequirement" class="requirement-preview" type="button" :aria-label="`查看${row.ticketNo}的具体镜头要求`" @click="openShotRequirement(row.shotRequirement)">{{ row.shotRequirement }}</button><span v-else>—</span></td><td>{{ row.plannedValidShotCount }}</td><td>{{ dateTime(row.deadline) }}</td><td>{{ row.actualValidShotCount ?? '—' }}</td><td>{{ dateTime(row.actualDeliveredAt) }}</td>
             <td><el-tooltip v-if="row.rejectionReason" :content="reasonText(row.rejectionReason)" popper-class="format-preserving-tooltip" placement="top"><el-tag size="small" :type="statusType(row)">{{ status(row) }}</el-tag></el-tooltip><el-tag v-else size="small" :type="statusType(row)">{{ status(row) }}</el-tag></td>
             <td class="notes"><span>{{ row.materialNotes || '—' }}</span></td>
@@ -105,7 +110,7 @@ onMounted(async () => { try { context.value = await api<ShootingContext>('/shoot
               <span v-if="(row.status === 'APPROVED') || (!canComplete && !canReviewEditor && !canReviewDept) || (row.status !== 'PENDING_SHOOT' && row.status !== 'PENDING_EDITOR_REVIEW' && row.status !== 'PENDING_DEPT_REVIEW')">—</span>
             </td>
           </tr>
-          <tr v-if="!loading && !tickets.length"><td colspan="14" class="empty">暂无拍摄工单</td></tr>
+          <tr v-if="!loading && !tickets.length"><td colspan="15" class="empty">暂无拍摄工单</td></tr>
         </tbody>
       </table>
     </div>
@@ -113,7 +118,7 @@ onMounted(async () => { try { context.value = await api<ShootingContext>('/shoot
 
   <el-dialog v-model="createVisible" title="新增拍摄工单" width="620px" destroy-on-close>
     <el-form ref="createFormRef" :model="createForm" :rules="createRules" label-position="top">
-      <div class="form-grid"><el-form-item label="地区" prop="marketCode"><el-select v-model="createForm.marketCode" placeholder="请选择地区"><el-option v-for="item in context?.markets" :key="item.marketCode" :label="item.marketName" :value="item.marketCode" /></el-select></el-form-item><el-form-item label="任务类型" prop="taskType"><el-select v-model="createForm.taskType" placeholder="请选择任务类型"><el-option v-for="item in context?.taskTypes" :key="item.code" :label="item.name" :value="item.code" /></el-select></el-form-item><el-form-item label="计划有效镜头数" prop="plannedValidShotCount"><el-input-number v-model="createForm.plannedValidShotCount" :min="0" :precision="0" controls-position="right" /></el-form-item><el-form-item label="截止时间" prop="deadline"><el-date-picker v-model="createForm.deadline" type="datetime" value-format="YYYY-MM-DD HH:mm:ss" placeholder="请选择截止时间" /></el-form-item></div>
+      <div class="form-grid"><el-form-item label="地区" prop="marketCode"><el-select v-model="createForm.marketCode" placeholder="请选择地区" @change="createForm.countryCode = ''"><el-option v-for="item in regions" :key="item.marketCode" :label="item.marketName" :value="item.marketCode" /></el-select></el-form-item><el-form-item v-if="createForm.marketCode === 'EU'" label="国家（可选）"><el-select v-model="createForm.countryCode" clearable placeholder="不选则为欧盟"><el-option v-for="item in euCountries" :key="item.marketCode" :label="item.marketName" :value="item.marketCode" /></el-select></el-form-item><el-form-item label="任务类型" prop="taskType"><el-select v-model="createForm.taskType" placeholder="请选择任务类型"><el-option v-for="item in context?.taskTypes" :key="item.code" :label="item.name" :value="item.code" /></el-select></el-form-item><el-form-item label="计划有效镜头数" prop="plannedValidShotCount"><el-input-number v-model="createForm.plannedValidShotCount" :min="0" :precision="0" controls-position="right" /></el-form-item><el-form-item label="截止时间" prop="deadline"><el-date-picker v-model="createForm.deadline" type="datetime" value-format="YYYY-MM-DD HH:mm:ss" placeholder="请选择截止时间" /></el-form-item></div>
       <el-form-item label="具体镜头要求" prop="shotRequirement"><el-input v-model="createForm.shotRequirement" type="textarea" :autosize="{ minRows: 5, maxRows: 10 }" maxlength="4000" show-word-limit placeholder="填写具体镜头、动作、构图或脚本要求" /></el-form-item>
     </el-form>
     <template #footer><el-button @click="createVisible = false">取消</el-button><el-button type="primary" :loading="saving" @click="createTicket">提交工单</el-button></template>

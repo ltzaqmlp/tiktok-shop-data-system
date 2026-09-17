@@ -44,7 +44,7 @@ public class ProductAdMetricsService {
                    case when coalesce(a.orders,0)=0 then 0 else a.ad_spend/a.orders end cpo,
                    coalesce(a.orders,0) orders
             from mappings m
-            left join ads a on a.product_id=m.product_id
+            join ads a on a.product_id=m.product_id
             order by m.sort_order,m.mapping_id
             """, scope.params());
     }

@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/v1/shooting-tickets")
 public class ShootingTicketController {
-    private static final List<String> MARKETS=List.of("MY","UK","US","DE","FR");
+    private static final List<String> MARKETS=List.of("MY","UK","US","DE","FR","EU");
     private static final List<Map<String,Object>> TASK_TYPES=List.of(
         p("code","SCRIPT_SHOOT","name","脚本拍摄"),
         p("code","LIBRARY","name","素材库补充"),
@@ -24,7 +24,7 @@ public class ShootingTicketController {
     @GetMapping("/context")
     public Object context(HttpServletRequest req){
         var actor=Identity.actor(req);
-        return Api.ok(req,p("role",role(actor),"markets",db.rows("select market_code,market_name,currency_code from dim_market where enabled and market_code in ('MY','UK','US','DE','FR') order by case market_code when 'MY' then 1 when 'UK' then 2 when 'US' then 3 when 'DE' then 4 else 5 end"),"taskTypes",TASK_TYPES));
+        return Api.ok(req,p("role",role(actor),"markets",db.rows("select market_code,market_name,currency_code from dim_market where enabled and market_code in ('MY','UK','US','DE','FR') order by case market_code when 'MY' then 1 when 'UK' then 2 when 'US' then 3 when 'DE' then 4 else 5 end").stream().filter(m->Identity.hasMarket(actor,m.get("marketCode").toString())).toList(),"taskTypes",TASK_TYPES));
     }
 
     @GetMapping
@@ -37,8 +37,8 @@ public class ShootingTicketController {
 
     @PostMapping
     public Object create(@RequestBody Map<String,Object> body,HttpServletRequest req){
-        requireRole(Identity.actor(req),"DIRECTOR");
-        String market=market(Api.text(body,"marketCode",16,true));
+        var actor=Identity.actor(req);if(Identity.role(actor,"BOSS"))throw forbidden();requireRole(actor,"DIRECTOR");
+        String market=allowedMarket(actor,Api.text(body,"marketCode",16,true));
         String type=taskType(Api.text(body,"taskType",32,true));
         String requirement=formattedText(body,"shotRequirement",4000,true);
         long planned=number(body,"plannedValidShotCount",true);
@@ -67,9 +67,10 @@ public class ShootingTicketController {
         req.setAttribute("auditAction",approved?"SHOOTING_TICKET_APPROVE":"SHOOTING_TICKET_REJECT");req.setAttribute("targetId",id);req.setAttribute("auditAfter",result);return Api.ok(req,result);
     }
 
-    private static String select(){return "select t.*,m.market_name region_name,creator.display_name director_name,shooter.display_name shooter_name,editor.display_name editor_reviewer_name,dept.display_name dept_reviewer_name from shooting_ticket t join dim_market m on m.market_code=t.market_code join sys_user creator on creator.id=t.created_by left join sys_user shooter on shooter.id=t.shooter_id left join sys_user editor on editor.id=t.editor_reviewer_id left join sys_user dept on dept.id=t.dept_reviewer_id";}
-    static String role(Map<String,Object> actor){if(Identity.role(actor,"ADMIN"))return "ADMIN";if(Identity.role(actor,"DIRECTOR"))return "DIRECTOR";if(Identity.role(actor,"SHOOTER"))return "SHOOTER";if(Identity.role(actor,"DEPT_HEAD"))return "DEPT_HEAD";return "VIEWER";}
+    private static String select(){return "select t.*,case when t.market_code in ('FR','DE') then concat('欧盟-',m.market_name) else m.market_name end region_name,creator.display_name creator_name,shooter.display_name shooter_name,editor.display_name editor_reviewer_name,dept.display_name dept_reviewer_name from shooting_ticket t join dim_market m on m.market_code=t.market_code join sys_user creator on creator.id=t.created_by left join sys_user shooter on shooter.id=t.shooter_id left join sys_user editor on editor.id=t.editor_reviewer_id left join sys_user dept on dept.id=t.dept_reviewer_id";}
+    static String role(Map<String,Object> actor){if(Identity.role(actor,"BOSS"))return "BOSS";if(Identity.role(actor,"ADMIN"))return "ADMIN";if(Identity.role(actor,"DIRECTOR"))return "DIRECTOR";if(Identity.role(actor,"SHOOTER"))return "SHOOTER";if(Identity.role(actor,"DEPT_HEAD"))return "DEPT_HEAD";return "VIEWER";}
     static String market(String value){String code=Objects.toString(value,"").toUpperCase(Locale.ROOT);Api.require(MARKETS.contains(code),"地区无效");return code;}
+    static String allowedMarket(Map<String,Object> actor,String value){String code=market(value);Api.require("EU".equals(code)?Identity.hasMarket(actor,"FR")||Identity.hasMarket(actor,"DE"):Identity.hasMarket(actor,code),"没有该市场的权限");return code;}
     static String taskType(String value){Api.require(TASK_TYPES.stream().anyMatch(t->t.get("code").equals(value)),"任务类型无效");return value;}
     static String deadline(String value){try{Instant.parse(value);return value;}catch(Exception e){throw new Api.Problem(400,"VALIDATION_ERROR","截止时间格式无效");}}
     static String formattedText(Map<String,Object> body,String key,int max,boolean required){String value=Objects.toString(body.get(key),"");Api.require(!required||!value.trim().isEmpty(),key+" 不能为空");Api.require(value.length()<=max,key+" 超过长度限制");return value;}

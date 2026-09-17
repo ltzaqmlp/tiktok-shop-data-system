@@ -40,7 +40,7 @@ public class DailyReportController {
 
     @GetMapping("/context")
     public Object context(HttpServletRequest req){
-        var actor=Identity.actor(req);var data=p("role",dailyRole(actor),"marketCode",Objects.toString(actor.get("marketCode"),""),"markets",db.rows("select market_code,market_name,currency_code from dim_market where market_code in ('MY','UK','US','DE','FR') and enabled order by case market_code when 'MY' then 1 when 'UK' then 2 when 'US' then 3 when 'DE' then 4 else 5 end"));
+        var actor=Identity.actor(req);var markets=availableMarkets(actor);var data=p("role",dailyRole(actor),"marketCode",markets.isEmpty()?"":markets.getFirst().get("marketCode"),"marketCodes",markets.stream().map(m->m.get("marketCode")).toList(),"markets",markets);
         return Api.ok(req,data);
     }
 
@@ -99,8 +99,8 @@ public class DailyReportController {
         if(Identity.role(actor,"BOSS"))where+=" and r.submission_status='APPROVED'";
         else if(Identity.role(actor,"DEPT_HEAD")||Identity.exactRole(actor,"ADMIN"))where+=" and r.submission_status<>'DRAFT'";
         else if(marketReviewer(actor,market))where+=" and (r.report_type='EDITOR' or r.reporter_id=#{p.user}) and r.submission_status<>'DRAFT'";
-        else if(Identity.role(actor,"DIRECTOR")&&market.equals(actor.get("marketCode")))where+=" and r.reporter_id=#{p.user}";
-        else if(Identity.role(actor,"MARKET_MEMBER")&&market.equals(actor.get("marketCode")))where+=" and r.reporter_id=#{p.user}";
+        else if(Identity.role(actor,"DIRECTOR")&&Identity.hasMarket(actor,market))where+=" and r.reporter_id=#{p.user}";
+        else if(Identity.role(actor,"MARKET_MEMBER")&&Identity.hasMarket(actor,market))where+=" and r.reporter_id=#{p.user}";
         else throw forbidden();
         return Api.ok(req,rows(where,args));
     }
@@ -126,33 +126,35 @@ public class DailyReportController {
     }
 
     @GetMapping("/mine/content")
-    public Object mineContent(@RequestParam String date,HttpServletRequest req){
-        var actor=Identity.actor(req);String type=contentRole(actor);LocalDate reportDate=day(date);String ownMarket=ownMarket(actor);var args=p("date",reportDate,"user",Identity.uid(req),"type",type);
-        var report=db.one(select()+" where r.report_date=#{p.date} and r.reporter_id=#{p.user} and r.report_type=#{p.type}",args);
+    public Object mineContent(@RequestParam String date,@RequestParam(required=false) String marketCode,HttpServletRequest req){
+        var actor=Identity.actor(req);String type=contentRole(actor);LocalDate reportDate=day(date);String ownMarket=allowedMarket(actor,marketCode);var args=p("date",reportDate,"user",Identity.uid(req),"type",type,"market",ownMarket);
+        var report=db.one(select()+" where r.report_date=#{p.date} and r.reporter_id=#{p.user} and r.report_type=#{p.type} and r.market_code=#{p.market}",args);
         if(report.isEmpty())report.putAll(blank(reportDate,type,ownMarket));
         if("EDITOR".equals(type))applyEditorPlan(report,editorPlan(reportDate,ownMarket,Identity.uid(req)).get("tasks"));
         if("DIRECTOR".equals(type))applyDirectorPlan(report,directorPlan(reportDate,ownMarket,Identity.uid(req)).get("tasks"));
         return Api.ok(req,report);
     }
-    @PutMapping("/mine/content/{date}") public Object saveContent(@PathVariable String date,@RequestBody Map<String,Object> body,HttpServletRequest req){return storeContent(date,body,req,false);}
-    @PostMapping("/mine/content/{date}/submit") public Object submitContent(@PathVariable String date,@RequestBody Map<String,Object> body,HttpServletRequest req){return storeContent(date,body,req,true);}
+    @PutMapping("/mine/content/{date}") public Object saveContent(@PathVariable String date,@RequestParam(required=false) String marketCode,@RequestBody Map<String,Object> body,HttpServletRequest req){return storeContent(date,marketCode,body,req,false);}
+    @PostMapping("/mine/content/{date}/submit") public Object submitContent(@PathVariable String date,@RequestParam(required=false) String marketCode,@RequestBody Map<String,Object> body,HttpServletRequest req){return storeContent(date,marketCode,body,req,true);}
 
     @GetMapping("/editor-plan")
-    public Object editorPlan(@RequestParam String date,HttpServletRequest req){
-        var actor=Identity.actor(req);String role=dailyRole(actor);String market=ownMarket(actor);if(!Set.of("EDITOR","DIRECTOR").contains(role))throw forbidden();
+    public Object editorPlan(@RequestParam String date,@RequestParam(required=false) String marketCode,HttpServletRequest req){
+        var actor=Identity.actor(req);String role=dailyRole(actor);if(!Set.of("EDITOR","DIRECTOR").contains(role))throw forbidden();
+        if("DIRECTOR".equals(role)&&(marketCode==null||marketCode.isBlank()))return Api.ok(req,availableMarkets(actor).stream().flatMap(m->editorPlans(day(date),m.get("marketCode").toString()).stream()).toList());
+        String market=allowedMarket(actor,marketCode);
         return Api.ok(req,"EDITOR".equals(role)?editorPlan(day(date),market,Identity.uid(req)):editorPlans(day(date),market));
     }
 
     @GetMapping("/director-plan")
-    public Object directorPlan(@RequestParam String date,HttpServletRequest req){
+    public Object directorPlan(@RequestParam String date,@RequestParam(required=false) String marketCode,HttpServletRequest req){
         var actor=Identity.actor(req);LocalDate reportDate=day(date);
-        if(Identity.role(actor,"DIRECTOR")){String market=ownMarket(actor);return Api.ok(req,directorPlan(reportDate,market,Identity.uid(req)));}
+        if(Identity.role(actor,"DIRECTOR")){String market=allowedMarket(actor,marketCode);return Api.ok(req,directorPlan(reportDate,market,Identity.uid(req)));}
         requireRole(actor,"DEPT_HEAD");return Api.ok(req,directorPlans(reportDate));
     }
 
     @PutMapping({"/editor-plan/{date}","/editor-plan/{date}/{editorId}"})
     public Object saveEditorPlan(@PathVariable String date,@PathVariable(required=false) Long editorId,@RequestBody Map<String,Object> body,HttpServletRequest req){
-        var actor=Identity.actor(req);requireRole(actor,"DIRECTOR");LocalDate reportDate=day(date);String market=ownMarket(actor);if(editorId==null){var marketEditors=editorUsers(market);Api.require(marketEditors.size()==1,"请指定要布置任务的剪辑账号");editorId=Long.parseLong(marketEditors.get(0).get("editorId").toString());}long targetEditor=editorId;Api.require(editorUsers(market).stream().anyMatch(editor->targetEditor==Long.parseLong(editor.get("editorId").toString())),"剪辑账号不存在或不属于当前市场");List<Map<String,Object>> tasks=editorPlanTasks(body);
+        var actor=Identity.actor(req);requireRole(actor,"DIRECTOR");LocalDate reportDate=day(date);String market=allowedMarket(actor,Api.text(body,"marketCode",16,false));if(editorId==null){var marketEditors=editorUsers(market);Api.require(marketEditors.size()==1,"请指定要布置任务的剪辑账号");editorId=Long.parseLong(marketEditors.get(0).get("editorId").toString());}long targetEditor=editorId;Api.require(editorUsers(market).stream().anyMatch(editor->targetEditor==Long.parseLong(editor.get("editorId").toString())),"剪辑账号不存在或不属于当前市场");List<Map<String,Object>> tasks=editorPlanTasks(body);
         tx.executeWithoutResult(s->{
             db.exec("insert into editor_daily_task_plan_setting(report_date,market_code,editor_id,director_id) values(#{p.date},#{p.market},#{p.editor},#{p.user}) on conflict(report_date,market_code,editor_id) do update set director_id=excluded.director_id,updated_at=now()",p("date",reportDate,"market",market,"editor",targetEditor,"user",Identity.uid(req)));
             db.exec("delete from editor_daily_task_plan where report_date=#{p.date} and market_code=#{p.market} and editor_id=#{p.editor}",p("date",reportDate,"market",market,"editor",targetEditor));
@@ -190,7 +192,7 @@ public class DailyReportController {
     @PostMapping("/{id}/approve") public Object approve(@PathVariable long id,HttpServletRequest req){return review(id,null,req);}
     @PostMapping("/{id}/reject") public Object reject(@PathVariable long id,@RequestBody Map<String,Object> body,HttpServletRequest req){return review(id,formattedText(body,"reason",2000,true),req);}
 
-    private Object storeContent(String value,Map<String,Object> body,HttpServletRequest req,boolean submit){var actor=Identity.actor(req);return store(day(value),contentRole(actor),ownMarket(actor),body,req,submit);}
+    private Object storeContent(String value,String valueMarket,Map<String,Object> body,HttpServletRequest req,boolean submit){var actor=Identity.actor(req);return store(day(value),contentRole(actor),allowedMarket(actor,valueMarket),body,req,submit);}
     private Object storeAds(String value,String valueMarket,Map<String,Object> body,HttpServletRequest req,boolean submit){requireRole(Identity.actor(req),"ADS_BUYER");return store(day(value),"ADS_BUYER",market(valueMarket),body,req,submit);}
     private Object storeSimple(String value,Map<String,Object> body,HttpServletRequest req,boolean submit){var actor=Identity.actor(req);return store(day(value),simpleRole(actor),"MY",body,req,submit);}
     private Object store(LocalDate date,String type,String market,Map<String,Object> body,HttpServletRequest req,boolean submit){
@@ -255,10 +257,10 @@ public class DailyReportController {
     }
     private List<Map<String,Object>> editorPlans(LocalDate date,String market){
         var plans=new ArrayList<Map<String,Object>>();
-        for(var editor:editorUsers(market)){long id=Long.parseLong(editor.get("editorId").toString());var plan=editorPlan(date,market,id);plan.put("editorId",editor.get("editorId"));plan.put("editorName",editor.get("editorName"));plans.add(plan);}
+        for(var editor:editorUsers(market)){long id=Long.parseLong(editor.get("editorId").toString());var plan=editorPlan(date,market,id);plan.put("editorId",editor.get("editorId"));plan.put("editorName",editor.get("editorName"));plan.put("marketCode",market);plans.add(plan);}
         return plans;
     }
-    private List<Map<String,Object>> editorUsers(String market){return db.rows("select u.id editor_id,u.display_name editor_name from sys_user u join sys_user_role ur on ur.user_id=u.id join sys_role r on r.id=ur.role_id and r.role_code='MARKET_MEMBER' where u.market_code=#{p.market} and u.status='ACTIVE' and u.deleted_at is null order by u.display_name,u.id",p("market",market));}
+    private List<Map<String,Object>> editorUsers(String market){return db.rows("select u.id editor_id,u.display_name editor_name from sys_user u join sys_user_market um on um.user_id=u.id and um.market_code=#{p.market} join sys_user_role ur on ur.user_id=u.id join sys_role r on r.id=ur.role_id and r.role_code='MARKET_MEMBER' and r.enabled where u.status='ACTIVE' and u.deleted_at is null order by u.display_name,u.id",p("market",market));}
     private Map<String,Object> directorPlan(LocalDate date,String market,long director){
         boolean configured=!db.one("select 1 from director_daily_task_plan_setting where report_date=#{p.date} and market_code=#{p.market} and director_id=#{p.director}",p("date",date,"market",market,"director",director)).isEmpty();
         var rows=db.rows("select task_name,planned_count,sort_order from director_daily_task_plan where report_date=#{p.date} and market_code=#{p.market} and director_id=#{p.director} order by sort_order,id",p("date",date,"market",market,"director",director));
@@ -272,7 +274,7 @@ public class DailyReportController {
         for(var director:directorUsers()){long id=Long.parseLong(director.get("directorId").toString());var plan=directorPlan(date,director.get("marketCode").toString(),id);plan.put("directorId",director.get("directorId"));plan.put("directorName",director.get("directorName"));plan.put("marketCode",director.get("marketCode"));plan.put("marketName",director.get("marketName"));plans.add(plan);}
         return plans;
     }
-    private List<Map<String,Object>> directorUsers(){return db.rows("select u.id director_id,u.display_name director_name,u.market_code, m.market_name from sys_user u join sys_user_role ur on ur.user_id=u.id join sys_role r on r.id=ur.role_id and r.role_code='DIRECTOR' join dim_market m on m.market_code=u.market_code where u.status='ACTIVE' and u.deleted_at is null order by case u.market_code when 'MY' then 1 when 'UK' then 2 when 'US' then 3 when 'DE' then 4 else 5 end,u.display_name,u.id",p());}
+    private List<Map<String,Object>> directorUsers(){return db.rows("select u.id director_id,u.display_name director_name,um.market_code, m.market_name from sys_user u join sys_user_market um on um.user_id=u.id join sys_user_role ur on ur.user_id=u.id join sys_role r on r.id=ur.role_id and r.role_code='DIRECTOR' join dim_market m on m.market_code=um.market_code where u.status='ACTIVE' and u.deleted_at is null order by case um.market_code when 'MY' then 1 when 'UK' then 2 when 'US' then 3 when 'DE' then 4 else 5 end,u.display_name,u.id",p());}
     static List<Map<String,Object>> editorPlanTasks(Map<String,Object> body){
         Object raw=body.get("tasks");Api.require(raw instanceof List,"任务列表格式无效");var tasks=new ArrayList<Map<String,Object>>();var used=new HashSet<String>();
         for(Object value:(List<?>)raw){Api.require(value instanceof Map,"任务列表格式无效");var item=(Map<?,?>)value;String name=Objects.toString(item.get("taskName"),"");Api.require(!name.trim().isBlank()&&name.length()<=100,"每日任务不能为空且不能超过 100 个字符");Api.require(used.add(name.trim()),"每日任务不能重复");tasks.add(p("taskCode",name,"taskName",name,"plannedCount",number(Map.of("plannedCount",item.get("plannedCount")),"plannedCount",true)));}
@@ -301,9 +303,14 @@ public class DailyReportController {
     private static Api.Problem forbidden(){return new Api.Problem(403,"AUTH_FORBIDDEN","没有此操作的权限");}
     private static void requireRole(Map<String,Object> actor,String role){if(!Identity.exactRole(actor,role)&&!Identity.exactRole(actor,"ADMIN"))throw forbidden();}
     private static void requireViewer(Map<String,Object> actor){if(!leader(actor))throw forbidden();}
-    private static String ownMarket(Map<String,Object> actor){String code=Objects.toString(actor.get("marketCode"),"");Api.require(MARKETS.contains(code),"账号尚未配置负责市场");return code;}
+    private List<Map<String,Object>> availableMarkets(Map<String,Object> actor){
+        String scope=leader(actor)||Identity.role(actor,"ADS_BUYER")?"":" and exists (select 1 from sys_user_market um where um.user_id=#{p.user} and um.market_code=m.market_code)";
+        return db.rows("select m.market_code,m.market_name,m.currency_code from dim_market m where m.enabled and m.market_code in ('MY','UK','US','DE','FR')"+scope+" order by case m.market_code when 'MY' then 1 when 'UK' then 2 when 'US' then 3 when 'DE' then 4 else 5 end",p("user",Long.parseLong(actor.get("id").toString())));
+    }
+    private static String ownMarket(Map<String,Object> actor){String code=Identity.marketCodes(actor).stream().filter(MARKETS::contains).findFirst().orElse("");Api.require(!code.isBlank(),"账号尚未配置负责市场");return code;}
+    private static String allowedMarket(Map<String,Object> actor,String requested){String code=requested==null||requested.isBlank()?ownMarket(actor):market(requested);Api.require(Identity.hasMarket(actor,code),"没有该市场的权限");return code;}
     static String dailyRole(Map<String,Object> actor){if(Identity.role(actor,"MARKET_MEMBER"))return "EDITOR";if(Identity.role(actor,"DIRECTOR"))return "DIRECTOR";if(Identity.role(actor,"ADS_BUYER"))return "ADS_BUYER";if(Identity.role(actor,"OPS"))return "OPS";if(Identity.role(actor,"TECH"))return "TECH";return "VIEWER";}
-    static boolean marketReviewer(Map<String,Object> actor,String market){return market.equals(actor.get("marketCode"))&&Identity.role(actor,"DIRECTOR");}
+    static boolean marketReviewer(Map<String,Object> actor,String market){return Identity.hasMarket(actor,market)&&Identity.role(actor,"DIRECTOR");}
     static String contentRole(Map<String,Object> actor){String role=dailyRole(actor);if(!Set.of("EDITOR","DIRECTOR").contains(role))throw forbidden();return role;}
     private static String simpleType(String value){String type=Objects.toString(value,"").toUpperCase(Locale.ROOT);Api.require(Set.of("OPS","TECH").contains(type),"日报类型无效");return type;}
     private static String simpleRole(Map<String,Object> actor){String role=dailyRole(actor);if(!Set.of("OPS","TECH").contains(role))throw forbidden();return role;}

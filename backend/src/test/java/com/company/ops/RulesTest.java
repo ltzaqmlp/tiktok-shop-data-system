@@ -82,4 +82,11 @@ class RulesTest {
     @Test void newUserPasswordIsFixed(){
         assertEquals("admin100",AdminController.temporary());
     }
+
+    @Test void usersCanHaveMultipleMarketPermissions(){
+        var user=Map.<String,Object>of("marketCode","MY","marketCodes",java.util.List.of("MY","UK","US"),"roles",java.util.List.of());
+        assertEquals(java.util.List.of("MY","UK","US"),com.company.ops.auth.Identity.marketCodes(user));
+        assertTrue(com.company.ops.auth.Identity.hasMarket(user,"UK"));
+        assertFalse(com.company.ops.auth.Identity.hasMarket(user,"DE"));
+    }
 }

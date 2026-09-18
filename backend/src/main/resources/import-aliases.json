@@ -225,6 +225,7 @@
   "attributed_revenue": [
     "广告归因收入",
     "总收入",
+    "总收入（当前店铺）",
     "Gross revenue",
     "Gross revenue (Current shop)",
     "Attributed revenue"
@@ -232,6 +233,7 @@
   "attributed_order_count": [
     "归因订单",
     "广告订单数",
+    "SKU 订单数（当前店铺）",
     "Orders (SKU)",
     "SKU orders (Current shop)",
     "Attributed orders"

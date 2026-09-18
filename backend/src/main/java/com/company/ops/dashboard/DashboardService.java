@@ -156,7 +156,7 @@ public class DashboardService {
     }
 
     private Map<String,Object> refundProductAggregate(Scope scope){
-        var period=db.one("select date_from,date_to,sum(refunded_qty) refunded_qty,sum(refund_customer_count) refund_customer_count from fact_product_period where market_code=#{p.market} and date_from<=#{p.from} and date_to>=#{p.to} and (cast(#{p.shop} as bigint) is null or shop_id=#{p.shop}) group by date_from,date_to order by date_to-date_from limit 1",scope.params());
+        var period=db.one("select date_from,date_to,sum(refunded_qty) refunded_qty,sum(refund_customer_count) refund_customer_count from fact_product_period"+PERIOD_EXACT+" group by date_from,date_to",scope.params());
         if(!period.isEmpty()){period.put("source","PRODUCT_PERIOD");return period;}
         return productAggregate(scope);
     }

@@ -6,16 +6,16 @@ import type { DailyContext, DailyMetricReport, DailySummary, DailySummaryReview,
 import { useAuth } from '../../stores/auth'
 import RequestError from '../../components/RequestError.vue'
 
-type Metric = { plan: keyof DailyMetricReport; actual: keyof DailyMetricReport; label: string }
-type ReportMetric = { metric: Metric; plan: number; actual: number; gap: number; rate: number; delivery: string }
+type Metric = { taskCode?: string; plan: keyof DailyMetricReport; actual: keyof DailyMetricReport; label: string }
+type ReportMetric = { metric: Pick<Metric, 'label'>; plan: number; actual: number; gap: number; rate: number; delivery: string }
 type ReportRow = { report: DailyMetricReport; marketName: string; role: string; metrics: ReportMetric[] }
 type ReportTab = { code: string; label: string; markets: Market[] }
 type SummaryMetric = { plan: keyof DailySummary; actual: keyof DailySummary; label: string }
 const contentMetrics: Metric[] = [
-  { label: '复盘视频', plan: 'plannedReviewVideos', actual: 'actualReviewVideos' }, { label: '有效对标', plan: 'plannedValidBenchmark', actual: 'actualValidBenchmark' },
-  { label: '完成拆解', plan: 'plannedDeconstruction', actual: 'actualDeconstruction' }, { label: '完整脚本', plan: 'plannedCompleteScript', actual: 'actualCompleteScript' },
-  { label: '可开剪脚本', plan: 'plannedReadyScript', actual: 'actualReadyScript' }, { label: '新增发布', plan: 'plannedNewPublish', actual: 'actualNewPublish' },
-  { label: '首次交审', plan: 'plannedFirstReview', actual: 'actualFirstReview' }, { label: '返工验收', plan: 'plannedReworkAcceptance', actual: 'actualReworkAcceptance' },
+  { taskCode: 'REVIEW_VIDEOS', label: '复盘视频', plan: 'plannedReviewVideos', actual: 'actualReviewVideos' }, { taskCode: 'VALID_BENCHMARK', label: '有效对标', plan: 'plannedValidBenchmark', actual: 'actualValidBenchmark' },
+  { taskCode: 'DECONSTRUCTION', label: '完成拆解', plan: 'plannedDeconstruction', actual: 'actualDeconstruction' }, { taskCode: 'COMPLETE_SCRIPT', label: '完整脚本', plan: 'plannedCompleteScript', actual: 'actualCompleteScript' },
+  { taskCode: 'READY_SCRIPT', label: '可开剪脚本', plan: 'plannedReadyScript', actual: 'actualReadyScript' }, { taskCode: 'NEW_PUBLISH', label: '新增发布', plan: 'plannedNewPublish', actual: 'actualNewPublish' },
+  { taskCode: 'FIRST_REVIEW', label: '首次交审', plan: 'plannedFirstReview', actual: 'actualFirstReview' }, { taskCode: 'REWORK_ACCEPTANCE', label: '返工验收', plan: 'plannedReworkAcceptance', actual: 'actualReworkAcceptance' },
 ]
 const editorMetrics = contentMetrics.slice(5), leadMetrics = contentMetrics.slice(0, 5)
 const adFields: { key: keyof DailyMetricReport; label: string; money?: boolean }[] = [
@@ -24,12 +24,7 @@ const adFields: { key: keyof DailyMetricReport; label: string; money?: boolean }
   { key: 'roi', label: 'ROI' }, { key: 'impressions', label: '展现量' }, { key: 'clicks', label: '点击量' }, { key: 'ctr', label: 'CTR' },
   { key: 'orders', label: '订单（单）' }, { key: 'expandedMaterial', label: '放大素材（条）' }, { key: 'stoppedMaterial', label: '停止素材（条）' },
 ]
-const summaryMetrics: SummaryMetric[] = [
-  { label: '复盘视频', plan: 'plannedReviewVideos', actual: 'actualReviewVideos' }, { label: '有效对标', plan: 'plannedValidBenchmark', actual: 'actualValidBenchmark' },
-  { label: '完成拆解', plan: 'plannedDeconstruction', actual: 'actualDeconstruction' }, { label: '完整脚本', plan: 'plannedCompleteScript', actual: 'actualCompleteScript' },
-  { label: '可开剪脚本', plan: 'plannedReadyScript', actual: 'actualReadyScript' }, { label: '新增发布', plan: 'plannedNewPublish', actual: 'actualNewPublish' },
-  { label: '首次交审', plan: 'plannedFirstReview', actual: 'actualFirstReview' }, { label: '返工验收', plan: 'plannedReworkAcceptance', actual: 'actualReworkAcceptance' },
-]
+const summaryMetrics: SummaryMetric[] = editorMetrics.map(metric => ({ label: metric.label, plan: metric.plan as keyof DailySummary, actual: metric.actual as keyof DailySummary }))
 const today = () => new Date().toLocaleDateString('en-CA'), selectedDate = ref(today()), tab = ref('summary'), adMarket = ref('MY'), contentMarket = ref('MY')
 const auth = useAuth(), context = ref<DailyContext>(), rows = ref<DailyMetricReport[]>([]), marketReports = ref<Record<string, DailyMetricReport[]>>({}), summaryReports = ref<DailySummary[]>([]), summaryReview = ref<DailySummaryReview>(summaryBlank()), loading = ref(false), saving = ref(false), error = ref<Error | null>(null)
 const content = reactive<DailyMetricReport>(blank('EDITOR', 'MY')), simpleReport = reactive<DailyMetricReport>(blank('OPS', 'MY')), ads = ref<Record<string, DailyMetricReport>>({})
@@ -64,18 +59,20 @@ function currencyLabel(field: { key: keyof DailyMetricReport; label: string }, m
 function adValue(row: DailyMetricReport, key: keyof DailyMetricReport) { return key === 'roi' ? number(Number(row[key])) : key === 'ctr' ? percent(Number(row[key])) : number(Number(row[key])) }
 function isOwnAd(row: DailyMetricReport) { return row.reporterId === auth.user?.id }
 function adLocked(marketCode: string) { const row = ads.value[marketCode]; return Boolean(row?.id && !isOwnAd(row)) }
-function reportRows(reports: DailyMetricReport[]): ReportRow[] { return reports.map(report => ({ report, marketName: report.marketName ?? report.marketCode, role: report.reportType === 'EDITOR' ? '剪辑' : '编导', metrics: (report.reportType === 'EDITOR' ? editorMetrics : leadMetrics).map(metric => { const plan = Number(report[metric.plan] ?? 0), actual = Number(report[metric.actual] ?? 0); return { metric, plan, actual, gap: Math.max(plan - actual, 0), rate: plan ? actual / plan : 0, delivery: report.deliveryResults?.[String(metric.actual)] ?? '' } }) })) }
+function reportRows(reports: DailyMetricReport[]): ReportRow[] { return reports.map(report => ({ report, marketName: report.marketName ?? report.marketCode, role: report.reportType === 'EDITOR' ? '剪辑' : '编导', metrics: report.reportType === 'DIRECTOR' && report.directorTasks ? report.directorTasks.map(task => { const plan = Number(task.plannedCount ?? 0), actual = Number(task.actualCount ?? 0); return { metric: { label: task.taskName }, plan, actual, gap: Math.max(plan - actual, 0), rate: plan ? actual / plan : 0, delivery: task.delivery ?? '' } }) : (report.reportType === 'EDITOR' ? editorMetrics : leadMetrics).map(metric => { const plan = Number(report[metric.plan] ?? 0), actual = Number(report[metric.actual] ?? 0); return { metric, plan, actual, gap: Math.max(plan - actual, 0), rate: plan ? actual / plan : 0, delivery: report.deliveryResults?.[String(metric.actual)] ?? '' } }) })) }
+const summaryDirectorTasks = computed(() => [...new Set(summaryReports.value.flatMap(row => (row.directorTasks ?? []).map(task => task.taskName)))])
+const summaryDirectorTotal = computed(() => Object.fromEntries(summaryDirectorTasks.value.map(name => { const tasks = summaryReports.value.flatMap(row => row.directorTasks ?? []).filter(task => task.taskName === name); return [name, { planned: tasks.reduce((sum, task) => sum + Number(task.plannedCount ?? 0), 0), actual: tasks.reduce((sum, task) => sum + Number(task.actualCount ?? 0), 0) }] })))
 const summaryTotal = computed(() => summaryMetrics.reduce((total, metric) => { total[metric.plan] = summaryReports.value.reduce((sum, row) => sum + Number(row[metric.plan] ?? 0), 0); total[metric.actual] = summaryReports.value.reduce((sum, row) => sum + Number(row[metric.actual] ?? 0), 0); return total }, {} as Record<string, number>))
 function submittedAt(value?: string | null) { return value ? new Date(value).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—' }
 function deliveryKey(metric: Metric) { return String(metric.actual) }
 function contentFormMetrics() { return leadMetrics }
 function syncTextareaRows() { nextTick(() => requestAnimationFrame(() => { document.querySelectorAll<HTMLElement>('.summary-review,.report-note-grid').forEach(row => { const textareas = Array.from(row.querySelectorAll<HTMLTextAreaElement>('textarea')); textareas.forEach(textarea => { textarea.style.height = '' }); const maxHeight = Math.max(...textareas.map(textarea => textarea.scrollHeight), 0); textareas.forEach(textarea => { textarea.style.height = `${maxHeight}px` }) }) })) }
-function taskMetric(task: EditorDailyTaskPlan) { return (context.value?.role === 'DIRECTOR' ? leadMetrics : editorMetrics).find(metric => metric.label === task.taskName) }
-function taskResult(task: EditorDailyTaskPlan) { return context.value?.role === 'DIRECTOR' ? content.directorTaskResults[task.taskName] : content.editorTaskResults[task.taskName] }
+function taskMetric(task: EditorDailyTaskPlan) { return (context.value?.role === 'DIRECTOR' ? leadMetrics : editorMetrics).find(metric => metric.taskCode === task.taskCode || metric.label === task.taskName) }
+function taskResult(task: EditorDailyTaskPlan) { const results = context.value?.role === 'DIRECTOR' ? content.directorTaskResults : content.editorTaskResults; return results[task.taskCode ?? task.taskName] ?? results[task.taskName] }
 function taskActual(task: EditorDailyTaskPlan) { const metric = taskMetric(task); return metric ? Number(content[metric.actual]) : Number(taskResult(task)?.actualCount ?? 0) }
-function setTaskActual(task: EditorDailyTaskPlan, value: number) { const metric = taskMetric(task); if (metric) Object.assign(content, { [metric.actual]: value }); else { const results = context.value?.role === 'DIRECTOR' ? content.directorTaskResults : content.editorTaskResults; (results[task.taskName] ??= { actualCount: 0, delivery: '' }).actualCount = value } }
+function setTaskActual(task: EditorDailyTaskPlan, value: number) { const metric = taskMetric(task); if (metric) Object.assign(content, { [metric.actual]: value }); else { const results = context.value?.role === 'DIRECTOR' ? content.directorTaskResults : content.editorTaskResults; (results[task.taskCode ?? task.taskName] ??= { actualCount: 0, delivery: '' }).actualCount = value } }
 function taskDelivery(task: EditorDailyTaskPlan) { const metric = taskMetric(task); return metric ? content.deliveryResults[String(metric.actual)] ?? '' : taskResult(task)?.delivery ?? '' }
-function setTaskDelivery(task: EditorDailyTaskPlan, value: string) { const metric = taskMetric(task); if (metric) content.deliveryResults[String(metric.actual)] = value; else { const results = context.value?.role === 'DIRECTOR' ? content.directorTaskResults : content.editorTaskResults; (results[task.taskName] ??= { actualCount: 0, delivery: '' }).delivery = value } }
+function setTaskDelivery(task: EditorDailyTaskPlan, value: string) { const metric = taskMetric(task); if (metric) content.deliveryResults[String(metric.actual)] = value; else { const results = context.value?.role === 'DIRECTOR' ? content.directorTaskResults : content.editorTaskResults; (results[task.taskCode ?? task.taskName] ??= { actualCount: 0, delivery: '' }).delivery = value } }
 function addPlanTask(plan: EditorDailyPlan | DirectorDailyPlan) { plan.tasks.push({ taskName: '', plannedCount: 0, sortOrder: plan.tasks.length }) }
 async function removePlanTask(plan: EditorDailyPlan | DirectorDailyPlan, index: number) { try { await ElMessageBox.confirm('删除后该任务不会出现在日报中，是否继续？', '确认删除', { type: 'warning', confirmButtonText: '确认删除', cancelButtonText: '取消' }); plan.tasks.splice(index, 1); plan.tasks.forEach((task, sortOrder) => task.sortOrder = sortOrder) } catch {/* 取消删除 */ } }
 async function saveEditorPlan(plan: EditorDailyEditorPlan) { saving.value = true; try { const result = await save<EditorDailyEditorPlan>(`/daily-reports/editor-plan/${selectedDate.value}/${plan.editorId}`, { tasks: plan.tasks, marketCode: plan.marketCode }, 'PUT'); Object.assign(plan, result); ElMessage.success(`${plan.editorName}的任务已布置`) } catch (e) { ElMessage.error((e as Error).message) } finally { saving.value = false } }
@@ -136,9 +133,10 @@ watch([selectedDate, tab], () => void load())
             <thead>
               <tr>
                 <th rowspan="2">地区</th>
+                <th v-for="task in summaryDirectorTasks" :key="`director-${task}`" colspan="2">{{ task }}</th>
                 <th v-for="metric in summaryMetrics" :key="metric.label" colspan="2">{{ metric.label }}</th>
               </tr>
-              <tr><template v-for="metric in summaryMetrics" :key="`${metric.label}-head`">
+              <tr><template v-for="task in summaryDirectorTasks" :key="`${task}-head`"><th>计划</th><th>实际</th></template><template v-for="metric in summaryMetrics" :key="`${metric.label}-head`">
                   <th>计划</th>
                   <th>实际</th>
                 </template>
@@ -146,17 +144,17 @@ watch([selectedDate, tab], () => void load())
             </thead>
             <tbody>
               <tr v-for="row in summaryReports" :key="row.marketCode">
-                <td>{{ row.marketName }}</td><template v-for="metric in summaryMetrics"
+                <td>{{ row.marketName }}</td><template v-for="task in summaryDirectorTasks" :key="`${row.marketCode}-${task}`"><td>{{ number(Number(row.directorTasks?.find(item => item.taskName === task)?.plannedCount ?? 0)) }}</td><td>{{ number(Number(row.directorTasks?.find(item => item.taskName === task)?.actualCount ?? 0)) }}</td></template><template v-for="metric in summaryMetrics"
                   :key="`${row.marketCode}-${metric.label}`">
                   <td>{{ number(Number(row[metric.plan])) }}</td>
                   <td>{{ number(Number(row[metric.actual])) }}</td>
                 </template>
               </tr>
               <tr v-if="!loading && !summaryReports.length">
-                <td :colspan="summaryMetrics.length * 2 + 1" class="empty">该日期暂无已通过日报</td>
+                <td :colspan="(summaryDirectorTasks.length + summaryMetrics.length) * 2 + 1" class="empty">该日期暂无已通过日报</td>
               </tr>
               <tr v-if="!loading && summaryReports.length" class="summary-total">
-                <td>合计</td><template v-for="metric in summaryMetrics" :key="`total-${metric.label}`">
+                <td>合计</td><template v-for="task in summaryDirectorTasks" :key="`total-${task}`"><td>{{ number(summaryDirectorTotal[task]?.planned ?? 0) }}</td><td>{{ number(summaryDirectorTotal[task]?.actual ?? 0) }}</td></template><template v-for="metric in summaryMetrics" :key="`total-${metric.label}`">
                   <td>{{ number(summaryTotal[metric.plan]) }}</td>
                   <td>{{ number(summaryTotal[metric.actual]) }}</td>
                 </template>
@@ -366,7 +364,7 @@ watch([selectedDate, tab], () => void load())
     </el-tab-pane>
     <el-tab-pane v-if="departmentReviewer" label="布置编导任务" name="director-plan">
       <section class="surface form-panel" v-loading="loading">
-        <div class="sheet-title">编导每日任务 <span>显示各市场编导，每人独立布置任务。</span></div>
+        <div class="sheet-title director-plan-sheet-title">编导每日任务 <span>显示各市场编导，每人独立布置任务。</span><strong class="director-plan-hint">17:00 前修改，今天生效；17:00 后修改，明天生效。</strong></div>
         <div v-if="!directorPlans.length" class="empty">暂无有效编导账号</div>
         <section v-for="plan in directorPlans" :key="plan.directorId" class="editor-plan-card">
           <div class="editor-plan-title">{{ plan.directorName }}<span>{{ plan.marketName }}编导</span></div>
@@ -393,7 +391,7 @@ watch([selectedDate, tab], () => void load())
               </tbody>
             </table>
           </div>
-          <div class="submit-bar"><span>默认任务：复盘视频、有效对标、完成拆解、完整脚本、可开剪脚本。</span>
+          <div class="submit-bar director-plan-actions">
             <div><el-button @click="addPlanTask(plan)">新增任务</el-button><el-button type="primary" :loading="saving"
                 @click="saveDirectorPlan(plan)">确认布置</el-button></div>
           </div>
@@ -415,7 +413,7 @@ watch([selectedDate, tab], () => void load())
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="(task, index) in plan.tasks" :key="index">
+                <tr v-for="(task, index) in plan.tasks" :key="`${task.taskCode ?? task.taskName}-${index}`">
                   <td><el-input v-model="task.taskName" maxlength="100" placeholder="请输入每日任务" /></td>
                   <td>
                     <div class="plan-cell"><el-input-number v-model="task.plannedCount" :min="0" :precision="0"
@@ -456,7 +454,7 @@ watch([selectedDate, tab], () => void load())
               </tr>
             </thead>
             <tbody><template v-if="context?.role === 'EDITOR' || context?.role === 'DIRECTOR'">
-                <tr v-for="task in currentPlan.tasks" :key="task.taskName">
+                <tr v-for="task in currentPlan.tasks" :key="task.taskCode ?? task.taskName">
                   <td>{{ task.taskName }}</td>
                   <td><el-input-number :model-value="task.plannedCount" disabled :min="0" :precision="0"
                       controls-position="right" /></td>
@@ -581,6 +579,20 @@ watch([selectedDate, tab], () => void load())
   padding: 14px 18px;
   font-weight: 650;
   border-bottom: 1px solid var(--hm-border)
+}
+
+.director-plan-sheet-title {
+  display: flex;
+  align-items: center;
+  gap: 16px
+}
+
+.director-plan-sheet-title .director-plan-hint {
+  margin-left: auto;
+  color: #dc2626;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap
 }
 
 .sheet-title span {
@@ -867,6 +879,10 @@ small {
   flex-shrink: 0
 }
 
+.director-plan-actions {
+  justify-content: flex-end
+}
+
 .note {
   padding: 12px 18px;
   margin: 0;
@@ -1067,6 +1083,17 @@ small {
 
   .sheet-title span {
     display: block;
+    margin: 5px 0 0
+  }
+
+  .director-plan-sheet-title {
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 0
+  }
+
+  .director-plan-sheet-title .director-plan-hint {
+    width: 100%;
     margin: 5px 0 0
   }
 

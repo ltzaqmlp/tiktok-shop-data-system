@@ -5,7 +5,7 @@ import com.company.ops.common.*;
 import static com.company.ops.common.Db.p;
 import jakarta.servlet.http.HttpServletRequest;
 import java.math.BigDecimal;
-import java.time.LocalDate;
+import java.time.*;
 import java.util.*;
 import org.springframework.stereotype.*;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -18,6 +18,8 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/v1/daily-reports")
 public class DailyReportController {
+    private static final ZoneId BUSINESS_ZONE=ZoneId.of("Asia/Shanghai");
+    private static final LocalTime PLAN_CUTOFF=LocalTime.of(17,0);
     private static final List<String> MARKETS=List.of("MY","UK","US","DE","FR");
     private static final List<String> EDITOR=List.of("plannedNewPublish","actualNewPublish","plannedFirstReview","actualFirstReview","plannedReworkAcceptance","actualReworkAcceptance");
     private static final List<String> LEAD=List.of("plannedReviewVideos","actualReviewVideos","plannedValidBenchmark","actualValidBenchmark","plannedDeconstruction","actualDeconstruction","plannedCompleteScript","actualCompleteScript","plannedReadyScript","actualReadyScript");
@@ -45,8 +47,9 @@ public class DailyReportController {
     }
 
     @GetMapping("/summary")
+    @SuppressWarnings("unchecked")
     public Object summary(@RequestParam String date,HttpServletRequest req){
-        requireViewer(Identity.actor(req));var args=p("date",day(date));
+        requireViewer(Identity.actor(req));LocalDate reportDate=day(date);var args=p("date",reportDate);
         String sql="select m.market_code,m.market_name,"+
             "coalesce(sum(r.planned_review_videos) filter(where r.report_type='DIRECTOR'),0) planned_review_videos,coalesce(sum(r.actual_review_videos) filter(where r.report_type='DIRECTOR'),0) actual_review_videos,"+
             "coalesce(sum(r.planned_valid_benchmark) filter(where r.report_type='DIRECTOR'),0) planned_valid_benchmark,coalesce(sum(r.actual_valid_benchmark) filter(where r.report_type='DIRECTOR'),0) actual_valid_benchmark,"+
@@ -57,7 +60,15 @@ public class DailyReportController {
             "coalesce(sum(r.planned_first_review) filter(where r.report_type='EDITOR'),0) planned_first_review,coalesce(sum(r.actual_first_review) filter(where r.report_type='EDITOR'),0) actual_first_review,"+
             "coalesce(sum(r.planned_rework_acceptance) filter(where r.report_type='EDITOR'),0) planned_rework_acceptance,coalesce(sum(r.actual_rework_acceptance) filter(where r.report_type='EDITOR'),0) actual_rework_acceptance " +
             "from dim_market m left join daily_metric_report r on r.market_code=m.market_code and r.report_date=#{p.date} and r.submission_status='APPROVED' where m.market_code in ('MY','UK','US','DE','FR') group by m.market_code,m.market_name order by case m.market_code when 'MY' then 1 when 'UK' then 2 when 'US' then 3 when 'DE' then 4 else 5 end";
-        return Api.ok(req,db.rows(sql,args));
+        var result=new ArrayList<Map<String,Object>>();for(var row:db.rows(sql,args))result.add(new LinkedHashMap<>(row));var byMarket=new HashMap<String,Map<String,Object>>();for(var row:result)byMarket.put(row.get("marketCode").toString(),row);
+        var plans=directorPlans(reportDate);var plansByDirector=new HashMap<String,Map<String,Object>>(); // ponytail: per-director plan reads; batch by market if director volume grows
+        for(var plan:plans){String market=plan.get("marketCode").toString();var summary=byMarket.get(market);if(summary==null)continue;var taskValues=(Map<String,Map<String,Object>>)summary.computeIfAbsent("directorTasks",key->new LinkedHashMap<String,Map<String,Object>>());plansByDirector.put(plan.get("directorId")+"|"+market,plan);for(Map<String,Object> task:(List<Map<String,Object>>)plan.get("tasks"))taskValues.putIfAbsent(task.get("taskName").toString(),p("taskCode",task.get("taskName"),"taskName",task.get("taskName"),"plannedCount",0L,"actualCount",0L));}
+        var reports=db.rows("select reporter_id,market_code,actual_review_videos,actual_valid_benchmark,actual_deconstruction,actual_complete_script,actual_ready_script,director_task_results from daily_metric_report where report_date=#{p.date} and report_type='DIRECTOR' and submission_status='APPROVED'",args);
+        for(var report:reports){String market=report.get("marketCode").toString();var plan=plansByDirector.get(report.get("reporterId")+"|"+market);if(plan==null)continue;var summary=byMarket.get(market);if(summary==null)continue;var taskValues=(Map<String,Map<String,Object>>)summary.get("directorTasks");var taskResults=report.get("directorTaskResults") instanceof Map<?,?> map?map:Map.of();
+            for(Map<String,Object> task:(List<Map<String,Object>>)plan.get("tasks")){var value=taskValues.get(task.get("taskName").toString());value.put("plannedCount",((Number)value.get("plannedCount")).longValue()+((Number)task.get("plannedCount")).longValue());var definition=taskDefinition(task,DIRECTOR_TASKS);Object actual=definition==null?taskResultValue(taskResults,task):report.get(definition.get("actualField").toString());value.put("actualCount",((Number)value.get("actualCount")).longValue()+(actual instanceof Number number?number.longValue():0));}
+        }
+        for(var summary:result){var taskValues=(Map<String,Map<String,Object>>)summary.getOrDefault("directorTasks",Map.of());summary.put("directorTasks",new ArrayList<>(taskValues.values()));}
+        return Api.ok(req,result);
     }
 
     @GetMapping("/summary/review")
@@ -95,14 +106,16 @@ public class DailyReportController {
 
     @GetMapping("/market/{market}")
     public Object market(@PathVariable String market,@RequestParam String date,HttpServletRequest req){
-        market=market(market);var actor=Identity.actor(req);var args=p("date",day(date),"market",market,"user",Identity.uid(req));String where="r.report_date=#{p.date} and r.market_code=#{p.market} and r.report_type in ('EDITOR','DIRECTOR')";
+        market=market(market);var actor=Identity.actor(req);LocalDate reportDate=day(date);var args=p("date",reportDate,"market",market,"user",Identity.uid(req));String where="r.report_date=#{p.date} and r.market_code=#{p.market} and r.report_type in ('EDITOR','DIRECTOR')";
         if(Identity.role(actor,"BOSS"))where+=" and r.submission_status='APPROVED'";
         else if(Identity.role(actor,"DEPT_HEAD")||Identity.exactRole(actor,"ADMIN"))where+=" and r.submission_status<>'DRAFT'";
         else if(marketReviewer(actor,market))where+=" and (r.report_type='EDITOR' or r.reporter_id=#{p.user}) and r.submission_status<>'DRAFT'";
         else if(Identity.role(actor,"DIRECTOR")&&Identity.hasMarket(actor,market))where+=" and r.reporter_id=#{p.user}";
         else if(Identity.role(actor,"MARKET_MEMBER")&&Identity.hasMarket(actor,market))where+=" and r.reporter_id=#{p.user}";
         else throw forbidden();
-        return Api.ok(req,rows(where,args));
+        var result=rows(where,args); // ponytail: per-report plan lookup, batch by role if report volume grows
+        for(var report:result){long reporter=Long.parseLong(report.get("reporterId").toString());if("EDITOR".equals(report.get("reportType")))applyReportPlan(report,editorPlan(reportDate,market,reporter).get("tasks"),EDITOR_TASKS);if("DIRECTOR".equals(report.get("reportType"))){var tasks=(List<Map<String,Object>>)directorPlan(reportDate,market,reporter).get("tasks");applyReportPlan(report,tasks,DIRECTOR_TASKS);report.put("directorTasks",reportTasks(report,tasks,DIRECTOR_TASKS,"directorTaskResults"));}}
+        return Api.ok(req,result);
     }
 
     @GetMapping("/ads")
@@ -149,7 +162,7 @@ public class DailyReportController {
     public Object directorPlan(@RequestParam String date,@RequestParam(required=false) String marketCode,HttpServletRequest req){
         var actor=Identity.actor(req);LocalDate reportDate=day(date);
         if(Identity.role(actor,"DIRECTOR")){String market=allowedMarket(actor,marketCode);return Api.ok(req,directorPlan(reportDate,market,Identity.uid(req)));}
-        requireRole(actor,"DEPT_HEAD");return Api.ok(req,directorPlans(reportDate));
+        requireRole(actor,"DEPT_HEAD");return Api.ok(req,directorPlans(directorPlanEffectiveDate(reportDate,ZonedDateTime.now(BUSINESS_ZONE))));
     }
 
     @PutMapping({"/editor-plan/{date}","/editor-plan/{date}/{editorId}"})
@@ -165,7 +178,7 @@ public class DailyReportController {
 
     @PutMapping("/director-plan/{date}/{directorId}")
     public Object saveDirectorPlan(@PathVariable String date,@PathVariable long directorId,@RequestBody Map<String,Object> body,HttpServletRequest req){
-        var actor=Identity.actor(req);requireRole(actor,"DEPT_HEAD");LocalDate reportDate=day(date);var director=directorUsers().stream().filter(row->directorId==Long.parseLong(row.get("directorId").toString())).findFirst().orElseThrow(()->new Api.Problem(400,"VALIDATION_ERROR","编导账号不存在或已停用"));String market=director.get("marketCode").toString();List<Map<String,Object>> tasks=editorPlanTasks(body);
+        var actor=Identity.actor(req);requireRole(actor,"DEPT_HEAD");LocalDate selectedDate=day(date);var now=ZonedDateTime.now(BUSINESS_ZONE);Api.require(!selectedDate.isBefore(now.toLocalDate()),"不能修改过去日期的编导任务计划");LocalDate reportDate=directorPlanEffectiveDate(selectedDate,now);var director=directorUsers().stream().filter(row->directorId==Long.parseLong(row.get("directorId").toString())).findFirst().orElseThrow(()->new Api.Problem(400,"VALIDATION_ERROR","编导账号不存在或已停用"));String market=director.get("marketCode").toString();List<Map<String,Object>> tasks=editorPlanTasks(body);
         tx.executeWithoutResult(s->{
             db.exec("insert into director_daily_task_plan_setting(report_date,market_code,director_id,dept_head_id) values(#{p.date},#{p.market},#{p.director},#{p.user}) on conflict(report_date,market_code,director_id) do update set dept_head_id=excluded.dept_head_id,updated_at=now()",p("date",reportDate,"market",market,"director",directorId,"user",Identity.uid(req)));
             db.exec("delete from director_daily_task_plan where report_date=#{p.date} and market_code=#{p.market} and director_id=#{p.director}",p("date",reportDate,"market",market,"director",directorId));
@@ -248,11 +261,11 @@ public class DailyReportController {
         if(!Set.of("EDITOR","DIRECTOR").contains(type))return new LinkedHashMap<>();Object raw=body.get(field);if(raw==null)return new LinkedHashMap<>();Api.require(raw instanceof Map,"自定义任务结果格式无效");var result=new LinkedHashMap<String,Object>();for(var entry:((Map<?,?>)raw).entrySet()){String name=Objects.toString(entry.getKey(),"");Api.require(!name.trim().isBlank()&&name.length()<=100,"任务名称格式无效");Api.require(entry.getValue() instanceof Map,"自定义任务结果格式无效");var value=(Map<?,?>)entry.getValue();long actual=number(Map.of("actualCount",value.get("actualCount")),"actualCount",true);String delivery=Objects.toString(value.get("delivery"),"");Api.require(delivery.length()<=2000,"交付成果不能超过 2000 个字符");result.put(name,p("actualCount",actual,"delivery",delivery));}return result;
     }
     private Map<String,Object> editorPlan(LocalDate date,String market,long editor){
-        boolean configured=!db.one("select 1 from editor_daily_task_plan_setting where report_date=#{p.date} and market_code=#{p.market} and editor_id=#{p.editor}",p("date",date,"market",market,"editor",editor)).isEmpty();
-        var rows=db.rows("select task_name,planned_count,sort_order from editor_daily_task_plan where report_date=#{p.date} and market_code=#{p.market} and editor_id=#{p.editor} order by sort_order,id",p("date",date,"market",market,"editor",editor));
+        boolean configured=!db.one("select report_date from editor_daily_task_plan_setting where report_date<=#{p.date} and market_code=#{p.market} and editor_id=#{p.editor} order by report_date desc limit 1",p("date",date,"market",market,"editor",editor)).isEmpty();
+        var rows=db.rows("select task_code,task_name,planned_count,sort_order from editor_daily_task_plan where report_date=(select max(report_date) from editor_daily_task_plan_setting where report_date<=#{p.date} and market_code=#{p.market} and editor_id=#{p.editor}) and market_code=#{p.market} and editor_id=#{p.editor} order by sort_order,id",p("date",date,"market",market,"editor",editor));
         var tasks=new ArrayList<Map<String,Object>>();
-        if(!configured)for(int i=0;i<EDITOR_TASKS.size();i++){var task=new LinkedHashMap<String,Object>();task.put("taskName",EDITOR_TASKS.get(i).get("taskName"));task.put("plannedCount",0);task.put("sortOrder",i);tasks.add(task);}
-        else for(var row:rows)tasks.add(p("taskName",row.get("taskName"),"plannedCount",row.get("plannedCount"),"sortOrder",row.get("sortOrder")));
+        if(!configured)for(int i=0;i<EDITOR_TASKS.size();i++){var task=new LinkedHashMap<String,Object>();task.put("taskCode",EDITOR_TASKS.get(i).get("taskCode"));task.put("taskName",EDITOR_TASKS.get(i).get("taskName"));task.put("plannedCount",0);task.put("sortOrder",i);tasks.add(task);}
+        else for(var row:rows)tasks.add(p("taskCode",taskCode(row,EDITOR_TASKS),"taskName",row.get("taskName"),"plannedCount",row.get("plannedCount"),"sortOrder",row.get("sortOrder")));
         return p("configured",configured,"tasks",tasks);
     }
     private List<Map<String,Object>> editorPlans(LocalDate date,String market){
@@ -262,13 +275,15 @@ public class DailyReportController {
     }
     private List<Map<String,Object>> editorUsers(String market){return db.rows("select u.id editor_id,u.display_name editor_name from sys_user u join sys_user_market um on um.user_id=u.id and um.market_code=#{p.market} join sys_user_role ur on ur.user_id=u.id join sys_role r on r.id=ur.role_id and r.role_code='MARKET_MEMBER' and r.enabled where u.status='ACTIVE' and u.deleted_at is null order by u.display_name,u.id",p("market",market));}
     private Map<String,Object> directorPlan(LocalDate date,String market,long director){
-        boolean configured=!db.one("select 1 from director_daily_task_plan_setting where report_date=#{p.date} and market_code=#{p.market} and director_id=#{p.director}",p("date",date,"market",market,"director",director)).isEmpty();
-        var rows=db.rows("select task_name,planned_count,sort_order from director_daily_task_plan where report_date=#{p.date} and market_code=#{p.market} and director_id=#{p.director} order by sort_order,id",p("date",date,"market",market,"director",director));
+        boolean configured=!db.one("select report_date from director_daily_task_plan_setting where report_date<=#{p.date} and market_code=#{p.market} and director_id=#{p.director} order by report_date desc limit 1",p("date",date,"market",market,"director",director)).isEmpty();
+        var rows=db.rows("select task_code,task_name,planned_count,sort_order from director_daily_task_plan where report_date=(select max(report_date) from director_daily_task_plan_setting where report_date<=#{p.date} and market_code=#{p.market} and director_id=#{p.director}) and market_code=#{p.market} and director_id=#{p.director} order by sort_order,id",p("date",date,"market",market,"director",director));
         var tasks=new ArrayList<Map<String,Object>>();
-        if(!configured)for(int i=0;i<DIRECTOR_TASKS.size();i++){var task=new LinkedHashMap<String,Object>();task.put("taskName",DIRECTOR_TASKS.get(i).get("taskName"));task.put("plannedCount",0);task.put("sortOrder",i);tasks.add(task);}
-        else for(var row:rows)tasks.add(p("taskName",row.get("taskName"),"plannedCount",row.get("plannedCount"),"sortOrder",row.get("sortOrder")));
+        if(!configured)for(int i=0;i<DIRECTOR_TASKS.size();i++){var task=new LinkedHashMap<String,Object>();task.put("taskCode",DIRECTOR_TASKS.get(i).get("taskCode"));task.put("taskName",DIRECTOR_TASKS.get(i).get("taskName"));task.put("plannedCount",0);task.put("sortOrder",i);tasks.add(task);}
+        else for(var row:rows)tasks.add(p("taskCode",taskCode(row,DIRECTOR_TASKS),"taskName",row.get("taskName"),"plannedCount",row.get("plannedCount"),"sortOrder",row.get("sortOrder")));
         return p("configured",configured,"tasks",tasks);
     }
+    static LocalDate directorPlanEffectiveDate(ZonedDateTime now){var local=now.withZoneSameInstant(BUSINESS_ZONE);return local.toLocalTime().isBefore(PLAN_CUTOFF)?local.toLocalDate():local.toLocalDate().plusDays(1);}
+    static LocalDate directorPlanEffectiveDate(LocalDate selectedDate,ZonedDateTime now){var local=now.withZoneSameInstant(BUSINESS_ZONE);return selectedDate.equals(local.toLocalDate())?directorPlanEffectiveDate(local):selectedDate;}
     private List<Map<String,Object>> directorPlans(LocalDate date){
         var plans=new ArrayList<Map<String,Object>>();
         for(var director:directorUsers()){long id=Long.parseLong(director.get("directorId").toString());var plan=directorPlan(date,director.get("marketCode").toString(),id);plan.put("directorId",director.get("directorId"));plan.put("directorName",director.get("directorName"));plan.put("marketCode",director.get("marketCode"));plan.put("marketName",director.get("marketName"));plans.add(plan);}
@@ -277,17 +292,25 @@ public class DailyReportController {
     private List<Map<String,Object>> directorUsers(){return db.rows("select u.id director_id,u.display_name director_name,um.market_code, m.market_name from sys_user u join sys_user_market um on um.user_id=u.id join sys_user_role ur on ur.user_id=u.id join sys_role r on r.id=ur.role_id and r.role_code='DIRECTOR' join dim_market m on m.market_code=um.market_code where u.status='ACTIVE' and u.deleted_at is null order by case um.market_code when 'MY' then 1 when 'UK' then 2 when 'US' then 3 when 'DE' then 4 else 5 end,u.display_name,u.id",p());}
     static List<Map<String,Object>> editorPlanTasks(Map<String,Object> body){
         Object raw=body.get("tasks");Api.require(raw instanceof List,"任务列表格式无效");var tasks=new ArrayList<Map<String,Object>>();var used=new HashSet<String>();
-        for(Object value:(List<?>)raw){Api.require(value instanceof Map,"任务列表格式无效");var item=(Map<?,?>)value;String name=Objects.toString(item.get("taskName"),"");Api.require(!name.trim().isBlank()&&name.length()<=100,"每日任务不能为空且不能超过 100 个字符");Api.require(used.add(name.trim()),"每日任务不能重复");tasks.add(p("taskCode",name,"taskName",name,"plannedCount",number(Map.of("plannedCount",item.get("plannedCount")),"plannedCount",true)));}
+        var usedCodes=new HashSet<String>();for(Object value:(List<?>)raw){Api.require(value instanceof Map,"任务列表格式无效");var item=(Map<?,?>)value;String name=Objects.toString(item.get("taskName"),"");String code=Objects.toString(item.get("taskCode"),name);Api.require(!name.trim().isBlank()&&name.length()<=100,"每日任务不能为空且不能超过 100 个字符");Api.require(!code.trim().isBlank()&&code.length()<=100,"任务标识无效");Api.require(used.add(name.trim()),"每日任务不能重复");Api.require(usedCodes.add(code),"任务标识不能重复");tasks.add(p("taskCode",code,"taskName",name,"plannedCount",number(Map.of("plannedCount",item.get("plannedCount")),"plannedCount",true)));}
         return tasks;
     }
     @SuppressWarnings("unchecked") private static void applyEditorPlan(Map<String,Object> values,Object rawTasks){
         for(var task:EDITOR_TASKS)values.put(camelToSnake(task.get("planField").toString()),0);
-        for(Map<String,Object> configured:(List<Map<String,Object>>)rawTasks)EDITOR_TASKS.stream().filter(task->task.get("taskName").equals(configured.get("taskName"))).findFirst().ifPresent(task->values.put(camelToSnake(task.get("planField").toString()),configured.get("plannedCount")));
+        for(Map<String,Object> configured:(List<Map<String,Object>>)rawTasks){var definition=taskDefinition(configured,EDITOR_TASKS);if(definition!=null)values.put(camelToSnake(definition.get("planField").toString()),configured.get("plannedCount"));}
     }
     @SuppressWarnings("unchecked") private static void applyDirectorPlan(Map<String,Object> values,Object rawTasks){
         for(var task:DIRECTOR_TASKS)values.put(camelToSnake(task.get("planField").toString()),0);
-        for(Map<String,Object> configured:(List<Map<String,Object>>)rawTasks)DIRECTOR_TASKS.stream().filter(task->task.get("taskName").equals(configured.get("taskName"))).findFirst().ifPresent(task->values.put(camelToSnake(task.get("planField").toString()),configured.get("plannedCount")));
+        for(Map<String,Object> configured:(List<Map<String,Object>>)rawTasks){var definition=taskDefinition(configured,DIRECTOR_TASKS);if(definition!=null)values.put(camelToSnake(definition.get("planField").toString()),configured.get("plannedCount"));}
     }
+    @SuppressWarnings("unchecked") private static void applyReportPlan(Map<String,Object> values,Object rawTasks,List<Map<String,Object>> definitions){
+        for(var task:definitions)values.put(task.get("planField").toString(),0);
+        for(Map<String,Object> configured:(List<Map<String,Object>>)rawTasks){var definition=taskDefinition(configured,definitions);if(definition!=null)values.put(definition.get("planField").toString(),configured.get("plannedCount"));}
+    }
+    private static String taskCode(Map<String,Object> row,List<Map<String,Object>> definitions){var definition=definitions.stream().filter(task->task.get("taskName").equals(row.get("taskName"))).findFirst().orElse(null);return definition==null?Objects.toString(row.get("taskCode"),row.get("taskName").toString()):definition.get("taskCode").toString();}
+    private static Map<String,Object> taskDefinition(Map<String,Object> task,List<Map<String,Object>> definitions){String code=Objects.toString(task.get("taskCode"),"");String name=Objects.toString(task.get("taskName"),"");return definitions.stream().filter(item->item.get("taskCode").equals(code)||item.get("taskName").equals(name)).findFirst().orElse(null);}
+    private static Object taskResultValue(Map<?,?> results,Map<String,Object> task){Object result=results.get(task.get("taskCode"));if(result==null)result=results.get(task.get("taskName"));return result instanceof Map<?,?> map?map.get("actualCount"):0;}
+    @SuppressWarnings("unchecked") private static List<Map<String,Object>> reportTasks(Map<String,Object> report,List<Map<String,Object>> tasks,List<Map<String,Object>> definitions,String resultField){var results=report.get(resultField) instanceof Map<?,?> map?map:Map.of();var deliveries=report.get("deliveryResults") instanceof Map<?,?> map?map:Map.of();var output=new ArrayList<Map<String,Object>>();for(var task:tasks){var definition=taskDefinition(task,definitions);Object actual=definition==null?taskResultValue(results,task):report.get(definition.get("actualField").toString());Object delivery=definition==null?(results.get(task.get("taskCode")) instanceof Map<?,?> value?value.get("delivery"):results.get(task.get("taskName")) instanceof Map<?,?> value?value.get("delivery"):""):deliveries.get(definition.get("actualField").toString());output.add(p("taskCode",task.get("taskCode"),"taskName",task.get("taskName"),"plannedCount",task.get("plannedCount"),"actualCount",actual instanceof Number?actual:0,"delivery",Objects.toString(delivery,"")));}return output;}
     private static long number(Map<String,Object> body,String key,boolean required){Object raw=body.get(key);if(raw==null||raw.toString().isBlank()){Api.require(!required,key+" 不能为空");return 0;}try{long result=Long.parseLong(raw.toString());Api.require(result>=0,key+" 不能小于 0");return result;}catch(NumberFormatException e){throw new Api.Problem(400,"VALIDATION_ERROR",key+" 必须是非负整数");}}
     private static BigDecimal money(Map<String,Object> body,String key,boolean required){Object raw=body.get(key);if(raw==null||raw.toString().isBlank()){Api.require(!required,key+" 不能为空");return BigDecimal.ZERO;}try{var result=new BigDecimal(raw.toString());Api.require(result.signum()>=0&&result.scale()<=2,key+" 必须是最多两位小数的非负数");return result;}catch(NumberFormatException e){throw new Api.Problem(400,"VALIDATION_ERROR",key+" 格式无效");}}
     private static String insertSql(){return "insert into daily_metric_report(report_date,reporter_id,report_type,market_code,submission_status,delivery_results,editor_task_results,director_task_results,submitted_at,notes,blockers,planned_review_videos,actual_review_videos,planned_valid_benchmark,actual_valid_benchmark,planned_deconstruction,actual_deconstruction,planned_complete_script,actual_complete_script,planned_ready_script,actual_ready_script,planned_new_publish,actual_new_publish,planned_first_review,actual_first_review,planned_rework_acceptance,actual_rework_acceptance,planned_test,actual_test,new_adjust_plan,ad_spend,ad_gmv,impressions,clicks,orders,expanded_material,stopped_material) values(#{p.date},#{p.user},#{p.type},#{p.market},#{p.status},cast(#{p.deliveryResults} as jsonb),cast(#{p.editorTaskResults} as jsonb),cast(#{p.directorTaskResults} as jsonb),case when #{p.submitted} then now() else null end,#{p.notes},#{p.blockers},#{p.planned_review_videos},#{p.actual_review_videos},#{p.planned_valid_benchmark},#{p.actual_valid_benchmark},#{p.planned_deconstruction},#{p.actual_deconstruction},#{p.planned_complete_script},#{p.actual_complete_script},#{p.planned_ready_script},#{p.actual_ready_script},#{p.planned_new_publish},#{p.actual_new_publish},#{p.planned_first_review},#{p.actual_first_review},#{p.planned_rework_acceptance},#{p.actual_rework_acceptance},#{p.planned_test},#{p.actual_test},#{p.new_adjust_plan},#{p.ad_spend},#{p.ad_gmv},#{p.impressions},#{p.clicks},#{p.orders},#{p.expanded_material},#{p.stopped_material})";}

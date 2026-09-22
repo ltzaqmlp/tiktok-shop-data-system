@@ -289,7 +289,6 @@ public class ImportService {
         final LinkedHashMap<String,Map<String,Object>> batch=new LinkedHashMap<>();
         final LinkedHashMap<String,Map<String,Object>> skuBatch=new LinkedHashMap<>();
         final List<Map<String,Object>> errors=new ArrayList<>();final TreeSet<LocalDate> dates=new TreeSet<>();Set<String> bestFields=Set.of();
-        boolean snapshotReset;
         Reader(long task,String source,String market,long shop,LocalDate chosen,String originalFilename,Map<String,Object> context){this.task=task;this.source=source;this.market=market;this.shop=shop;this.chosen=chosen;this.originalFilename=originalFilename;this.context=context;}
         @Override public void invoke(Map<Integer,String> row,AnalysisContext ctx){process(row,ctx.readRowHolder().getRowIndex()+1);}
 
@@ -439,16 +438,6 @@ public class ImportService {
 
         void flush(){
             if(batch.isEmpty()&&skuBatch.isEmpty())return;
-            if(source.equals("ORDER_DETAIL")&&!snapshotReset){
-                for(var old:db.rows("select distinct biz_date from fact_order where shop_id=#{p.shop}",p("shop",shop)))dates.add(LocalDate.parse(old.get("bizDate").toString()));
-                db.exec("delete from fact_order_sku where shop_id=#{p.shop}",p("shop",shop));
-                db.exec("delete from fact_order where shop_id=#{p.shop}",p("shop",shop));
-                snapshotReset=true;
-            }
-            if(source.equals("AFFILIATE_ORDER")&&!snapshotReset){
-                db.exec("delete from fact_affiliate_order where shop_id=#{p.shop}",p("shop",shop));
-                snapshotReset=true;
-            }
             if(!batch.isEmpty()){
                 List<String> names=new ArrayList<>(batch.values().iterator().next().keySet());var params=new LinkedHashMap<String,Object>();var tuples=new ArrayList<String>();int index=0;
                 for(var row:batch.values()){

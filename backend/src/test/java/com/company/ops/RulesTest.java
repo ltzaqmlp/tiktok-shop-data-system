@@ -83,6 +83,34 @@ class RulesTest {
         assertEquals("admin100",AdminController.temporary());
     }
 
+    @Test void failedLoginCanBeFilteredByRecordedUsername(){
+        var db=mock(com.company.ops.common.Db.class);
+        when(db.rows(anyString(),anyMap())).thenReturn(java.util.List.of());
+        when(db.count(anyString(),anyMap())).thenReturn(0L);
+        var controller=new AdminController(db,mock(com.company.ops.auth.Identity.class),mock(org.springframework.security.crypto.password.PasswordEncoder.class),mock(org.springframework.transaction.PlatformTransactionManager.class));
+        var req=mock(jakarta.servlet.http.HttpServletRequest.class);
+        when(req.getRequestURI()).thenReturn("/api/v1/admin/login-logs");
+
+        controller.logs(Map.of("username","missing-user"),req);
+
+        verify(db).rows(contains("l.username ilike"),anyMap());
+    }
+
+    @Test void deletingSkuConfigAlsoDeletesItsProductMappings(){
+        var db=mock(com.company.ops.common.Db.class);
+        when(db.one(contains("from sku_config"),anyMap())).thenReturn(new java.util.LinkedHashMap<>(Map.of("shopId","7","sellerSku","SKU-1")));
+        when(db.exec(startsWith("delete from sku_config"),anyMap())).thenReturn(1);
+        var manager=mock(org.springframework.transaction.PlatformTransactionManager.class);
+        var status=mock(org.springframework.transaction.TransactionStatus.class);
+        when(manager.getTransaction(any())).thenReturn(status);
+        var controller=new AdminController(db,mock(com.company.ops.auth.Identity.class),mock(org.springframework.security.crypto.password.PasswordEncoder.class),manager);
+
+        controller.deleteSkuConfig(9,mock(jakarta.servlet.http.HttpServletRequest.class));
+
+        verify(db).exec(startsWith("delete from product_sku_mapping"),argThat(args->"7".equals(args.get("shop"))&&"SKU-1".equals(args.get("sku"))));
+        verify(manager).commit(status);
+    }
+
     @Test void usersCanHaveMultipleMarketPermissions(){
         var user=Map.<String,Object>of("marketCode","MY","marketCodes",java.util.List.of("MY","UK","US"),"roles",java.util.List.of());
         assertEquals(java.util.List.of("MY","UK","US"),com.company.ops.auth.Identity.marketCodes(user));

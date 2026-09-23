@@ -107,7 +107,7 @@ async function review(row: DailyMetricReport, accept: boolean) {
     await save(`/daily-reports/${row.id}/${accept ? 'approve' : 'reject'}`, data); ElMessage.success(accept ? '审核已通过' : '日报已退回'); await load()
   } catch (e) { if (e instanceof Error && e.message !== 'cancel') ElMessage.error(e.message) }
 }
-onMounted(async () => { document.addEventListener('input', syncTextareaRows); try { context.value = await api<DailyContext>('/daily-reports/context'); contentMarket.value = ownMarket.value; const market = ownMarket.value; tab.value = context.value.role === 'ADS_BUYER' ? 'ads' : context.value.role === 'DIRECTOR' ? 'content-submit' : simpleRole.value ? 'simple-submit' : `market-${['DE', 'FR'].includes(market) ? 'EU' : market}`; await load() } catch (e) { error.value = e as Error } })
+onMounted(async () => { document.addEventListener('input', syncTextareaRows); try { context.value = await api<DailyContext>('/daily-reports/context'); contentMarket.value = ownMarket.value; const market = ownMarket.value; tab.value = viewer.value ? 'summary' : context.value.role === 'ADS_BUYER' ? 'ads' : context.value.role === 'DIRECTOR' ? 'content-submit' : simpleRole.value ? 'simple-submit' : `market-${['DE', 'FR'].includes(market) ? 'EU' : market}`; await load() } catch (e) { error.value = e as Error } })
 onUnmounted(() => document.removeEventListener('input', syncTextareaRows))
 watch([selectedDate, tab], () => void load())
 </script>

@@ -109,8 +109,8 @@ public class ImportService {
             finalMessage=message;
         }
         if(source.equals("ORDER_DETAIL")&&!"FAILED".equals(finalStatus)){
-            for(var unmapped:db.rows("select o.seller_sku,sum(greatest(o.quantity-least(o.return_quantity,o.quantity),0)) effective_qty from fact_order_sku o left join sku_config c on c.shop_id=o.shop_id and c.seller_sku=o.seller_sku and c.enabled where o.shop_id=#{p.shop} and c.id is null and o.normalized_status in ('PAID','SHIPPED','COMPLETED') group by o.seller_sku having sum(greatest(o.quantity-least(o.return_quantity,o.quantity),0))>0 order by o.seller_sku",p("shop",shop))){
-                String seller=Objects.toString(unmapped.get("sellerSku"),"");listener.errors.add(p("row",0,"field","Seller SKU","raw",seller,"code","SKU_UNMAPPED","message",(seller.isBlank()?"Seller SKU为空":"Seller SKU未配置")+"，有效销量 "+unmapped.get("effectiveQty")+"，请在 SKU 配置中补充映射"));
+            for(var unmapped:db.rows("select o.seller_sku,sum(greatest(o.quantity-least(o.return_quantity,o.quantity),0)) effective_qty from fact_order_sku o left join sku_config c on c.shop_id=o.shop_id and c.seller_sku=o.seller_sku and c.enabled where o.shop_id=#{p.shop} and btrim(o.seller_sku)<>'' and c.id is null and o.normalized_status in ('PAID','SHIPPED','COMPLETED') group by o.seller_sku having sum(greatest(o.quantity-least(o.return_quantity,o.quantity),0))>0 order by o.seller_sku",p("shop",shop))){
+                String seller=Objects.toString(unmapped.get("sellerSku"),"");listener.errors.add(p("row",0,"field","Seller SKU","raw",seller,"code","SKU_UNMAPPED","message","Seller SKU未配置，有效销量 "+unmapped.get("effectiveQty")+"，请在 SKU 配置中补充映射"));
             }
         }
         for(var error:listener.errors){

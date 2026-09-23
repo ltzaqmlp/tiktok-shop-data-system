@@ -25,16 +25,21 @@ public class ProductAdMetricsService {
                 and (cast(#{p.shop} as bigint) is null or shop_id=#{p.shop})
               group by product_id
             ), mappings as (
-              select product_sku_mapping.product_id,
-                     string_agg(product_sku_mapping.display_name || '(' || product_sku_mapping.seller_sku || ')', ' / ' order by product_sku_mapping.sort_order, product_sku_mapping.id) display_name,
-                     min(product_sku_mapping.sort_order) sort_order,
-                     min(product_sku_mapping.id) mapping_id
-              from product_sku_mapping
-              join dim_shop s on s.id=product_sku_mapping.shop_id
-              where s.market_code=#{p.market}
-                and (cast(#{p.shop} as bigint) is null or product_sku_mapping.shop_id=#{p.shop})
-                and product_sku_mapping.enabled
-              group by product_id
+              select k.product_id,
+                     string_agg(k.display_name || '(' || k.seller_sku || ')', ' / ' order by k.sort_order, k.id) display_name,
+                     min(k.sort_order) sort_order,
+                     min(k.id) mapping_id
+              from (
+                select distinct on (m.product_id,m.seller_sku)
+                       m.id,m.product_id,m.display_name,m.seller_sku,m.sort_order
+                from product_sku_mapping m
+                join dim_shop s on s.id=m.shop_id
+                where s.market_code=#{p.market}
+                  and (cast(#{p.shop} as bigint) is null or m.shop_id=#{p.shop})
+                  and m.enabled
+                order by m.product_id,m.seller_sku,m.sort_order,m.id
+              ) k
+              group by k.product_id
             )
             select m.product_id,
                    m.display_name,

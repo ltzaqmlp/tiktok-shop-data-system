@@ -4,7 +4,7 @@ import com.company.ops.auth.Identity;
 import com.company.ops.common.*;
 import static com.company.ops.common.Db.p;
 import jakarta.servlet.http.HttpServletRequest;
-import java.time.Instant;
+import java.time.*;
 import java.util.*;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.bind.annotation.*;
@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/v1/shooting-tickets")
 public class ShootingTicketController {
+    private static final ZoneId BUSINESS_ZONE=ZoneId.of("Asia/Shanghai");
     private static final List<String> MARKETS=List.of("MY","UK","US","DE","FR","EU");
     private static final List<Map<String,Object>> TASK_TYPES=List.of(
         p("code","SCRIPT_SHOOT","name","脚本拍摄"),
@@ -24,7 +25,17 @@ public class ShootingTicketController {
     @GetMapping("/context")
     public Object context(HttpServletRequest req){
         var actor=Identity.actor(req);
-        return Api.ok(req,p("role",role(actor),"markets",db.rows("select market_code,market_name,currency_code from dim_market where enabled and market_code in ('MY','UK','US','DE','FR') order by case market_code when 'MY' then 1 when 'UK' then 2 when 'US' then 3 when 'DE' then 4 else 5 end").stream().filter(m->Identity.hasMarket(actor,m.get("marketCode").toString())).toList(),"taskTypes",TASK_TYPES));
+        return Api.ok(req,p("role",role(actor),"markets",db.rows("select market_code,market_name,currency_code from dim_market where enabled and market_code in ('MY','UK','US','DE','FR') order by case market_code when 'MY' then 1 when 'UK' then 2 when 'US' then 3 when 'DE' then 4 else 5 end").stream().filter(m->Identity.hasMarket(actor,m.get("marketCode").toString())).toList(),"taskTypes",TASK_TYPES,"shooters",shooters()));
+    }
+
+    private List<Map<String,Object>> shooters(){return db.rows("select distinct u.id,u.display_name from sys_user u join sys_user_role ur on ur.user_id=u.id join sys_role r on r.id=ur.role_id where r.role_code='SHOOTER' and r.enabled and u.status='ACTIVE' and u.deleted_at is null order by u.display_name,u.id");}
+
+    @GetMapping("/schedule")
+    public Object schedule(@RequestParam String date,HttpServletRequest req){
+        try{
+            LocalDate day=LocalDate.parse(date);Instant start=day.atStartOfDay(BUSINESS_ZONE).toInstant(),end=day.plusDays(1).atStartOfDay(BUSINESS_ZONE).toInstant();
+            return Api.ok(req,db.rows("select t.shooter_id,coalesce(u.display_name,'未指定') shooter_name,t.planned_start,t.planned_end,t.planned_valid_shot_count from shooting_ticket t left join sys_user u on u.id=t.shooter_id where t.status='PENDING_SHOOT' and ((t.planned_start is not null and t.planned_start < cast(#{p.end} as timestamptz) and t.planned_end > cast(#{p.start} as timestamptz)) or (t.planned_start is null and t.planned_end >= cast(#{p.start} as timestamptz) and t.planned_end < cast(#{p.end} as timestamptz))) order by t.planned_start nulls first,t.planned_end,t.id",p("start",start.toString(),"end",end.toString())));
+        }catch(DateTimeException e){throw new Api.Problem(400,"VALIDATION_ERROR","日期格式无效");}
     }
 
     @GetMapping
@@ -42,8 +53,11 @@ public class ShootingTicketController {
         String type=taskType(Api.text(body,"taskType",32,true));
         String requirement=formattedText(body,"shotRequirement",4000,true);
         long planned=number(body,"plannedValidShotCount",true);
-        String deadline=deadline(Api.text(body,"deadline",64,true));
-        long id=Long.parseLong(tx.execute(s->db.insert("insert into shooting_ticket(created_by,market_code,task_type,shot_requirement,planned_valid_shot_count,deadline) values(#{p.user},#{p.market},#{p.type},#{p.requirement},#{p.planned},cast(#{p.deadline} as timestamptz))",p("user",Identity.uid(req),"market",market,"type",type,"requirement",requirement,"planned",planned,"deadline",deadline))));
+        String start=plannedTime(Api.text(body,"plannedStart",64,true)),end=plannedTime(Api.text(body,"plannedEnd",64,true));
+        Api.require(Instant.parse(start).isBefore(Instant.parse(end)),"结束时间必须晚于开始时间");
+        long shooter=Api.idValue(body.get("shooterId"));
+        Api.require(db.count("select count(*) from sys_user u join sys_user_role ur on ur.user_id=u.id join sys_role r on r.id=ur.role_id where u.id=#{p.id} and u.status='ACTIVE' and u.deleted_at is null and r.role_code='SHOOTER' and r.enabled",p("id",shooter))>0,"拍摄人无效或已停用");
+        long id=Long.parseLong(tx.execute(s->db.insert("insert into shooting_ticket(created_by,market_code,task_type,shot_requirement,planned_valid_shot_count,planned_start,planned_end,shooter_id) values(#{p.user},#{p.market},#{p.type},#{p.requirement},#{p.planned},cast(#{p.start} as timestamptz),cast(#{p.end} as timestamptz),#{p.shooter})",p("user",Identity.uid(req),"market",market,"type",type,"requirement",requirement,"planned",planned,"start",start,"end",end,"shooter",shooter))));
         var result=db.one(select()+" where t.id=#{p.id}",p("id",id));
         req.setAttribute("auditAction","SHOOTING_TICKET_CREATE");req.setAttribute("targetId",id);req.setAttribute("auditAfter",result);return Api.ok(req,result);
     }
@@ -51,7 +65,7 @@ public class ShootingTicketController {
     @PostMapping("/{id}/complete")
     public Object complete(@PathVariable long id,@RequestBody Map<String,Object> body,HttpServletRequest req){
         requireRole(Identity.actor(req),"SHOOTER");String sku=formattedText(body,"sku",500,true);long actual=number(body,"actualValidShotCount",true);String notes=formattedText(body,"materialNotes",4000,false);
-        var result=tx.execute(s->{var old=db.one("select id,status from shooting_ticket where id=#{p.id} for update",p("id",id));Api.require(!old.isEmpty(),"拍摄工单不存在");Api.require("PENDING_SHOOT".equals(old.get("status")),"当前工单不在待拍摄状态");db.exec("update shooting_ticket set shooter_id=#{p.user},sku=#{p.sku},actual_valid_shot_count=#{p.actual},material_notes=#{p.notes},actual_delivered_at=now(),status='PENDING_EDITOR_REVIEW',rejection_stage=null,rejection_reason='',updated_at=now() where id=#{p.id}",p("user",Identity.uid(req),"sku",sku,"actual",actual,"notes",notes,"id",id));return db.one(select()+" where t.id=#{p.id}",p("id",id));});
+        var result=tx.execute(s->{var old=db.one("select id,status,shooter_id from shooting_ticket where id=#{p.id} for update",p("id",id));Api.require(!old.isEmpty(),"拍摄工单不存在");Api.require("PENDING_SHOOT".equals(old.get("status")),"当前工单不在待拍摄状态");if(old.get("shooterId")!=null&&!Identity.role(Identity.actor(req),"ADMIN")&&!old.get("shooterId").toString().equals(Long.toString(Identity.uid(req))))throw forbidden();db.exec("update shooting_ticket set shooter_id=coalesce(shooter_id,#{p.user}),sku=#{p.sku},actual_valid_shot_count=#{p.actual},material_notes=#{p.notes},actual_delivered_at=now(),status='PENDING_EDITOR_REVIEW',rejection_stage=null,rejection_reason='',updated_at=now() where id=#{p.id}",p("user",Identity.uid(req),"sku",sku,"actual",actual,"notes",notes,"id",id));return db.one(select()+" where t.id=#{p.id}",p("id",id));});
         req.setAttribute("auditAction","SHOOTING_TICKET_COMPLETE");req.setAttribute("targetId",id);req.setAttribute("auditAfter",result);return Api.ok(req,result);
     }
 
@@ -72,7 +86,7 @@ public class ShootingTicketController {
     static String market(String value){String code=Objects.toString(value,"").toUpperCase(Locale.ROOT);Api.require(MARKETS.contains(code),"地区无效");return code;}
     static String allowedMarket(Map<String,Object> actor,String value){String code=market(value);Api.require("EU".equals(code)?Identity.hasMarket(actor,"FR")||Identity.hasMarket(actor,"DE"):Identity.hasMarket(actor,code),"没有该市场的权限");return code;}
     static String taskType(String value){Api.require(TASK_TYPES.stream().anyMatch(t->t.get("code").equals(value)),"任务类型无效");return value;}
-    static String deadline(String value){try{Instant.parse(value);return value;}catch(Exception e){throw new Api.Problem(400,"VALIDATION_ERROR","截止时间格式无效");}}
+    static String plannedTime(String value){try{Instant.parse(value);return value;}catch(Exception e){throw new Api.Problem(400,"VALIDATION_ERROR","拍摄时间格式无效");}}
     static String formattedText(Map<String,Object> body,String key,int max,boolean required){String value=Objects.toString(body.get(key),"");Api.require(!required||!value.trim().isEmpty(),key+" 不能为空");Api.require(value.length()<=max,key+" 超过长度限制");return value;}
     static long number(Map<String,Object> body,String key,boolean required){Object raw=body.get(key);if(raw==null||raw.toString().isBlank()){Api.require(!required,key+" 不能为空");return 0;}try{long result=Long.parseLong(raw.toString());Api.require(result>=0,key+" 不能小于 0");return result;}catch(NumberFormatException e){throw new Api.Problem(400,"VALIDATION_ERROR",key+" 必须是非负整数");}}
     private static Api.Problem forbidden(){return new Api.Problem(403,"AUTH_FORBIDDEN","没有此操作的权限");}

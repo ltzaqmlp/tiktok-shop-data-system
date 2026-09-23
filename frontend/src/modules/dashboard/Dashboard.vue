@@ -18,33 +18,29 @@ const single = computed(() => applied.value.dateFrom === applied.value.dateTo), 
 const currency = computed(() => overview.value?.currencyCode ?? markets.value.find(m => m.marketCode === marketCode.value)?.currencyCode ?? 'MYR')
 const currencyDisplay = computed(() => currency.value === 'MYR' ? 'RM' : currency.value)
 const metricIcons: Record<string, unknown> = { gmv: ShoppingBag, orderCount: Tickets, soldQty: Goods, aov: Coin, refundAmount: Refresh }
-const kpis = computed(() => [{ key: 'gmv', label: 'GMV', hint: 'Shop Analytics 每日 GMV', money: true }, { key: 'orderCount', label: '订单数', hint: 'Shop Analytics 每日订单数' }, { key: 'soldQty', label: '商品成交件数', hint: 'Shop Analytics 每日商品成交件数' }, { key: 'aov', label: '平均订单金额', hint: 'AOV = 总 GMV ÷ 总订单数', money: true }, { key: 'refundAmount', label: '退款金额', hint: 'Shop Analytics 每日退款金额', money: true, direction: 'lower' }])
+const kpis = computed(() => [{ key: 'gmv', label: 'GMV', hint: '有效成交订单金额，每个订单 ID 只计一次', money: true }, { key: 'orderCount', label: '订单数', hint: '有效 SKU 订单数：Seller SKU 非空且未取消' }, { key: 'soldQty', label: '商品成交件数', hint: '有效 SKU 数量扣除退货数量' }, { key: 'aov', label: '平均订单金额', hint: '有效 GMV ÷ 有效 SKU 订单数', money: true }, { key: 'refundAmount', label: '退款金额', hint: '有效订单退款金额，按订单业务日期归属', money: true, direction: 'lower' }])
 const getMetric = (key: string) => overview.value?.[key as keyof Overview] as Metric | undefined
 const pct = (v: number | null | undefined) => v == null ? '—' : `${number(v * 100, 1)}%`
-const productNotice = computed(() => { if (!loaded.value || !funnel.value) return ''; if (funnel.value.source === 'SHOP_ANALYTICS_PARTIAL') return '曝光、点击及去重指标使用 Shop Analytics 店铺口径；加购指标继续使用商品报表，商品报表缺失时显示为横线。'; if (funnel.value.source === 'NONE') return '当前范围没有 Shop Analytics 数据，商品漏斗无法计算。'; return '' })
-const funnelSourceLabel = computed(() => ({ PRODUCT_PERIOD: '商品区间报表', PRODUCT_DAILY: '商品单日数据', SHOP_ANALYTICS_PARTIAL: 'Shop Analytics（流量口径）', NONE: '无可用数据' }[funnel.value?.source ?? 'NONE']))
-const funnelStatus = computed(() => ({ PRODUCT_PERIOD: '完整商品数据', PRODUCT_DAILY: '完整商品数据', SHOP_ANALYTICS_PARTIAL: '部分数据', NONE: '无可用数据' }[funnel.value?.source ?? 'NONE']))
-const funnelStatusType = computed(() => funnel.value?.source === 'NONE' ? 'warning' : funnel.value?.source === 'SHOP_ANALYTICS_PARTIAL' ? 'info' : 'success')
-const stages = computed(() => [{ label: '商品曝光次数', value: funnel.value?.impressions, rateLabel: '', rate: null, aux: '去重曝光', extra: funnel.value?.uniqueImpressions }, { label: '商品点击量', value: funnel.value?.clicks, rateLabel: 'CTR', rate: funnel.value?.ctr, aux: '去重点击', extra: funnel.value?.uniqueClicks }, { label: '加购次数', value: funnel.value?.addToCartCount, rateLabel: '加购率', rate: funnel.value?.addToCartRate, aux: '加购用户', extra: funnel.value?.addedUserCount }, { label: 'SKU 订单数', value: funnel.value?.skuOrderCount, rateLabel: 'CTOR', rate: funnel.value?.ctor, aux: '下单客户', extra: funnel.value?.estimatedCustomerCount }])
+const productNotice = computed(() => { if (!loaded.value || !funnel.value) return ''; if (funnel.value.source === 'SHOP_ANALYTICS_PARTIAL') return '曝光、点击与加购为平台流量口径；SKU 订单数及 CTOR 的成交分子仅计有效订单。'; if (funnel.value.source === 'NONE') return '当前范围没有平台流量数据；有效成交仍按订单明细计算。'; return '' })
+const stages = computed(() => [{ label: '商品曝光次数', value: funnel.value?.impressions, rateLabel: '', rate: null, aux: '去重曝光', extra: funnel.value?.uniqueImpressions }, { label: '商品点击量', value: funnel.value?.clicks, rateLabel: 'CTR', rate: funnel.value?.ctr, aux: '去重点击', extra: funnel.value?.uniqueClicks }, { label: '加购次数', value: funnel.value?.addToCartCount, rateLabel: '加购率', rate: funnel.value?.addToCartRate, aux: '加购用户', extra: funnel.value?.addedUserCount }, { label: '有效 SKU 订单数', value: funnel.value?.skuOrderCount, rateLabel: 'CTOR', rate: funnel.value?.ctor, aux: '下单客户', extra: funnel.value?.estimatedCustomerCount }])
 const adMetricConfig = [{ key: 'spend', trendKey: 'spend', metricKey: 'spend', label: '广告花费', chartLabel: '广告花费', direction: 'neutral', money: true }, { key: 'totalRevenue', trendKey: 'totalRevenue', metricKey: 'attributedRevenue', label: '总收入', chartLabel: '总收入', direction: 'higher', money: true }, { key: 'roi', trendKey: 'roi', metricKey: 'roi', label: 'ROI', chartLabel: '投入产出比', direction: 'higher', money: false }, { key: 'cpo', trendKey: 'cpo', metricKey: 'cpo', label: 'CPO', chartLabel: '每单成本', direction: 'lower', money: true }] as const
 type AdMetricKey = typeof adMetricConfig[number]['key']
-const selectedAdMetricKeys = ref<AdMetricKey[]>(['spend', 'totalRevenue'])
+const selectedAdMetricKeys = ref<AdMetricKey[]>(['spend'])
 const adMetrics = computed(() => adMetricConfig.map(metric => ({ ...metric, metric: ads.value?.[metric.metricKey] })))
-const adCurrencyDisplay = 'USD'
-const selectedAdMetrics = computed(() => adMetricConfig.filter(metric => selectedAdMetricKeys.value.includes(metric.key)).map(metric => ({ key: metric.trendKey, label: `${metric.chartLabel}${metric.money ? `（${adCurrencyDisplay}）` : ''}` })))
+const adCurrencyDisplay = computed(() => ads.value?.currencyCode ?? 'USD')
+const selectedAdMetrics = computed(() => adMetricConfig.filter(metric => selectedAdMetricKeys.value.includes(metric.key)).map(metric => ({ key: metric.trendKey, label: `${metric.chartLabel}${metric.money ? `（${adCurrencyDisplay.value}）` : ''}` })))
 const adChartRows = computed(() => ads.value?.trend?.map(row => ({ ...row, totalRevenue: row.attributedRevenue })) ?? [])
 const adChartTitle = computed(() => selectedAdMetrics.value.map(metric => metric.label).join('与'))
 function toggleAdMetric(key: AdMetricKey) { const index = selectedAdMetricKeys.value.indexOf(key); if (index >= 0) { selectedAdMetricKeys.value = selectedAdMetricKeys.value.filter(item => item !== key); return } if (selectedAdMetricKeys.value.length < 2) { selectedAdMetricKeys.value = [...selectedAdMetricKeys.value, key]; return } ElMessage.info('图表最多同时展示两个指标，请先取消一个已选指标') }
 const currentAfterMetrics = computed(() => [{ label: '退款金额', metric: after.value?.refundAmount, money: true }, { label: '取消订单数', metric: after.value?.cancelOrderCount }])
-const cumulativeAfterMetrics = computed(() => [{ label: '已退款商品件数', metric: after.value?.refundedQty }, { label: '退款客户数', metric: after.value?.refundCustomerCount }])
-const afterSource = computed(() => after.value?.productDataRange ? `商品售后累计数据：${after.value.productDataRange.dateFrom} 至今` : '商品售后累计数据暂无可用报表')
-const afterUpdatedAt = computed(() => after.value?.productDataRange?.dateTo)
+const cumulativeAfterMetrics = computed(() => [{ label: '已退款商品件数', metric: after.value?.refundedQty }, { label: '退款订单数', metric: after.value?.refundOrderCount }])
 const skuSalesTotal = computed(() => skuSales.value.reduce((sum, s) => sum + s.sales, 0))
-const skuSalesOption = computed(() => ({ tooltip: { trigger: 'item', confine: true }, color: ['#5F8FBE', '#7EA6C9', '#AAB7C5', '#C7D3DF', '#D9E2EB', '#E14B50'], series: [{ type: 'pie', radius: ['66%', '84%'], center: ['50%', '50%'], label: { show: false }, itemStyle: { borderWidth: 2, borderColor: '#fff' }, data: skuSales.value.map(s => ({ name: s.displayName, value: s.sales })) }] }))
+const skuSalesOption = computed(() => ({ tooltip: { show: skuSalesTotal.value > 0, trigger: 'item', confine: true }, color: ['#5F8FBE', '#7EA6C9', '#AAB7C5', '#C7D3DF', '#D9E2EB', '#E14B50'], series: [{ type: 'pie', radius: ['66%', '84%'], center: ['50%', '50%'], label: { show: false }, itemStyle: { borderWidth: 2, borderColor: '#fff' }, data: skuSalesTotal.value ? skuSales.value.map(s => ({ name: s.displayName, value: s.sales })) : [{ name: '暂无销量', value: 1, itemStyle: { color: '#E8EDF2' } }] }] }))
 const sourceSales = computed(() => [{ label: '自营销量', value: overview.value?.selfSales?.value ?? null }, { label: '达人销量', value: overview.value?.affiliateSales?.value ?? null }])
+const sourceSalesKnown = computed(() => overview.value?.orderCount?.value != null)
 const sourceSalesTotal = computed(() => sourceSales.value.reduce((sum, item) => sum + Math.max(Number(item.value ?? 0), 0), 0))
-const sourceSalesOption = computed(() => ({ tooltip: { trigger: 'item', confine: true }, color: ['#5F8FBE', '#E14B50'], series: [{ type: 'pie', radius: ['64%', '82%'], center: ['50%', '50%'], label: { show: false }, itemStyle: { borderWidth: 2, borderColor: '#fff' }, data: sourceSales.value.map(item => ({ name: item.label, value: Math.max(Number(item.value ?? 0), 0) })) }] }))
-const skuAdRows = computed(() => [...skuAdMetrics.value].sort((a, b) => b.roi - a.roi))
+const sourceSalesOption = computed(() => ({ tooltip: { show: sourceSalesTotal.value > 0, trigger: 'item', confine: true }, color: ['#5F8FBE', '#E14B50'], series: [{ type: 'pie', radius: ['64%', '82%'], center: ['50%', '50%'], label: { show: false }, itemStyle: { borderWidth: 2, borderColor: '#fff' }, data: sourceSalesTotal.value ? sourceSales.value.map(item => ({ name: item.label, value: Math.max(Number(item.value ?? 0), 0) })) : [{ name: '暂无销量', value: 1, itemStyle: { color: '#E8EDF2' } }] }] }))
+const skuAdRows = computed(() => [...skuAdMetrics.value].sort((a, b) => b.adSpend - a.adSpend))
 let request = 0
 async function load() {
   const validation = dateRangeError(dates.value?.[0], dates.value?.[1]); if (validation) { ElMessage.warning(validation); return }
@@ -55,6 +51,7 @@ async function load() {
     const values = await Promise.all([api<Overview>('/dashboard/overview' + suffix), api<Trend[]>('/dashboard/sales-trend' + suffix), api<Funnel>('/dashboard/product-funnel' + suffix), api<Ads>('/dashboard/ads' + suffix), api<SkuSales[]>('/dashboard/sku-sales' + suffix), api<AfterSales>('/dashboard/after-sales' + suffix)])
     if (current !== request) return
     ;[overview.value, sales.value, funnel.value, ads.value, skuSales.value, after.value] = values
+    selectedAdMetricKeys.value = ads.value?.attributedRevenue?.value == null ? ['spend'] : ['spend', 'totalRevenue']
     try { skuAdMetrics.value = await api<SkuAdMetric[]>('/dashboard/sku-ad-metrics' + suffix) } catch { skuAdMetrics.value = [] }
     applied.value = filters; loaded.value = true
   } catch (e) { if (current === request) error.value = e as Error } finally { if (current === request) busy.value = false }
@@ -118,20 +115,19 @@ onMounted(async () => { void load(); try { markets.value = await api<Market[]>('
                     <InfoFilled />
                   </el-icon></button></el-tooltip></div>
           </div>
-          <div v-if="sourceSalesTotal" class="status-layout source-layout">
+          <div v-if="sourceSalesKnown" class="status-layout source-layout">
             <div class="donut">
               <Chart :option="sourceSalesOption" :height="126" label="自营与达人销量分布环形图" />
               <div class="donut-center"><strong class="number">{{ number(sourceSalesTotal) }}</strong><small
-                  class="muted">来源合计</small></div>
+                  class="muted">{{ sourceSalesTotal ? '来源合计' : '当前暂无销量' }}</small></div>
             </div>
             <div class="status-list">
               <div v-for="(item, i) in sourceSales" :key="item.label"><span class="status-dot"
                   :class="`dot-${i}`" /><span>{{ item.label }}</span><small class="number muted">{{ pct(sourceSalesTotal
                     ? Number(item.value ?? 0) / sourceSalesTotal : null) }}</small><b class="number">({{
-                    number(item.value) }})</b></div>
+                    number(item.value ?? 0) }})</b></div>
             </div>
-          </div>
-          <div v-else class="no-spark">{{ loaded ? '暂无销量数据' : '等待数据加载' }}</div>
+          </div><div v-else class="no-spark">订单明细不足，无法计算销量分布</div>
         </article>
       </section>
       <section class="analysis-grid">
@@ -162,11 +158,11 @@ onMounted(async () => { void load(); try { markets.value = await api<Market[]>('
         </article>
         <article class="surface panel ads-panel">
           <div class="panel-head">
-            <h2>GMV Max 广告效果 <small class="muted">广告投放数据</small></h2><small>币种: {{ adCurrencyDisplay
+            <h2>GMV Max 广告效果 <small class="muted">广告系列报表口径，不按 Seller SKU 筛选</small></h2><small>币种: {{ adCurrencyDisplay
             }}</small>
           </div>
           <div class="ad-metrics">
-            <button v-for="m in adMetrics" :key="m.key" class="ad-metric" :class="{ selected: selectedAdMetricKeys.includes(m.key) }" type="button" :aria-pressed="selectedAdMetricKeys.includes(m.key)" @click="toggleAdMetric(m.key)"><small class="muted">{{ m.label }}</small><strong
+            <button v-for="m in adMetrics" :key="m.key" class="ad-metric" :class="{ selected: selectedAdMetricKeys.includes(m.key) }" type="button" :disabled="m.metric?.value == null" :aria-pressed="selectedAdMetricKeys.includes(m.key)" @click="toggleAdMetric(m.key)"><small class="muted">{{ m.label }}</small><strong
                 class="number"><small v-if="m.money">{{ adCurrencyDisplay }} </small>{{ number(m.metric?.value, 2) }}</strong>
               <MetricChange :value="m.metric?.comparePrevious" :status="m.metric?.comparePreviousStatus"
                 :direction="m.direction" />
@@ -179,28 +175,28 @@ onMounted(async () => { void load(); try { markets.value = await api<Market[]>('
           <div v-else class="empty-inline">此范围暂无广告趋势</div>
         </article>
       </section>
-      <section class="bottom-grid">
+      <section class="bottom-grid" :class="{ 'without-visitors': applied.marketCode === 'UK' }">
         <article class="surface panel">
           <div class="panel-head">
             <h2>SKU销量分布</h2>
           </div>
-          <div v-if="skuSalesTotal" class="status-layout">
+          <div class="status-layout">
             <div class="donut">
               <Chart :option="skuSalesOption" :height="166" label="SKU销量分布环形图" />
               <div class="donut-center"><strong class="number">{{ number(skuSalesTotal) }}</strong><small
-                  class="muted">有效销量</small></div>
+                  class="muted">{{ skuSalesTotal ? '有效销量' : '当前暂无销量' }}</small></div>
             </div>
-            <div class="status-list">
+            <div v-if="skuSalesTotal" class="status-list">
               <div v-for="(s, i) in skuSales" :key="s.sellerSku"><span class="status-dot"
                   :class="`dot-${i % 6}`" /><span>{{
                     s.displayName }}</span><small class="number muted">{{ pct(s.ratio) }}</small><b class="number">({{
                     number(s.sales) }})</b></div>
-            </div>
-          </div><el-empty v-else description="暂无已配置 SKU 销量数据" :image-size="52" />
+            </div><div v-else class="empty-inline">当前范围暂无有效 SKU 销量</div>
+          </div>
         </article>
         <article class="surface panel after-panel">
           <div class="panel-head">
-            <h2>售后情况 <small class="muted">基于订单数据统计</small></h2>
+            <h2>售后情况 <small class="muted">仅统计 Seller SKU 非空的订单，按订单业务日期统计</small></h2>
           </div>
           <div class="after-grid">
             <div v-for="m in [...currentAfterMetrics, ...cumulativeAfterMetrics]" :key="m.label"><span
@@ -215,13 +211,13 @@ onMounted(async () => { void load(); try { markets.value = await api<Market[]>('
             </div>
           </div>
         </article>
-        <article class="surface panel">
+        <article v-if="applied.marketCode !== 'UK'" class="surface panel">
           <div class="panel-head">
             <h2>商品访客与转化</h2>
           </div>
           <div class="store-grid">
             <div
-              v-for="(m, i) in [{ label: '商品访客数', metric: overview?.visitorCount }, { label: '店铺转化率', metric: overview?.conversionRate }]"
+              v-for="(m, i) in [{ label: '平台商品访客数', metric: overview?.visitorCount }, { label: '有效成交转化率', metric: overview?.conversionRate }]"
               :key="m.label"><span class="store-icon"><el-icon>
                   <View v-if="!i" />
                   <Goods v-else />
@@ -240,13 +236,13 @@ onMounted(async () => { void load(); try { markets.value = await api<Market[]>('
       </section>
       <section class="surface panel sku-ad-panel">
         <div class="panel-head">
-          <h2>各 SKU 投流指标</h2>
+          <h2>各 SKU 投流指标 <small class="muted">商品投流报表口径</small></h2>
         </div>
         <el-table v-if="skuAdRows.length" :data="skuAdRows" size="small" class="sku-ad-table">
           <el-table-column prop="displayName" label="SKU配置" min-width="320" show-overflow-tooltip />
           <el-table-column label="广告花费" min-width="145"><template #default="{ row }"><span class="number">USD {{ number(row.adSpend, 2) }}</span></template></el-table-column>
           <el-table-column label="广告收入" min-width="145"><template #default="{ row }"><span class="number">USD {{ number(row.adRevenue, 2) }}</span></template></el-table-column>
-          <el-table-column label="ROI" min-width="100"><template #default="{ row }"><span class="number" :class="{ 'roi-low': row.roi < 1 }">{{ number(row.roi, 2) }}</span></template></el-table-column>
+          <el-table-column label="ROI" min-width="100"><template #default="{ row }"><span class="number" :class="{ 'roi-low': row.roi != null && row.roi < 1 }">{{ number(row.roi, 2) }}</span></template></el-table-column>
           <el-table-column label="CPO" min-width="120"><template #default="{ row }"><span class="number">USD {{ number(row.cpo, 2) }}</span></template></el-table-column>
           <!-- 订单数暂时隐藏，后续取消注释即可恢复展示。
           <el-table-column prop="orders" label="订单数" min-width="100" />
@@ -564,6 +560,10 @@ onMounted(async () => { void load(); try { markets.value = await api<Market[]>('
   gap: 16px
 }
 
+.bottom-grid.without-visitors {
+  grid-template-columns: 1.15fr .85fr
+}
+
 .sku-ad-panel {
   margin-top: 16px;
   overflow: hidden
@@ -800,8 +800,16 @@ onMounted(async () => { void load(); try { markets.value = await api<Market[]>('
     grid-template-columns: 1fr 1fr
   }
 
+  .bottom-grid.without-visitors {
+    grid-template-columns: 1fr 1fr
+  }
+
   .bottom-grid>article:last-child {
     grid-column: 1/-1
+  }
+
+  .bottom-grid.without-visitors>article:last-child {
+    grid-column: auto
   }
 }
 
@@ -857,6 +865,10 @@ onMounted(async () => { void load(); try { markets.value = await api<Market[]>('
   .bottom-grid {
     grid-template-columns: 1fr;
     gap: 12px
+  }
+
+  .bottom-grid.without-visitors {
+    grid-template-columns: 1fr
   }
 
   .sales-panel,

@@ -39,6 +39,14 @@ public class DashboardService {
     public static BigDecimal divide(Object top,Object bottom){
         if(top==null||bottom==null)return null;BigDecimal b=decimal(bottom);return b.signum()==0?null:decimal(top).divide(b,8,RoundingMode.HALF_UP);
     }
+    private static BigDecimal perOrder(Object value,Object orders){
+        if(value==null||orders==null)return null;
+        return decimal(orders).signum()==0?BigDecimal.ZERO:divide(value,orders);
+    }
+    private static BigDecimal adRoi(Object revenue,Object spend){
+        if(revenue==null||spend==null)return null;
+        return decimal(revenue).signum()==0&&decimal(spend).signum()==0?BigDecimal.ZERO:divide(revenue,spend);
+    }
     public static BigDecimal change(Object now,Object previous){
         if(now==null||previous==null)return null;BigDecimal baseline=decimal(previous);return baseline.signum()==0?null:decimal(now).subtract(baseline).divide(baseline.abs(),8,RoundingMode.HALF_UP);
     }
@@ -79,50 +87,74 @@ public class DashboardService {
         }
     }
 
-    /** Shop Analytics is the authoritative daily source for dashboard KPI values. */
-    private Map<String,Object> shopSums(Scope scope){
-        var row=db.one("""
-            select
-              case when count(*)=0 then null else sum(gmv) end gmv,
-              case when count(*)=0 then null else sum(order_count) end order_count,
-              case when count(*)=0 then null else sum(sold_qty) end sold_qty,
-              case when count(*)=0 or count(*) filter(where sku_order_count is null)>0 then null else sum(sku_order_count) end sku_order_count,
-              case when count(*)=0 or count(*) filter(where refund_amount is null)>0 then null else sum(refund_amount) end refund_amount,
-              case when count(*)=0 or count(*) filter(where visitor_count is null)>0 then null else sum(visitor_count) end visitor_count,
-              case when count(*)=0 or count(*) filter(where visitor_count is null or conversion_rate_src is null)>0 then null else sum(visitor_count*conversion_rate_src)/nullif(sum(visitor_count),0) end conversion_rate
-            from fact_shop_daily"""+WHERE,scope.params());
-        row.put("aov",divide(row.get("gmv"),row.get("orderCount")));
-        return row;
+    private static BigDecimal sum(List<Map<String,Object>> rows,String key){
+        if(rows.isEmpty()||rows.stream().anyMatch(row->row.get(key)==null))return null;
+        return rows.stream().map(row->decimal(row.get(key))).reduce(BigDecimal.ZERO,BigDecimal::add);
+    }
+    private static long metricDays(List<Map<String,Object>> rows,String key){
+        return rows.stream().filter(row->key.equals("conversionRate")?row.get("orderCount")!=null&&row.get("visitorCount")!=null:row.get(key)!=null).count();
+    }
+    static Map<String,Object> shopSums(List<Map<String,Object>> rows){
+        var result=p("gmv",sum(rows,"gmv"),"orderCount",sum(rows,"orderCount"),"soldQty",sum(rows,"soldQty"),
+                "skuOrderCount",sum(rows,"skuOrderCount"),"refundAmount",sum(rows,"refundAmount"),
+                "refundedQty",sum(rows,"refundedQty"),"refundOrderCount",sum(rows,"refundOrderCount"),
+                "visitorCount",sum(rows,"visitorCount"));
+        result.put("aov",perOrder(result.get("gmv"),result.get("orderCount")));
+        result.put("conversionRate",divide(result.get("orderCount"),result.get("visitorCount")));
+        return result;
     }
 
     private Object affiliateSales(Scope scope){
-        return db.one("select coalesce(sum(item_qty),0) affiliate_sales from fact_affiliate_order where market_code=#{p.market} and biz_date between #{p.from} and #{p.to} and (cast(#{p.shop} as bigint) is null or shop_id=#{p.shop}) and normalized_status in ('AFFILIATE_PENDING','AFFILIATE_SETTLED')",scope.params()).get("affiliateSales");
+        return db.one("""
+            select count(*) filter(where a.item_qty>0 and s.quantity>0) affiliate_sales
+            from fact_affiliate_order a
+            join v_effective_order o on o.shop_id=a.shop_id and o.order_id=a.order_id
+            join fact_order_sku s on s.shop_id=a.shop_id and s.order_id=a.order_id and s.sku_id=a.sku_id
+            where o.market_code=#{p.market} and o.biz_date between #{p.from} and #{p.to}
+              and (cast(#{p.shop} as bigint) is null or o.shop_id=#{p.shop})
+              and a.normalized_status in ('AFFILIATE_PENDING','AFFILIATE_SETTLED')
+            """,scope.params()).get("affiliateSales");
     }
 
     public List<Map<String,Object>> daily(Scope scope){
         return db.rows("""
+            with dates as (
+              select shop_id,market_code,biz_date from fact_shop_daily %s
+              union
+              select shop_id,market_code,biz_date from fact_order_sku %s
+            ), raw_orders as (
+              select shop_id,biz_date,count(distinct order_id) orders_in_day from fact_order_sku %s group by shop_id,biz_date
+            ), per_shop as (
+              select d.biz_date,
+                     case when s.order_count>coalesce(r.orders_in_day,0) then null else coalesce(v.gmv,0) end gmv,
+                     case when s.order_count>coalesce(r.orders_in_day,0) then null else coalesce(v.order_count,0) end order_count,
+                     case when s.order_count>coalesce(r.orders_in_day,0) then null else coalesce(v.sold_qty,0) end sold_qty,
+                     case when s.order_count>coalesce(r.orders_in_day,0) then null else coalesce(v.sku_order_count,0) end sku_order_count,
+                     case when s.order_count>coalesce(r.orders_in_day,0) then null else coalesce(v.refund_amount,0) end refund_amount,
+                     case when s.order_count>coalesce(r.orders_in_day,0) then null else coalesce(v.refunded_qty,0) end refunded_qty,
+                     case when s.order_count>coalesce(r.orders_in_day,0) then null else coalesce(v.refund_order_count,0) end refund_order_count,
+                     s.visitor_count
+              from dates d
+              left join fact_shop_daily s on s.shop_id=d.shop_id and s.biz_date=d.biz_date
+              left join raw_orders r on r.shop_id=d.shop_id and r.biz_date=d.biz_date
+              left join v_effective_order_daily v on v.shop_id=d.shop_id and v.biz_date=d.biz_date
+            )
             select biz_date date,
-                   case when count(*)=0 then null else sum(gmv) end gmv,
-                   case when count(*)=0 then null else sum(order_count) end order_count,
-                   case when count(*)=0 then null else sum(sold_qty) end sold_qty,
-                   case when count(*) filter(where sku_order_count is null)=0 then sum(sku_order_count) end sku_order_count,
-                   case when count(*) filter(where refund_amount is null)=0 then sum(refund_amount) end refund_amount,
-                   sum(gmv)/nullif(sum(order_count),0) aov
-            from fact_shop_daily"""+WHERE+" group by biz_date order by biz_date",scope.params());
+                   case when count(*) filter(where gmv is null)>0 then null else sum(gmv) end gmv,
+                   case when count(*) filter(where order_count is null)>0 then null else sum(order_count) end order_count,
+                   case when count(*) filter(where sold_qty is null)>0 then null else sum(sold_qty) end sold_qty,
+                   case when count(*) filter(where sku_order_count is null)>0 then null else sum(sku_order_count) end sku_order_count,
+                   case when count(*) filter(where refund_amount is null)>0 then null else sum(refund_amount) end refund_amount,
+                   case when count(*) filter(where refunded_qty is null)>0 then null else sum(refunded_qty) end refunded_qty,
+                   case when count(*) filter(where refund_order_count is null)>0 then null else sum(refund_order_count) end refund_order_count,
+                   case when count(*) filter(where visitor_count is null)>0 then null else sum(visitor_count) end visitor_count,
+                   case when count(*) filter(where order_count is null)>0 then null when sum(order_count)=0 then 0 else sum(gmv)/sum(order_count) end aov
+            from per_shop group by biz_date order by biz_date
+            """.formatted(WHERE,WHERE,WHERE),scope.params());
     }
 
     private String currency(Scope scope){return db.one("select currency_code from dim_market where market_code=#{p.market}",scope.params()).get("currencyCode").toString();}
     private long dataDays(Scope scope,String table){return db.count("select count(distinct biz_date) from "+table+WHERE,scope.params());}
-    private long shopMetricDays(Scope scope,String key){
-        String predicate=switch(key){
-            case "skuOrderCount" -> "sku_order_count is not null";
-            case "refundAmount" -> "refund_amount is not null";
-            case "visitorCount" -> "visitor_count is not null";
-            case "conversionRate" -> "visitor_count is not null and conversion_rate_src is not null";
-            default -> "true";
-        };
-        return db.count("select count(distinct biz_date) from fact_shop_daily"+WHERE+" and "+predicate,scope.params());
-    }
 
     private Map<String,Object> coverage(Scope scope,String table){
         var row=db.one("select count(*) rows_in_range,count(distinct biz_date) days_in_range,min(biz_date) first_biz_date,max(biz_date) last_biz_date from "+table+WHERE,scope.params());
@@ -138,55 +170,40 @@ public class DashboardService {
         if(dataDays(scope,"fact_product_daily")>0)return "PRODUCT_DAILY";
         return null;
     }
-    private long productCoverageDays(Scope scope){return productPeriodRows(scope)>0?scope.days():dataDays(scope,"fact_product_daily");}
 
     private Map<String,Object> productAggregate(Scope scope){
         String source=productSource(scope);if(source==null)return new LinkedHashMap<>();
         String table=source.equals("PRODUCT_PERIOD")?"fact_product_period":"fact_product_daily";
         String where=source.equals("PRODUCT_PERIOD")?PERIOD_EXACT:WHERE;
         var row=db.one("""
-            select sum(gmv) gmv,sum(order_count) order_count,sum(sku_order_count) sku_order_count,sum(sold_qty) sold_qty,
-                   sum(estimated_customer_count) estimated_customer_count,sum(impressions) impressions,sum(clicks) clicks,
-                   sum(add_to_cart_count) add_to_cart_count,sum(refund_amount) refund_amount,sum(refunded_qty) refunded_qty,
-                   sum(refund_customer_count) refund_customer_count,sum(unique_impressions) unique_impressions,
-                   sum(unique_clicks) unique_clicks,sum(added_user_count) added_user_count,count(*) product_rows,
-                   count(*) filter(where sold_qty>0) sold_qty_non_zero_rows,count(*) filter(where sku_order_count>0) sku_order_count_non_zero_rows
+            select sum(impressions) impressions,sum(clicks) clicks,sum(add_to_cart_count) add_to_cart_count,
+                   sum(unique_impressions) unique_impressions,sum(unique_clicks) unique_clicks,
+                   sum(added_user_count) added_user_count
             from """+" "+table+where,scope.params());
         row.put("source",source);return row;
     }
 
-    private Map<String,Object> refundProductAggregate(Scope scope){
-        var period=db.one("select date_from,date_to,sum(refunded_qty) refunded_qty,sum(refund_customer_count) refund_customer_count from fact_product_period"+PERIOD_EXACT+" group by date_from,date_to",scope.params());
-        if(!period.isEmpty()){period.put("source","PRODUCT_PERIOD");return period;}
-        return productAggregate(scope);
-    }
-
-    private Map<String,Object> productQuality(Scope scope){
-        var row=productAggregate(scope);if(row.isEmpty())return p("source","NONE","productRows",0,"soldQty",null,"skuOrderCount",null,"soldQtyNonZeroRows",0,"skuOrderCountNonZeroRows",0);
-        return p("source",row.get("source"),"productRows",row.get("productRows"),"soldQty",row.get("soldQty"),"skuOrderCount",row.get("skuOrderCount"),"soldQtyNonZeroRows",row.get("soldQtyNonZeroRows"),"skuOrderCountNonZeroRows",row.get("skuOrderCountNonZeroRows"));
-    }
-
     public Map<String,Object> overview(Scope scope){
         long days=scope.days();var previousScope=scope.previous();var avgScope=scope.between(scope.dateFrom.minusDays(7),scope.dateFrom.minusDays(1));
-        var now=shopSums(scope);var before=shopSums(previousScope);var avg=shopSums(avgScope);
+        var nowRows=daily(scope);var beforeRows=daily(previousScope);var avgRows=daily(avgScope);
+        var now=shopSums(nowRows);var before=shopSums(beforeRows);var avg=shopSums(avgRows);
         Object influencerSales=affiliateSales(scope);
         var trendScope=days==1?scope.between(scope.dateTo.minusDays(13),scope.dateTo):scope;var trend=daily(trendScope);
-        var shopTrend=db.rows("select biz_date date,case when count(*) filter(where visitor_count is null)=0 then sum(visitor_count) end visitor_count,case when count(*) filter(where visitor_count is null or conversion_rate_src is null)=0 then sum(visitor_count*conversion_rate_src)/nullif(sum(visitor_count),0) end conversion_rate from fact_shop_daily"+WHERE+" group by biz_date order by biz_date",trendScope.params());
         boolean productDataAvailable=productSource(scope)!=null;
         var result=p("currencyCode",currency(scope),"comparisonLabel",scope.comparisonLabel(),"productDataAvailable",productDataAvailable,"productDataSource",Objects.toString(productSource(scope),"NONE"));
         result.put("affiliateSales",p("value",influencerSales,"trend",List.of()));
         result.put("selfSales",p("value",subtract(now.get("orderCount"),influencerSales),"trend",List.of()));
         var coverage=p("shopAnalytics",coverage(scope,"fact_shop_daily"),"productDaily",coverage(scope,"fact_product_daily"),"productPeriod",productPeriodCoverage(scope),"orderDetail",coverage(scope,"fact_order"),"ads",coverage(scope,"fact_ad_campaign_daily"));
-        result.put("dataCoverage",coverage);result.put("productDataQuality",productQuality(scope));
+        result.put("dataCoverage",coverage);
         for(String key:List.of("gmv","orderCount","soldQty","skuOrderCount","aov","refundAmount","visitorCount","conversionRate")){
-            long currentDataDays=shopMetricDays(scope,key),previousDataDays=shopMetricDays(previousScope,key),avgDataDays=shopMetricDays(avgScope,key);
+            long currentDataDays=metricDays(nowRows,key),previousDataDays=metricDays(beforeRows,key),avgDataDays=metricDays(avgRows,key);
             Object average=avg.get(key);if(!Set.of("aov","conversionRate").contains(key)&&average!=null)average=decimal(average).divide(BigDecimal.valueOf(7),8,RoundingMode.HALF_UP);
             String previousStatus=comparisonStatus(now.get(key),before.get(key),currentDataDays,days,previousDataDays,days);
             String avgStatus=days==1?comparisonStatus(now.get(key),average,currentDataDays,1,avgDataDays,7):"NOT_APPLICABLE";
-            var points=(Set.of("visitorCount","conversionRate").contains(key)?shopTrend:trend).stream().map(row->p("date",row.get("date"),"value",row.get(key))).toList();
+            var points=trend.stream().map(row->p("date",row.get("date"),"value",key.equals("conversionRate")?divide(row.get("orderCount"),row.get("visitorCount")):row.get(key))).toList();
             result.put(key,p("value",now.get(key),"comparePrevious",comparisonValue(previousStatus,now.get(key),before.get(key)),"comparePreviousStatus",previousStatus,"compare7dAvg",days==1?comparisonValue(avgStatus,now.get(key),average):null,"compare7dAvgStatus",avgStatus,"trend",points));
         }
-        result.put("dataFreshness",db.one("select max(biz_date_to) latest_biz_date,max(finished_at) latest_import_at from sys_import_task where source_type='SHOP_ANALYTICS' and market_code=#{p.market} and status='SUCCESS' and (cast(#{p.shop} as bigint) is null or shop_id=#{p.shop})",scope.params()));
+        result.put("dataFreshness",db.one("select max(biz_date_to) latest_biz_date,max(finished_at) latest_import_at from sys_import_task where source_type='ORDER_DETAIL' and market_code=#{p.market} and status='SUCCESS' and (cast(#{p.shop} as bigint) is null or shop_id=#{p.shop})",scope.params()));
         return result;
     }
 
@@ -195,8 +212,8 @@ public class DashboardService {
             select case when count(*)=0 or count(*) filter(where impressions is null)>0 then null else sum(impressions) end impressions,
                    case when count(*)=0 or count(*) filter(where clicks is null)>0 then null else sum(clicks) end clicks,
                    null::bigint add_to_cart_count,
-                   case when count(*)=0 then null else sum(order_count) end order_count,
-                   case when count(*)=0 or count(*) filter(where sku_order_count is null)>0 then null else sum(sku_order_count) end sku_order_count,
+                   null::bigint order_count,
+                   null::bigint sku_order_count,
                    case when count(*)=0 or count(*) filter(where unique_impressions is null)>0 then null else sum(unique_impressions) end unique_impressions,
                    case when count(*)=0 or count(*) filter(where unique_clicks is null)>0 then null else sum(unique_clicks) end unique_clicks,
                    null::bigint added_user_count,
@@ -204,6 +221,8 @@ public class DashboardService {
                    count(*) shop_rows
             from fact_shop_daily"""+WHERE,scope.params());
         boolean hasShop=((Number)row.getOrDefault("shopRows",0)).longValue()>0;row.put("source",hasShop?"SHOP_ANALYTICS_PARTIAL":"NONE");row.put("complete",false);
+        var sales=shopSums(daily(scope));row.put("orderCount",sales.get("orderCount"));row.put("skuOrderCount",sales.get("skuOrderCount"));
+        if(!shopOrdersMatch(scope))row.put("estimatedCustomerCount",null);
         var product=productAggregate(scope);
         if(hasShop&&!product.isEmpty()){
             row.put("addToCartCount",product.get("addToCartCount"));
@@ -216,34 +235,69 @@ public class DashboardService {
         return row;
     }
 
+    private boolean hasBlankSku(Scope scope){return db.count("select count(*) from fact_order_sku"+WHERE+" and btrim(seller_sku)=''",scope.params())>0;}
+    boolean shopOrdersMatch(Scope scope){
+        if(hasBlankSku(scope))return false;
+        return db.count("""
+            select count(*) from fact_shop_daily s
+            left join (select shop_id,biz_date,count(*) orders from v_effective_order"""+WHERE+" group by shop_id,biz_date) v on v.shop_id=s.shop_id and v.biz_date=s.biz_date where s.market_code=#{p.market} and s.biz_date between #{p.from} and #{p.to} and (cast(#{p.shop} as bigint) is null or s.shop_id=#{p.shop}) and s.order_count<>coalesce(v.orders,0)",scope.params())==0;
+    }
     private Map<String,Object> adTotals(Scope scope){return db.one("select sum(spend) spend,sum(attributed_revenue) attributed_revenue,sum(attributed_order_count) attributed_order_count from fact_ad_campaign_daily"+WHERE,scope.params());}
     public Map<String,Object> ads(Scope scope){
         long days=scope.days();var previous=scope.previous();
         var currencies=db.rows("select distinct currency_code from fact_ad_campaign_daily"+WHERE,scope.between(previous.dateFrom,scope.dateTo).params());if(currencies.size()>1)throw new Api.Problem(400,"DASHBOARD_CURRENCY_MIXED","广告数据包含不同币种，不能汇总或比较");
-        var now=adTotals(scope);var before=adTotals(previous);now.put("roi",divide(now.get("attributedRevenue"),now.get("spend")));now.put("cpo",divide(now.get("spend"),now.get("attributedOrderCount")));before.put("roi",divide(before.get("attributedRevenue"),before.get("spend")));before.put("cpo",divide(before.get("spend"),before.get("attributedOrderCount")));
+        var now=adTotals(scope);var before=adTotals(previous);
         long currentDays=dataDays(scope,"fact_ad_campaign_daily"),historyDays=dataDays(previous,"fact_ad_campaign_daily");var out=p("currencyCode",currencies.isEmpty()?currency(scope):currencies.getFirst().get("currencyCode"));
-        for(String key:List.of("spend","attributedRevenue","roi","cpo")){String status=comparisonStatus(now.get(key),before.get(key),currentDays,days,historyDays,days);out.put(key,p("value",now.get(key),"comparePrevious",comparisonValue(status,now.get(key),before.get(key)),"comparePreviousStatus",status));}
-        out.put("trend",db.rows("select biz_date date,sum(spend) spend,sum(attributed_revenue) attributed_revenue,sum(attributed_order_count) attributed_order_count,case when sum(spend)=0 then null else sum(attributed_revenue)/sum(spend) end roi,case when sum(attributed_order_count)=0 then null else sum(spend)/sum(attributed_order_count) end cpo from fact_ad_campaign_daily"+WHERE+" group by biz_date order by biz_date",scope.params()));return out;
+        String status=comparisonStatus(now.get("spend"),before.get("spend"),currentDays,days,historyDays,days);
+        out.put("spend",p("value",now.get("spend"),"comparePrevious",comparisonValue(status,now.get("spend"),before.get("spend")),"comparePreviousStatus",status));
+        now.put("roi",adRoi(now.get("attributedRevenue"),now.get("spend")));now.put("cpo",perOrder(now.get("spend"),now.get("attributedOrderCount")));
+        before.put("roi",adRoi(before.get("attributedRevenue"),before.get("spend")));before.put("cpo",perOrder(before.get("spend"),before.get("attributedOrderCount")));
+        for(String key:List.of("attributedRevenue","roi","cpo")){
+            String metricStatus=comparisonStatus(now.get(key),before.get(key),currentDays,days,historyDays,days);
+            out.put(key,p("value",now.get(key),"comparePrevious",comparisonValue(metricStatus,now.get(key),before.get(key)),"comparePreviousStatus",metricStatus));
+        }
+        out.put("trend",db.rows("select biz_date date,sum(spend) spend,sum(attributed_revenue) attributed_revenue,sum(attributed_order_count) attributed_order_count,case when sum(spend)=0 and sum(attributed_revenue)=0 then 0 when sum(spend)=0 then null else sum(attributed_revenue)/sum(spend) end roi,case when sum(spend) is null or sum(attributed_order_count) is null then null when sum(attributed_order_count)=0 then 0 else sum(spend)/sum(attributed_order_count) end cpo from fact_ad_campaign_daily"+WHERE+" group by biz_date order by biz_date",scope.params()));return out;
     }
 
-    public List<Map<String,Object>> statuses(Scope scope){return db.rows("select normalized_status status,count(*) count,count(*)::numeric/nullif(sum(count(*)) over(),0) ratio from fact_order"+WHERE+" group by normalized_status order by count(*) desc",scope.params());}
-    public List<Map<String,Object>> skuSales(Scope scope){return db.rows("select c.display_name,string_agg(distinct c.seller_sku,',' order by c.seller_sku) seller_sku,sum(greatest(o.quantity-least(o.return_quantity,o.quantity),0)) sales,sum(greatest(o.quantity-least(o.return_quantity,o.quantity),0))::numeric/nullif(sum(sum(greatest(o.quantity-least(o.return_quantity,o.quantity),0))) over(),0) ratio from fact_order_sku o join sku_config c on c.shop_id=o.shop_id and c.seller_sku=o.seller_sku and c.enabled where o.market_code=#{p.market} and o.biz_date between #{p.from} and #{p.to} and (cast(#{p.shop} as bigint) is null or o.shop_id=#{p.shop}) and o.normalized_status in ('PAID','SHIPPED','COMPLETED') group by c.display_name having sum(greatest(o.quantity-least(o.return_quantity,o.quantity),0))>0 order by min(c.sort_order),min(c.id)",scope.params());}
-    private long cancelledOrders(Scope scope){return db.count("select count(*) from fact_order"+WHERE+" and normalized_status='CANCELLED'",scope.params());}
+    public List<Map<String,Object>> statuses(Scope scope){
+        return db.rows("select normalized_status status,sum(sku_order_count) count,sum(sku_order_count)::numeric/nullif(sum(sum(sku_order_count)) over(),0) ratio from v_effective_order"+WHERE+" group by normalized_status order by count desc",scope.params());
+    }
+    public List<Map<String,Object>> skuSales(Scope scope){
+        return db.rows("""
+        select coalesce(c.display_name,s.seller_sku) display_name,
+               string_agg(distinct s.seller_sku,',' order by s.seller_sku) seller_sku,
+               sum(greatest(s.quantity-least(s.return_quantity,s.quantity),0)) sales,
+               sum(greatest(s.quantity-least(s.return_quantity,s.quantity),0))::numeric/
+                 nullif(sum(sum(greatest(s.quantity-least(s.return_quantity,s.quantity),0))) over(),0) ratio
+        from v_effective_order o
+        join fact_order_sku s on s.shop_id=o.shop_id and s.order_id=o.order_id
+        left join sku_config c on c.shop_id=s.shop_id and c.seller_sku=s.seller_sku and c.enabled
+        where o.market_code=#{p.market} and o.biz_date between #{p.from} and #{p.to}
+          and (cast(#{p.shop} as bigint) is null or o.shop_id=#{p.shop})
+        group by coalesce(c.display_name,s.seller_sku)
+        having sum(greatest(s.quantity-least(s.return_quantity,s.quantity),0))>0
+        order by min(c.sort_order) nulls last,min(c.id) nulls last
+        """,scope.params());}
     private long orderCoverageDays(Scope scope){
         long full=db.count("select count(*) from sys_import_task where source_type='ORDER_DETAIL' and status='SUCCESS' and market_code=#{p.market} and biz_date_from<=#{p.from} and biz_date_to>=#{p.to} and (cast(#{p.shop} as bigint) is null or shop_id=#{p.shop})",scope.params());
         return full>0?scope.days():dataDays(scope,"fact_order");
     }
+    private long cancelledOrders(Scope scope){return db.count("""
+        select count(*) from fact_order o
+        where o.market_code=#{p.market} and o.biz_date between #{p.from} and #{p.to}
+          and (cast(#{p.shop} as bigint) is null or o.shop_id=#{p.shop})
+          and o.normalized_status='CANCELLED'
+          and exists(select 1 from fact_order_sku s where s.shop_id=o.shop_id and s.order_id=o.order_id)
+          and not exists(select 1 from fact_order_sku s where s.shop_id=o.shop_id and s.order_id=o.order_id and btrim(s.seller_sku)='')
+        """,scope.params());}
 
     public Map<String,Object> afterSales(Scope scope){
-        long days=scope.days();var previous=scope.previous();var nowShop=shopSums(scope);var beforeShop=shopSums(previous);var nowProduct=refundProductAggregate(scope);var beforeProduct=refundProductAggregate(previous);var out=new LinkedHashMap<String,Object>();
-        String refundStatus=comparisonStatus(nowShop.get("refundAmount"),beforeShop.get("refundAmount"),shopMetricDays(scope,"refundAmount"),days,shopMetricDays(previous,"refundAmount"),days);
-        out.put("refundAmount",p("value",nowShop.get("refundAmount"),"comparePrevious",comparisonValue(refundStatus,nowShop.get("refundAmount"),beforeShop.get("refundAmount")),"comparePreviousStatus",refundStatus));
-        boolean periodTotal="PRODUCT_PERIOD".equals(nowProduct.get("source"));
-        for(String key:List.of("refundedQty","refundCustomerCount")){
-            Object now=nowProduct.get(key),before=beforeProduct.get(key);String status=periodTotal?"PERIOD_TOTAL":comparisonStatus(now,before,productCoverageDays(scope),days,productCoverageDays(previous),days);
-            out.put(key,p("value",now,"comparePrevious",comparisonValue(status,now,before),"comparePreviousStatus",status));
+        long days=scope.days();var previous=scope.previous();var nowRows=daily(scope);var beforeRows=daily(previous);
+        var now=shopSums(nowRows);var before=shopSums(beforeRows);var out=new LinkedHashMap<String,Object>();
+        for(String key:List.of("refundAmount","refundedQty","refundOrderCount")){
+            String status=comparisonStatus(now.get(key),before.get(key),metricDays(nowRows,key),days,metricDays(beforeRows,key),days);
+            out.put(key,p("value",now.get(key),"comparePrevious",comparisonValue(status,now.get(key),before.get(key)),"comparePreviousStatus",status));
         }
-        if(periodTotal)out.put("productDataRange",p("dateFrom",nowProduct.get("dateFrom"),"dateTo",nowProduct.get("dateTo")));
         long nowCancel=cancelledOrders(scope),beforeCancel=cancelledOrders(previous);String cancelStatus=comparisonStatus(nowCancel,beforeCancel,orderCoverageDays(scope),days,orderCoverageDays(previous),days);
         out.put("cancelOrderCount",p("value",nowCancel,"comparePrevious",comparisonValue(cancelStatus,nowCancel,beforeCancel),"comparePreviousStatus",cancelStatus));
         return out;

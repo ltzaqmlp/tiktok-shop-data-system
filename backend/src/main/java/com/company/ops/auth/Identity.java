@@ -12,7 +12,7 @@ public class Identity {
     private final Db db;
     public Identity(Db db){this.db=db;}
     public Map<String,Object> user(long id){
-        var user=db.one("select id,username,display_name,org_unit_id,market_code,status,must_change_password,session_version,last_login_at from sys_user where id=#{p.id} and deleted_at is null",p("id",id));
+        var user=db.one("select u.id,u.username,u.display_name,u.org_unit_id,u.market_code,u.status,u.must_change_password,u.session_version,u.last_login_at,u.operations_supervisor_id,s.display_name operations_supervisor_name from sys_user u left join sys_user s on s.id=u.operations_supervisor_id where u.id=#{p.id} and u.deleted_at is null",p("id",id));
         if(user.isEmpty())return user;
         user.put("roles",db.rows("select r.id,r.role_code,r.role_name from sys_role r join sys_user_role ur on ur.role_id=r.id where ur.user_id=#{p.id} and r.enabled",p("id",id)));
         var markets=db.rows("select m.market_code,m.market_name,m.currency_code from sys_user_market um join dim_market m on m.market_code=um.market_code where um.user_id=#{p.id} and m.enabled order by m.market_code",p("id",id));

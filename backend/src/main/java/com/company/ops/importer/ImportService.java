@@ -433,7 +433,7 @@ public class ImportService {
         private void validateProductRatio(Map<String,String> raw,Map<String,Object> values,String field,String numerator,String denominator){
             String text=raw.getOrDefault(field,"").trim();if(text.isEmpty()||text.equals("-"))return;
             currentField=field;currentRaw=text;BigDecimal calculated=DashboardService.divide(values.get(numerator),values.get(denominator));if(calculated==null)return;
-            Api.require(calculated.subtract(ImportMapping.ratio(text)).abs().compareTo(new BigDecimal("0.005"))<=0,field+" 与分子/分母计算值偏差超过 0.5 个百分点");
+            Api.require(calculated.subtract(ImportMapping.ratio(text,field.equals("add_to_cart_rate_src"))).abs().compareTo(new BigDecimal("0.005"))<=0,field+" 与分子/分母计算值偏差超过 0.5 个百分点");
         }
 
         void flush(){

@@ -40,7 +40,7 @@ const sourceSales = computed(() => [{ label: '自营销量', value: overview.val
 const sourceSalesKnown = computed(() => overview.value?.orderCount?.value != null)
 const sourceSalesTotal = computed(() => sourceSales.value.reduce((sum, item) => sum + Math.max(Number(item.value ?? 0), 0), 0))
 const sourceSalesOption = computed(() => ({ tooltip: { show: sourceSalesTotal.value > 0, trigger: 'item', confine: true }, color: ['#5F8FBE', '#E14B50'], series: [{ type: 'pie', radius: ['64%', '82%'], center: ['50%', '50%'], label: { show: false }, itemStyle: { borderWidth: 2, borderColor: '#fff' }, data: sourceSalesTotal.value ? sourceSales.value.map(item => ({ name: item.label, value: Math.max(Number(item.value ?? 0), 0) })) : [{ name: '暂无销量', value: 1, itemStyle: { color: '#E8EDF2' } }] }] }))
-const skuAdRows = computed(() => [...skuAdMetrics.value].sort((a, b) => b.adSpend - a.adSpend))
+const skuAdRows = computed(() => [...skuAdMetrics.value].sort((a, b) => (b.roi ?? 0) - (a.roi ?? 0)))
 let request = 0
 async function load() {
   const validation = dateRangeError(dates.value?.[0], dates.value?.[1]); if (validation) { ElMessage.warning(validation); return }

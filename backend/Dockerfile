@@ -5,7 +5,10 @@ COPY src src
 RUN --mount=type=cache,target=/root/.m2 mvn -B -q package
 FROM eclipse-temurin:21-jre
 WORKDIR /app
-RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
+RUN for attempt in 1 2 3 4 5; do \
+      apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/* && exit 0; \
+      echo "apt mirror update failed; retrying ($attempt/5)" >&2; sleep 5; \
+    done; exit 1
 RUN groupadd --gid 10001 app && useradd --uid 10001 --gid app --no-create-home app && mkdir -p /data/files/raw /data/files/export /data/files/logs && chown -R app:app /data/files
 COPY --from=build /app/target/shop-operations-1.0.0.jar app.jar
 USER app

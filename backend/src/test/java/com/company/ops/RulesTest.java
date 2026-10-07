@@ -31,6 +31,8 @@ class RulesTest {
         assertEquals(new BigDecimal("-20.00"),ImportMapping.amount("(20.00)"));
         assertEquals(new BigDecimal("0.123"),ImportMapping.ratio("12.3%"));
         assertThrows(RuntimeException.class,()->ImportMapping.ratio("101%"));
+        assertEquals(new BigDecimal("2.0000"),ImportMapping.ratio("200.00%",true));
+        assertThrows(RuntimeException.class,()->ImportMapping.ratio("-1%",true));
         assertEquals(LocalDate.of(2026,9,5),ImportMapping.date("2026/9/5"));
         assertEquals(LocalDate.of(2026,9,5),ImportMapping.date("05/09/2026"));
         assertEquals(LocalDate.of(2026,10,9),ImportMapping.date("09/10/2026"));

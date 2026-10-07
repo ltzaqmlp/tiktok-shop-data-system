@@ -1,0 +1,357 @@
+- generic [ref=f12e3]:
+  - link "跳转到主要内容" [ref=f12e4] [cursor=pointer]:
+    - /url: "#main"
+  - complementary "主导航" [ref=f12e5]:
+    - generic [ref=f12e6]:
+      - img "HERBMODA" [ref=f12e8]
+      - generic [ref=f12e9]:
+        - strong [ref=f12e10]: HERBMODA
+        - generic [ref=f12e11]: Commerce Intelligence
+    - generic [ref=f12e12]: 工作空间
+    - navigation [ref=f12e42]:
+      - link "数据看板" [ref=f12e43] [cursor=pointer]:
+        - /url: /dashboard
+      - link "数据导入" [ref=f12e50] [cursor=pointer]:
+        - /url: /data-import
+      - link "日报" [ref=f12e55] [cursor=pointer]:
+        - /url: /daily-reports
+      - link "用户管理" [ref=f12e60] [cursor=pointer]:
+        - /url: /admin/users
+      - link "角色管理" [ref=f12e65] [cursor=pointer]:
+        - /url: /admin/roles
+      - link "菜单管理" [ref=f12e70] [cursor=pointer]:
+        - /url: /admin/menus
+      - link "审计日志" [ref=f12e75] [cursor=pointer]:
+        - /url: /admin/audit
+      - link "登录日志" [ref=f12e80] [cursor=pointer]:
+        - /url: /admin/login-logs
+      - link "SKU配置" [ref=f12e86] [cursor=pointer]:
+        - /url: /admin/sku-config
+      - link "店铺管理" [ref=f12e91] [cursor=pointer]:
+        - /url: /admin/shops
+      - link "拍摄工单" [ref=f12e96] [cursor=pointer]:
+        - /url: /shooting-tickets
+    - generic [ref=f12e13]: 内部经营系统 · V1.0
+    - button "收起侧栏" [expanded] [ref=f12e16] [cursor=pointer]
+  - generic [ref=f12e20]:
+    - banner [ref=f12e21]:
+      - navigation "面包屑" [ref=f12e23]:
+        - generic [ref=f12e24]:
+          - link "工作空间" [ref=f12e25]
+          - text: /
+        - link "日报" [ref=f12e101]
+      - generic [ref=f12e28]:
+        - generic [ref=f12e29]: Q
+        - generic [ref=f12e30]:
+          - strong [ref=f12e31]: QA0930专用测试管理员
+          - generic [ref=f12e32]: 系统管理员
+        - button "退出登录" [ref=f12e33] [cursor=pointer]
+    - main [ref=f12e39]:
+      - generic [ref=f12e102]:
+        - generic [ref=f12e103]:
+          - heading "日报" [level=1] [ref=f12e104]
+          - paragraph [ref=f12e105]: 按角色填报，审核通过后实时进入对应汇总。
+        - generic [ref=f12e106]:
+          - text: 日期
+          - combobox "日期" [active] [ref=f12e113]: 2027-01-15
+      - generic [ref=f12e114]:
+        - tablist [ref=f12e118]:
+          - tab "汇总" [selected] [ref=f12e120]
+          - tab "马来西亚日报" [ref=f12e121]
+          - tab "英国日报" [ref=f12e122]
+          - tab "美国日报" [ref=f12e123]
+          - tab "欧盟日报" [ref=f12e124]
+          - tab "投流日报" [ref=f12e125]
+          - tab "运营日报" [ref=f12e126]
+          - tab "技术日报" [ref=f12e127]
+          - tab "布置编导任务" [ref=f12e128]
+        - tabpanel "汇总" [ref=f12e130]:
+          - generic [ref=f12e131]:
+            - generic [ref=f12e132]:
+              - text: 五区内容日报汇总 按市场汇总各岗位已通过日报的计划与实际数据
+              - generic [ref=f12e133]: 已退回
+            - alert [ref=f12e399]:
+              - generic [ref=f12e400]:
+                - generic [ref=f12e401]: 汇总日报已退回
+                - paragraph [ref=f12e402]: 原因：QA汇总退回
+            - table [ref=f12e136]:
+              - rowgroup [ref=f12e137]:
+                - row [ref=f12e403]:
+                  - columnheader "地区" [ref=f12e139]
+                  - columnheader "复盘视频" [ref=f12e140]
+                  - columnheader "QA自定义脚本" [ref=f12e404]
+                  - columnheader "有效对标" [ref=f12e141]
+                  - columnheader "完成拆解" [ref=f12e142]
+                  - columnheader "完整脚本" [ref=f12e143]
+                  - columnheader "可开剪脚本" [ref=f12e144]
+                  - columnheader "复盘视频123123" [ref=f12e145]
+                  - columnheader "调研产品（款）" [ref=f12e146]
+                  - columnheader "对标并拆解视频（条）" [ref=f12e147]
+                  - columnheader "完整脚本 （条）" [ref=f12e148]
+                  - columnheader "bfbgd" [ref=f12e149]
+                  - columnheader "gfdbfgbf" [ref=f12e150]
+                  - columnheader "fbdfbdfb" [ref=f12e151]
+                  - columnheader "新增发布" [ref=f12e152]
+                  - columnheader "首次交审" [ref=f12e153]
+                  - columnheader "返工验收" [ref=f12e154]
+                - row [ref=f12e405]:
+                  - columnheader "计划" [ref=f12e156]
+                  - columnheader "实际" [ref=f12e157]
+                  - columnheader "计划" [ref=f12e406]
+                  - columnheader "实际" [ref=f12e407]
+                  - columnheader "计划" [ref=f12e158]
+                  - columnheader "实际" [ref=f12e159]
+                  - columnheader "计划" [ref=f12e160]
+                  - columnheader "实际" [ref=f12e161]
+                  - columnheader "计划" [ref=f12e162]
+                  - columnheader "实际" [ref=f12e163]
+                  - columnheader "计划" [ref=f12e164]
+                  - columnheader "实际" [ref=f12e165]
+                  - columnheader "计划" [ref=f12e166]
+                  - columnheader "实际" [ref=f12e167]
+                  - columnheader "计划" [ref=f12e168]
+                  - columnheader "实际" [ref=f12e169]
+                  - columnheader "计划" [ref=f12e170]
+                  - columnheader "实际" [ref=f12e171]
+                  - columnheader "计划" [ref=f12e172]
+                  - columnheader "实际" [ref=f12e173]
+                  - columnheader "计划" [ref=f12e174]
+                  - columnheader "实际" [ref=f12e175]
+                  - columnheader "计划" [ref=f12e176]
+                  - columnheader "实际" [ref=f12e177]
+                  - columnheader "计划" [ref=f12e178]
+                  - columnheader "实际" [ref=f12e179]
+                  - columnheader "计划" [ref=f12e180]
+                  - columnheader "实际" [ref=f12e181]
+                  - columnheader "计划" [ref=f12e182]
+                  - columnheader "实际" [ref=f12e183]
+                  - columnheader "计划" [ref=f12e184]
+                  - columnheader "实际" [ref=f12e185]
+              - rowgroup [ref=f12e186]:
+                - row [ref=f12e408]:
+                  - cell "马来西亚" [ref=f12e188]
+                  - cell "0" [ref=f12e189]
+                  - cell "0" [ref=f12e190]
+                  - cell "0" [ref=f12e409]
+                  - cell "0" [ref=f12e410]
+                  - cell "0" [ref=f12e191]
+                  - cell "0" [ref=f12e192]
+                  - cell "0" [ref=f12e193]
+                  - cell "0" [ref=f12e194]
+                  - cell "0" [ref=f12e195]
+                  - cell "0" [ref=f12e196]
+                  - cell "0" [ref=f12e197]
+                  - cell "0" [ref=f12e198]
+                  - cell "0" [ref=f12e199]
+                  - cell "0" [ref=f12e200]
+                  - cell "0" [ref=f12e201]
+                  - cell "0" [ref=f12e202]
+                  - cell "0" [ref=f12e203]
+                  - cell "0" [ref=f12e204]
+                  - cell "0" [ref=f12e205]
+                  - cell "0" [ref=f12e206]
+                  - cell "0" [ref=f12e207]
+                  - cell "0" [ref=f12e208]
+                  - cell "0" [ref=f12e209]
+                  - cell "0" [ref=f12e210]
+                  - cell "0" [ref=f12e211]
+                  - cell "0" [ref=f12e212]
+                  - cell "0" [ref=f12e213]
+                  - cell "0" [ref=f12e214]
+                  - cell "0" [ref=f12e215]
+                  - cell "0" [ref=f12e216]
+                  - cell "0" [ref=f12e217]
+                  - cell "0" [ref=f12e218]
+                - row [ref=f12e411]:
+                  - cell "英国" [ref=f12e220]
+                  - cell "0" [ref=f12e221]
+                  - cell "0" [ref=f12e222]
+                  - cell "0" [ref=f12e412]
+                  - cell "0" [ref=f12e413]
+                  - cell "0" [ref=f12e223]
+                  - cell "0" [ref=f12e224]
+                  - cell "0" [ref=f12e225]
+                  - cell "0" [ref=f12e226]
+                  - cell "0" [ref=f12e227]
+                  - cell "0" [ref=f12e228]
+                  - cell "0" [ref=f12e229]
+                  - cell "0" [ref=f12e230]
+                  - cell "0" [ref=f12e231]
+                  - cell "0" [ref=f12e232]
+                  - cell "0" [ref=f12e233]
+                  - cell "0" [ref=f12e234]
+                  - cell "0" [ref=f12e235]
+                  - cell "0" [ref=f12e236]
+                  - cell "0" [ref=f12e237]
+                  - cell "0" [ref=f12e238]
+                  - cell "0" [ref=f12e239]
+                  - cell "0" [ref=f12e240]
+                  - cell "0" [ref=f12e241]
+                  - cell "0" [ref=f12e242]
+                  - cell "0" [ref=f12e243]
+                  - cell "0" [ref=f12e244]
+                  - cell "0" [ref=f12e245]
+                  - cell "0" [ref=f12e246]
+                  - cell "0" [ref=f12e247]
+                  - cell "0" [ref=f12e248]
+                  - cell "0" [ref=f12e249]
+                  - cell "0" [ref=f12e250]
+                - row [ref=f12e414]:
+                  - cell "美国" [ref=f12e252]
+                  - cell "0" [ref=f12e253]
+                  - cell "0" [ref=f12e254]
+                  - cell "0" [ref=f12e415]
+                  - cell "0" [ref=f12e416]
+                  - cell "0" [ref=f12e255]
+                  - cell "0" [ref=f12e256]
+                  - cell "0" [ref=f12e257]
+                  - cell "0" [ref=f12e258]
+                  - cell "0" [ref=f12e259]
+                  - cell "0" [ref=f12e260]
+                  - cell "0" [ref=f12e261]
+                  - cell "0" [ref=f12e262]
+                  - cell "0" [ref=f12e263]
+                  - cell "0" [ref=f12e264]
+                  - cell "0" [ref=f12e265]
+                  - cell "0" [ref=f12e266]
+                  - cell "0" [ref=f12e267]
+                  - cell "0" [ref=f12e268]
+                  - cell "0" [ref=f12e269]
+                  - cell "0" [ref=f12e270]
+                  - cell "0" [ref=f12e271]
+                  - cell "0" [ref=f12e272]
+                  - cell "0" [ref=f12e273]
+                  - cell "0" [ref=f12e274]
+                  - cell "0" [ref=f12e275]
+                  - cell "0" [ref=f12e276]
+                  - cell "0" [ref=f12e277]
+                  - cell "0" [ref=f12e278]
+                  - cell "0" [ref=f12e279]
+                  - cell "0" [ref=f12e280]
+                  - cell "0" [ref=f12e281]
+                  - cell "0" [ref=f12e282]
+                - row [ref=f12e417]:
+                  - cell "德国" [ref=f12e284]
+                  - cell "0" [ref=f12e285]
+                  - cell "0" [ref=f12e286]
+                  - cell "0" [ref=f12e418]
+                  - cell "0" [ref=f12e419]
+                  - cell "0" [ref=f12e287]
+                  - cell "0" [ref=f12e288]
+                  - cell "0" [ref=f12e289]
+                  - cell "0" [ref=f12e290]
+                  - cell "0" [ref=f12e291]
+                  - cell "0" [ref=f12e292]
+                  - cell "0" [ref=f12e293]
+                  - cell "0" [ref=f12e294]
+                  - cell "0" [ref=f12e295]
+                  - cell "0" [ref=f12e296]
+                  - cell "0" [ref=f12e297]
+                  - cell "0" [ref=f12e298]
+                  - cell "0" [ref=f12e299]
+                  - cell "0" [ref=f12e300]
+                  - cell "0" [ref=f12e301]
+                  - cell "0" [ref=f12e302]
+                  - cell "0" [ref=f12e303]
+                  - cell "0" [ref=f12e304]
+                  - cell "0" [ref=f12e305]
+                  - cell "0" [ref=f12e306]
+                  - cell "0" [ref=f12e307]
+                  - cell "0" [ref=f12e308]
+                  - cell "0" [ref=f12e309]
+                  - cell "0" [ref=f12e310]
+                  - cell "0" [ref=f12e311]
+                  - cell "0" [ref=f12e312]
+                  - cell "0" [ref=f12e313]
+                  - cell "0" [ref=f12e314]
+                - row [ref=f12e420]:
+                  - cell "法国" [ref=f12e316]
+                  - cell "0" [ref=f12e317]
+                  - cell "0" [ref=f12e318]
+                  - cell "0" [ref=f12e421]
+                  - cell "0" [ref=f12e422]
+                  - cell "0" [ref=f12e319]
+                  - cell "0" [ref=f12e320]
+                  - cell "0" [ref=f12e321]
+                  - cell "0" [ref=f12e322]
+                  - cell "0" [ref=f12e323]
+                  - cell "0" [ref=f12e324]
+                  - cell "0" [ref=f12e325]
+                  - cell "0" [ref=f12e326]
+                  - cell "0" [ref=f12e327]
+                  - cell "0" [ref=f12e328]
+                  - cell "0" [ref=f12e329]
+                  - cell "0" [ref=f12e330]
+                  - cell "0" [ref=f12e331]
+                  - cell "0" [ref=f12e332]
+                  - cell "0" [ref=f12e333]
+                  - cell "0" [ref=f12e334]
+                  - cell "0" [ref=f12e335]
+                  - cell "0" [ref=f12e336]
+                  - cell "0" [ref=f12e337]
+                  - cell "0" [ref=f12e338]
+                  - cell "0" [ref=f12e339]
+                  - cell "0" [ref=f12e340]
+                  - cell "0" [ref=f12e341]
+                  - cell "0" [ref=f12e342]
+                  - cell "0" [ref=f12e343]
+                  - cell "0" [ref=f12e344]
+                  - cell "0" [ref=f12e345]
+                  - cell "0" [ref=f12e346]
+                - row [ref=f12e423]:
+                  - cell "合计" [ref=f12e424]
+                  - cell "0" [ref=f12e425]
+                  - cell "0" [ref=f12e426]
+                  - cell "0" [ref=f12e427]
+                  - cell "0" [ref=f12e428]
+                  - cell "0" [ref=f12e429]
+                  - cell "0" [ref=f12e430]
+                  - cell "0" [ref=f12e431]
+                  - cell "0" [ref=f12e432]
+                  - cell "0" [ref=f12e433]
+                  - cell "0" [ref=f12e434]
+                  - cell "0" [ref=f12e435]
+                  - cell "0" [ref=f12e436]
+                  - cell "0" [ref=f12e437]
+                  - cell "0" [ref=f12e438]
+                  - cell "0" [ref=f12e439]
+                  - cell "0" [ref=f12e440]
+                  - cell "0" [ref=f12e441]
+                  - cell "0" [ref=f12e442]
+                  - cell "0" [ref=f12e443]
+                  - cell "0" [ref=f12e444]
+                  - cell "0" [ref=f12e445]
+                  - cell "0" [ref=f12e446]
+                  - cell "0" [ref=f12e447]
+                  - cell "0" [ref=f12e448]
+                  - cell "0" [ref=f12e449]
+                  - cell "0" [ref=f12e450]
+                  - cell "0" [ref=f12e451]
+                  - cell "0" [ref=f12e452]
+                  - cell "0" [ref=f12e453]
+                  - cell "0" [ref=f12e454]
+                  - cell "0" [ref=f12e455]
+                  - cell "0" [ref=f12e456]
+            - generic [ref=f12e379]:
+              - generic [ref=f12e380]:
+                - generic [ref=f12e381]: 今日最重要成果
+                - textbox "今日最重要成果" [ref=f12e383]:
+                  - /placeholder: 请输入今日最重要成果
+                  - text: QA汇总
+              - generic [ref=f12e384]:
+                - generic [ref=f12e385]: 需老板支持
+                - textbox "需老板支持" [ref=f12e387]:
+                  - /placeholder: 请输入需要老板支持的事项
+                  - text: QA无
+              - generic [ref=f12e388]:
+                - generic [ref=f12e389]: 明日重点
+                - textbox "明日重点" [ref=f12e391]:
+                  - /placeholder: 请输入明日重点
+                  - text: QA继续
+            - generic [ref=f12e392]:
+              - button "暂存" [ref=f12e393] [cursor=pointer]
+              - button "通过" [ref=f12e395] [cursor=pointer]
+              - button "不通过" [ref=f12e397] [cursor=pointer]
+    - contentinfo [ref=f12e40]:
+      - text: 跨境电商经营数据平台
+      - generic [ref=f12e41]: 按业务日期统计 · 金额按市场币种展示

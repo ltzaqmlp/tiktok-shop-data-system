@@ -1,0 +1,159 @@
+- generic [ref=f12e3]:
+  - link "跳转到主要内容" [ref=f12e4] [cursor=pointer]:
+    - /url: "#main"
+  - complementary "主导航" [ref=f12e5]:
+    - generic [ref=f12e6]:
+      - img "HERBMODA" [ref=f12e8]
+      - generic [ref=f12e9]:
+        - strong [ref=f12e10]: HERBMODA
+        - generic [ref=f12e11]: Commerce Intelligence
+    - generic [ref=f12e12]: 工作空间
+    - navigation [ref=f12e42]:
+      - link "数据看板" [ref=f12e43] [cursor=pointer]:
+        - /url: /dashboard
+      - link "数据导入" [ref=f12e50] [cursor=pointer]:
+        - /url: /data-import
+      - link "日报" [ref=f12e55] [cursor=pointer]:
+        - /url: /daily-reports
+      - link "用户管理" [ref=f12e60] [cursor=pointer]:
+        - /url: /admin/users
+      - link "角色管理" [ref=f12e65] [cursor=pointer]:
+        - /url: /admin/roles
+      - link "菜单管理" [ref=f12e70] [cursor=pointer]:
+        - /url: /admin/menus
+      - link "审计日志" [ref=f12e75] [cursor=pointer]:
+        - /url: /admin/audit
+      - link "登录日志" [ref=f12e80] [cursor=pointer]:
+        - /url: /admin/login-logs
+      - link "SKU配置" [ref=f12e86] [cursor=pointer]:
+        - /url: /admin/sku-config
+      - link "店铺管理" [ref=f12e91] [cursor=pointer]:
+        - /url: /admin/shops
+      - link "拍摄工单" [ref=f12e96] [cursor=pointer]:
+        - /url: /shooting-tickets
+    - generic [ref=f12e13]: 内部经营系统 · V1.0
+    - button "收起侧栏" [expanded] [ref=f12e16] [cursor=pointer]
+  - generic [ref=f12e20]:
+    - banner [ref=f12e21]:
+      - navigation "面包屑" [ref=f12e23]:
+        - generic [ref=f12e24]:
+          - link "工作空间" [ref=f12e25]
+          - text: /
+        - link "日报" [ref=f12e101]
+      - generic [ref=f12e28]:
+        - generic [ref=f12e29]: Q
+        - generic [ref=f12e30]:
+          - strong [ref=f12e31]: QA0930专用测试管理员
+          - generic [ref=f12e32]: 系统管理员
+        - button "退出登录" [ref=f12e33] [cursor=pointer]
+    - main [ref=f12e39]:
+      - generic [ref=f12e102]:
+        - generic [ref=f12e103]:
+          - heading "日报" [level=1] [ref=f12e104]
+          - paragraph [ref=f12e105]: 按角色填报，审核通过后实时进入对应汇总。
+        - generic [ref=f12e106]:
+          - text: 日期
+          - combobox "日期" [ref=f12e113]: 2027-01-15
+      - generic [ref=f12e114]:
+        - tablist [ref=f12e118]:
+          - tab "汇总" [ref=f12e120]
+          - tab "马来西亚日报" [active] [selected] [ref=f12e121] [cursor=pointer]
+          - tab "英国日报" [ref=f12e122]
+          - tab "美国日报" [ref=f12e123]
+          - tab "欧盟日报" [ref=f12e124]
+          - tab "投流日报" [ref=f12e125]
+          - tab "运营日报" [ref=f12e126]
+          - tab "技术日报" [ref=f12e127]
+          - tab "布置编导任务" [ref=f12e128]
+        - tabpanel "马来西亚日报" [ref=f12e462]:
+          - generic [ref=f12e463]:
+            - generic [ref=f12e464]:
+              - generic [ref=f12e465]:
+                - generic [ref=f12e466]: 日报分区
+                - strong [ref=f12e467]: 马来西亚日报
+              - generic [ref=f12e468]: 按个人日报展示。
+            - generic [ref=f12e469]:
+              - generic [ref=f12e470]:
+                - text: 马来西亚区日报
+                - generic [ref=f12e472]: 部门负责人可审核待处理日报。
+              - table [ref=f12e474]:
+                - rowgroup [ref=f12e475]:
+                  - row [ref=f12e476]:
+                    - columnheader "地区" [ref=f12e477]
+                    - columnheader "每日任务" [ref=f12e478]
+                    - columnheader "执行岗位" [ref=f12e479]
+                    - columnheader "具体负责人" [ref=f12e480]
+                    - columnheader "计划" [ref=f12e481]
+                    - columnheader "实际" [ref=f12e482]
+                    - columnheader "还差" [ref=f12e483]
+                    - columnheader "完成率" [ref=f12e484]
+                    - columnheader "交付链接 / 编号清单" [ref=f12e485]
+                    - columnheader "备注" [ref=f12e486]
+                    - columnheader "卡点" [ref=f12e487]
+                    - columnheader "截止时间" [ref=f12e488]
+                    - columnheader "状态" [ref=f12e489]
+                    - columnheader "操作" [ref=f12e490]
+                - rowgroup [ref=f12e491]:
+                  - row [ref=f12e492]:
+                    - cell "马来西亚" [ref=f12e493]
+                    - cell "复盘视频 QA自定义脚本" [ref=f12e494]:
+                      - generic [ref=f12e495]: 复盘视频
+                      - generic [ref=f12e496]: QA自定义脚本
+                    - cell "编导" [ref=f12e497]
+                    - cell "qa0930_2cb065_director" [ref=f12e498]
+                    - cell "4 3" [ref=f12e499]:
+                      - generic [ref=f12e500]: "4"
+                      - generic [ref=f12e501]: "3"
+                    - cell "3 2" [ref=f12e502]:
+                      - generic [ref=f12e503]: "3"
+                      - generic [ref=f12e504]: "2"
+                    - cell "1 1" [ref=f12e505]:
+                      - generic [ref=f12e506]: "1"
+                      - generic [ref=f12e507]: "1"
+                    - cell "75.00% 66.67%" [ref=f12e508]:
+                      - generic [ref=f12e509]: 75.00%
+                      - generic [ref=f12e510]: 66.67%
+                    - cell "— QA脚本文件" [ref=f12e511]:
+                      - generic [ref=f12e512]: —
+                      - generic [ref=f12e513]: QA脚本文件
+                    - cell "QA编导完成" [ref=f12e514]
+                    - cell "QA无卡点" [ref=f12e515]
+                    - cell "09/30 10:38" [ref=f12e516]
+                    - cell "已退回" [ref=f12e517]
+                    - cell "—" [ref=f12e520]
+                  - row [ref=f12e521]:
+                    - cell "马来西亚" [ref=f12e522]
+                    - cell "新增发布 首次交审 返工验收" [ref=f12e523]:
+                      - generic [ref=f12e524]: 新增发布
+                      - generic [ref=f12e525]: 首次交审
+                      - generic [ref=f12e526]: 返工验收
+                    - cell "剪辑" [ref=f12e527]
+                    - cell "qa0930_2cb065_editor" [ref=f12e528]
+                    - cell "5 0 0" [ref=f12e529]:
+                      - generic [ref=f12e530]: "5"
+                      - generic [ref=f12e531]: "0"
+                      - generic [ref=f12e532]: "0"
+                    - cell "3 0 0" [ref=f12e533]:
+                      - generic [ref=f12e534]: "3"
+                      - generic [ref=f12e535]: "0"
+                      - generic [ref=f12e536]: "0"
+                    - cell "2 0 0" [ref=f12e537]:
+                      - generic [ref=f12e538]: "2"
+                      - generic [ref=f12e539]: "0"
+                      - generic [ref=f12e540]: "0"
+                    - cell "60.00% — —" [ref=f12e541]:
+                      - generic [ref=f12e542]: 60.00%
+                      - generic [ref=f12e543]: —
+                      - generic [ref=f12e544]: —
+                    - cell "https://example.test/qa0930 — —" [ref=f12e545]:
+                      - generic [ref=f12e546]: https://example.test/qa0930
+                      - generic [ref=f12e547]: —
+                      - generic [ref=f12e548]: —
+                    - cell "QA完成内容" [ref=f12e549]
+                    - cell "QA无卡点" [ref=f12e550]
+                    - cell "09/30 10:38" [ref=f12e551]
+                    - cell "已退回" [ref=f12e552]
+                    - cell "—" [ref=f12e555]
+    - contentinfo [ref=f12e40]:
+      - text: 跨境电商经营数据平台
+      - generic [ref=f12e41]: 按业务日期统计 · 金额按市场币种展示

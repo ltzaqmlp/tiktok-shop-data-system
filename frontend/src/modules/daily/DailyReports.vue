@@ -34,8 +34,10 @@ const viewer = computed(() => ['BOSS', 'DEPT_HEAD', 'ADMIN'].some(role => auth.u
 const departmentReviewer = computed(() => auth.user?.roles.some(role => ['ADMIN', 'DEPT_HEAD'].includes(role.roleCode)) || false)
 const reviewColumn = computed(() => departmentReviewer.value || context.value?.role === 'DIRECTOR')
 const contentRole = computed(() => ['EDITOR', 'DIRECTOR'].includes(context.value?.role ?? ''))
-const simpleRole = computed(() => ['OPS', 'TECH'].includes(context.value?.role ?? ''))
-const simpleLabel = computed(() => context.value?.role === 'TECH' ? '技术' : '运营')
+const simpleRole = computed(() => ['OPS', 'OPS_ASSISTANT', 'TECH'].includes(context.value?.role ?? ''))
+const operationsTabs = computed(() => viewer.value ? [{ name: 'ops', label: '运营日报' }] : context.value?.role === 'OPS' ? [{ name: 'ops_assistant', label: '运营助理日报' }] : [])
+const operationsSheets = computed(() => viewer.value && rows.value.length ? rows.value.map(row => ({ title: `${row.reportType === 'OPS' ? '运营主管' : '运营助理'} ${row.reporterName ?? ''}`, reports: [row] })) : [{ title: viewer.value ? '运营日报' : '运营助理日报', reports: rows.value }])
+const simpleLabel = computed(() => context.value?.role === 'TECH' ? '技术' : context.value?.role === 'OPS_ASSISTANT' ? '运营助理' : '运营主管')
 const ownMarket = computed(() => context.value?.marketCode || 'MY'), currentMarket = computed(() => tab.value.startsWith('market-') ? tab.value.slice(7) : ownMarket.value)
 const marketTabs = computed<Market[]>(() => context.value?.markets ?? [])
 const visibleMarketTabs = computed(() => simpleRole.value || context.value?.role === 'ADS_BUYER' ? [] : marketTabs.value)
@@ -49,8 +51,8 @@ function blank(reportType: DailyMetricReport['reportType'], marketCode: string):
 }
 function summaryBlank(): DailySummaryReview { return { reportDate: selectedDate.value, todayImportantResult: '', needBossSupport: '', tomorrowFocus: '', submissionStatus: 'DRAFT', rejectionReason: '' } }
 function assign(target: DailyMetricReport, value: DailyMetricReport) { Object.assign(target, blank(value.reportType, value.marketCode), value) }
-function status(value: string) { return ({ DRAFT: '草稿', PENDING_MARKET: '待编导审核', PENDING_DEPT: '待部门负责人审核', APPROVED: '已通过', REJECTED: '已退回' } as Record<string, string>)[value] ?? value }
-function statusType(value: string) { return ({ APPROVED: 'success', REJECTED: 'danger', DRAFT: 'info', PENDING_MARKET: 'warning', PENDING_DEPT: 'warning' } as Record<string, string>)[value] ?? 'info' }
+function status(value: string) { return ({ DRAFT: '草稿', PENDING_MARKET: '待编导审核', PENDING_OPS: '待运营主管审核', PENDING_DEPT: '待部门负责人审核', APPROVED: '已通过', REJECTED: '已退回' } as Record<string, string>)[value] ?? value }
+function statusType(value: string) { return ({ APPROVED: 'success', REJECTED: 'danger', DRAFT: 'info', PENDING_MARKET: 'warning', PENDING_OPS: 'warning', PENDING_DEPT: 'warning' } as Record<string, string>)[value] ?? 'info' }
 function reasonText(value: string) { return value ? (value.startsWith('原因：') ? value : `原因：${value}`) : '' }
 function number(value: number) { return Number(value ?? 0).toLocaleString('zh-CN', { maximumFractionDigits: 2 }) }
 function percent(value: number) { return `${(Number(value ?? 0) * 100).toFixed(2)}%` }
@@ -68,6 +70,7 @@ function deliveryKey(metric: Metric) { return String(metric.actual) }
 function contentFormMetrics() { return leadMetrics }
 function syncTextareaRows() { nextTick(() => requestAnimationFrame(() => { document.querySelectorAll<HTMLElement>('.summary-review,.report-note-grid').forEach(row => { const textareas = Array.from(row.querySelectorAll<HTMLTextAreaElement>('textarea')); textareas.forEach(textarea => { textarea.style.height = '' }); const maxHeight = Math.max(...textareas.map(textarea => textarea.scrollHeight), 0); textareas.forEach(textarea => { textarea.style.height = `${maxHeight}px` }) }) })) }
 function taskMetric(task: EditorDailyTaskPlan) { return (context.value?.role === 'DIRECTOR' ? leadMetrics : editorMetrics).find(metric => metric.taskCode === task.taskCode || metric.label === task.taskName) }
+function planForReport(plan: EditorDailyPlan | DirectorDailyPlan, report: DailyMetricReport) { if (!report.id) return plan; const results = context.value?.role === 'DIRECTOR' ? report.directorTaskResults : report.editorTaskResults; const snapshots = Object.entries(results ?? {}).filter(([, value]) => value.taskName && value.plannedCount !== undefined).map(([taskCode, value], sortOrder) => ({ taskCode, taskName: value.taskName!, plannedCount: Number(value.plannedCount), sortOrder: Number(value.sortOrder ?? sortOrder) })).sort((a, b) => a.sortOrder - b.sortOrder); if (snapshots.length) return { ...plan, configured: true, tasks: snapshots }; return { ...plan, tasks: plan.tasks.map(task => { const metric = taskMetric(task); return metric ? { ...task, plannedCount: Number(report[metric.plan] ?? 0) } : task }) } }
 function taskResult(task: EditorDailyTaskPlan) { const results = context.value?.role === 'DIRECTOR' ? content.directorTaskResults : content.editorTaskResults; return results[task.taskCode ?? task.taskName] ?? results[task.taskName] }
 function taskActual(task: EditorDailyTaskPlan) { const metric = taskMetric(task); return metric ? Number(content[metric.actual]) : Number(taskResult(task)?.actualCount ?? 0) }
 function setTaskActual(task: EditorDailyTaskPlan, value: number) { const metric = taskMetric(task); if (metric) Object.assign(content, { [metric.actual]: value }); else { const results = context.value?.role === 'DIRECTOR' ? content.directorTaskResults : content.editorTaskResults; (results[task.taskCode ?? task.taskName] ??= { actualCount: 0, delivery: '' }).actualCount = value } }
@@ -76,8 +79,8 @@ function setTaskDelivery(task: EditorDailyTaskPlan, value: string) { const metri
 function addPlanTask(plan: EditorDailyPlan | DirectorDailyPlan) { plan.tasks.push({ taskName: '', plannedCount: 0, sortOrder: plan.tasks.length }) }
 async function removePlanTask(plan: EditorDailyPlan | DirectorDailyPlan, index: number) { try { await ElMessageBox.confirm('删除后该任务不会出现在日报中，是否继续？', '确认删除', { type: 'warning', confirmButtonText: '确认删除', cancelButtonText: '取消' }); plan.tasks.splice(index, 1); plan.tasks.forEach((task, sortOrder) => task.sortOrder = sortOrder) } catch {/* 取消删除 */ } }
 async function saveEditorPlan(plan: EditorDailyEditorPlan) { saving.value = true; try { const result = await save<EditorDailyEditorPlan>(`/daily-reports/editor-plan/${selectedDate.value}/${plan.editorId}`, { tasks: plan.tasks, marketCode: plan.marketCode }, 'PUT'); Object.assign(plan, result); ElMessage.success(`${plan.editorName}的任务已布置`) } catch (e) { ElMessage.error((e as Error).message) } finally { saving.value = false } }
-async function saveDirectorPlan(plan: DirectorDailyDirectorPlan) { saving.value = true; try { const result = await save<DirectorDailyDirectorPlan>(`/daily-reports/director-plan/${selectedDate.value}/${plan.directorId}`, { tasks: plan.tasks }, 'PUT'); Object.assign(plan, result); ElMessage.success(`${plan.directorName}的任务已布置`) } catch (e) { ElMessage.error((e as Error).message) } finally { saving.value = false } }
-function canReview(row: DailyMetricReport) { return (context.value?.role === 'DIRECTOR' && row.reportType === 'EDITOR' && row.submissionStatus === 'PENDING_MARKET') || (departmentReviewer.value && row.submissionStatus === 'PENDING_DEPT') }
+async function saveDirectorPlan(plan: DirectorDailyDirectorPlan) { saving.value = true; try { const result = await save<DirectorDailyDirectorPlan>(`/daily-reports/director-plan/${selectedDate.value}/${plan.directorId}`, { marketCode: plan.marketCode, tasks: plan.tasks }, 'PUT'); Object.assign(plan, result); ElMessage.success(`${plan.directorName}的任务已布置`) } catch (e) { ElMessage.error((e as Error).message) } finally { saving.value = false } }
+function canReview(row: DailyMetricReport) { return (context.value?.role === 'OPS' && row.reportType === 'OPS_ASSISTANT' && row.submissionStatus === 'PENDING_OPS' && row.operationsSupervisorId === auth.user?.id) || (departmentReviewer.value && row.reportType === 'OPS_ASSISTANT' && row.submissionStatus === 'PENDING_OPS' && auth.user?.roles.some(role => role.roleCode === 'ADMIN')) || (context.value?.role === 'DIRECTOR' && row.reportType === 'EDITOR' && row.submissionStatus === 'PENDING_MARKET') || (departmentReviewer.value && row.submissionStatus === 'PENDING_DEPT') }
 function requireReportFields(notes: string, blockers: string) { if (notes.trim() && blockers.trim()) return true; ElMessage.warning('备注和卡点均不能为空'); return false }
 async function load() {
   if (!context.value) return
@@ -85,13 +88,14 @@ async function load() {
   try {
     if (tab.value === 'summary') { summaryReports.value = await api<DailySummary[]>(`/daily-reports/summary?${query({ date: selectedDate.value })}`); summaryReview.value = await api<DailySummaryReview>(`/daily-reports/summary/review?${query({ date: selectedDate.value })}`) }
     else if (tab.value === 'ads') rows.value = await api<DailyMetricReport[]>(`/daily-reports/ads?${query({ date: selectedDate.value })}`)
-    else if (tab.value === 'content-submit') { const [report, plan] = await Promise.all([api<DailyMetricReport>(`/daily-reports/mine/content?${query({ date: selectedDate.value, marketCode: contentMarket.value })}`), context.value.role === 'EDITOR' ? api<EditorDailyPlan>(`/daily-reports/editor-plan?${query({ date: selectedDate.value, marketCode: contentMarket.value })}`) : context.value.role === 'DIRECTOR' ? api<DirectorDailyPlan>(`/daily-reports/director-plan?${query({ date: selectedDate.value, marketCode: contentMarket.value })}`) : Promise.resolve(null)]); assign(content, report); if (context.value.role === 'EDITOR' && plan) editorPlan.value = plan as EditorDailyPlan; if (context.value.role === 'DIRECTOR' && plan) directorPlan.value = plan as DirectorDailyPlan }
+    else if (tab.value === 'content-submit') { const [report, plan] = await Promise.all([api<DailyMetricReport>(`/daily-reports/mine/content?${query({ date: selectedDate.value, marketCode: contentMarket.value })}`), context.value.role === 'EDITOR' ? api<EditorDailyPlan>(`/daily-reports/editor-plan?${query({ date: selectedDate.value, marketCode: contentMarket.value })}`) : context.value.role === 'DIRECTOR' ? api<DirectorDailyPlan>(`/daily-reports/director-plan?${query({ date: selectedDate.value, marketCode: contentMarket.value })}`) : Promise.resolve(null)]); assign(content, report); if (context.value.role === 'EDITOR' && plan) editorPlan.value = planForReport(plan as EditorDailyPlan, report); if (context.value.role === 'DIRECTOR' && plan) directorPlan.value = planForReport(plan as DirectorDailyPlan, report) }
     else if (tab.value === 'editor-plan') editorPlans.value = await api<EditorDailyEditorPlan[]>(`/daily-reports/editor-plan?${query({ date: selectedDate.value })}`)
     else if (tab.value === 'director-plan') directorPlans.value = await api<DirectorDailyDirectorPlan[]>(`/daily-reports/director-plan?${query({ date: selectedDate.value })}`)
     else if (tab.value === 'simple-submit') assign(simpleReport, await api<DailyMetricReport>(`/daily-reports/mine/simple?${query({ date: selectedDate.value })}`))
     else if (tab.value === 'ads-submit') {
       const reports = await api<DailyMetricReport[]>(`/daily-reports/ads?${query({ date: selectedDate.value })}`); ads.value = Object.fromEntries(marketTabs.value.map(m => [m.marketCode, blank('ADS_BUYER', m.marketCode)])); for (const row of reports) ads.value[row.marketCode] = row
-    } else if (tab.value === 'ops' || tab.value === 'tech') rows.value = await api<DailyMetricReport[]>(`/daily-reports/simple/${tab.value.toUpperCase()}?${query({ date: selectedDate.value })}`)
+    } else if (tab.value === 'ops') rows.value = (await Promise.all(['OPS', 'OPS_ASSISTANT'].map(type => api<DailyMetricReport[]>(`/daily-reports/simple/${type}?${query({ date: selectedDate.value })}`)))).flat()
+    else if (['ops_assistant', 'tech'].includes(tab.value)) rows.value = await api<DailyMetricReport[]>(`/daily-reports/simple/${tab.value.toUpperCase()}?${query({ date: selectedDate.value })}`)
     else if (tab.value.startsWith('market-')) { const reports = await Promise.all(activeReportMarkets.value.map(async market => [market.marketCode, await api<DailyMetricReport[]>(`/daily-reports/market/${market.marketCode}?${query({ date: selectedDate.value })}`)] as const)); marketReports.value = Object.fromEntries(reports) }
   } catch (e) { error.value = e as Error } finally { loading.value = false; syncTextareaRows() }
 }
@@ -288,24 +292,24 @@ watch([selectedDate, tab], () => void load())
         <p class="note">同一素材重复测试不累计测试素材数量；测试缺口 = max(计划测试 − 实际测试，0)，ROI 和 CTR 自动计算。</p>
       </section>
     </el-tab-pane>
-    <el-tab-pane v-if="viewer" label="运营日报" name="ops">
-      <section class="surface table-panel">
-        <div class="sheet-title">运营日报 <span>运营提交后由部门负责人审核，审核通过后展示给老板。</span></div>
+    <el-tab-pane v-for="opsTab in operationsTabs" :key="opsTab.name" :label="opsTab.label" :name="opsTab.name">
+      <section v-for="sheet in operationsSheets" :key="sheet.reports[0]?.id ?? 'empty'" class="surface table-panel operations-sheet">
+        <div class="sheet-title">{{ sheet.title }} <span>{{ sheet.reports[0]?.reportType === 'OPS_ASSISTANT' || opsTab.name === 'ops_assistant' ? '助理提交后，由绑定的运营主管审核，再交部门负责人审核，通过后展示给老板。' : '主管提交后由部门负责人审核，通过后展示给老板。' }}</span></div>
         <div v-loading="loading" class="table-scroll">
           <table class="simple-table">
             <thead>
               <tr>
-                <th>填报人</th>
+                <th v-if="!viewer">填报人</th>
                 <th>备注</th>
                 <th>卡点</th>
                 <th>提交时间</th>
                 <th>状态</th>
-                <th v-if="departmentReviewer">操作</th>
+                <th v-if="departmentReviewer || context?.role === 'OPS'">操作</th>
               </tr>
             </thead>
             <tbody>
-              <tr v-for="row in rows" :key="row.id">
-                <td>{{ row.reporterName }}</td>
+              <tr v-for="row in sheet.reports" :key="row.id">
+                <td v-if="!viewer">{{ row.reporterName }}</td>
                 <td class="notes-cell">{{ row.notes || '—' }}</td>
                 <td class="notes-cell">{{ row.blockers || '—' }}</td>
                 <td>{{ submittedAt(row.submittedAt) }}</td>
@@ -313,12 +317,12 @@ watch([selectedDate, tab], () => void load())
                 }}</el-tag>
                   <div v-if="row.rejectionReason" class="reason">{{ reasonText(row.rejectionReason) }}</div>
                 </td>
-                <td v-if="departmentReviewer"><template v-if="canReview(row)"><el-button link type="success"
+                <td v-if="departmentReviewer || context?.role === 'OPS'"><template v-if="canReview(row)"><el-button link type="success"
                       @click="review(row, true)">通过</el-button><el-button link type="danger"
                       @click="review(row, false)">不通过</el-button></template><span v-else>—</span></td>
               </tr>
-              <tr v-if="!loading && !rows.length">
-                <td :colspan="departmentReviewer ? 6 : 5" class="empty">该日期暂无运营日报</td>
+              <tr v-if="!loading && !sheet.reports.length">
+                <td :colspan="viewer ? (departmentReviewer ? 5 : 4) : 6" class="empty">该日期暂无{{ opsTab.label }}</td>
               </tr>
             </tbody>
           </table>
@@ -366,7 +370,7 @@ watch([selectedDate, tab], () => void load())
       <section class="surface form-panel" v-loading="loading">
         <div class="sheet-title director-plan-sheet-title">编导每日任务 <span>显示各市场编导，每人独立布置任务。</span><strong class="director-plan-hint">17:00 前修改，今天生效；17:00 后修改，明天生效。</strong></div>
         <div v-if="!directorPlans.length" class="empty">暂无有效编导账号</div>
-        <section v-for="plan in directorPlans" :key="plan.directorId" class="editor-plan-card">
+        <section v-for="plan in directorPlans" :key="`${plan.directorId}-${plan.marketCode}`" class="editor-plan-card">
           <div class="editor-plan-title">{{ plan.directorName }}<span>{{ plan.marketName }}编导</span></div>
           <div class="report-table-scroll">
             <table class="task-plan-table">
@@ -400,7 +404,7 @@ watch([selectedDate, tab], () => void load())
     </el-tab-pane>
     <el-tab-pane v-if="context?.role === 'DIRECTOR'" label="布置任务" name="editor-plan">
       <section class="surface form-panel" v-loading="loading">
-        <div class="sheet-title">剪辑每日任务 <span>显示与你负责的市场匹配的剪辑，每人独立布置任务。</span></div>
+        <div class="sheet-title director-plan-sheet-title">剪辑每日任务 <span>显示与你负责的市场匹配的剪辑，每人独立布置；布置后持续沿用，直到再次修改。</span><strong class="director-plan-hint">17:00 前修改，今天生效；17:00 后修改，明天生效。</strong></div>
         <div v-if="!editorPlans.length" class="empty">负责的市场暂无有效剪辑账号</div>
         <section v-for="plan in editorPlans" :key="`${plan.editorId}-${plan.marketCode}`" class="editor-plan-card">
           <div class="editor-plan-title">{{ editorLabel(plan) }}<span>剪辑账号</span></div>
@@ -552,7 +556,7 @@ watch([selectedDate, tab], () => void load())
               :autosize="{ minRows: 6, maxRows: 10 }" maxlength="4000" aria-required="true"
               placeholder="填写当前卡点" /></label>
         </div>
-        <div class="submit-bar"><span>提交后进入部门负责人审核，审核通过后展示在老板日报中。</span>
+        <div class="submit-bar"><span>{{ context?.role === 'OPS_ASSISTANT' ? '提交后由绑定的运营主管审核，再交部门负责人审核，通过后展示给老板。' : '提交后进入部门负责人审核，审核通过后展示在老板日报中。' }}</span>
           <div><el-button :loading="saving" @click="saveSimple(false)">暂存</el-button><el-button type="primary"
               :loading="saving" @click="saveSimple(true)">提交日报</el-button></div>
         </div>
@@ -573,6 +577,10 @@ watch([selectedDate, tab], () => void load())
 
 .daily-tabs {
   margin-top: -8px
+}
+
+.operations-sheet + .operations-sheet {
+  margin-top: 16px
 }
 
 .sheet-title {

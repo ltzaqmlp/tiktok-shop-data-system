@@ -1,0 +1,293 @@
+- generic [ref=e52]:
+  - link "跳转到主要内容" [ref=e53] [cursor=pointer]:
+    - /url: "#main"
+  - complementary "主导航" [ref=e54]:
+    - generic [ref=e55]:
+      - img "HERBMODA" [ref=e57]
+      - generic [ref=e58]:
+        - strong [ref=e59]: HERBMODA
+        - generic [ref=e60]: Commerce Intelligence
+    - generic [ref=e61]: 工作空间
+    - navigation [ref=e62]:
+      - link "数据看板" [ref=e63] [cursor=pointer]:
+        - /url: /dashboard
+      - link "数据导入" [ref=e70] [cursor=pointer]:
+        - /url: /data-import
+      - link "日报" [ref=e75] [cursor=pointer]:
+        - /url: /daily-reports
+      - link "用户管理" [ref=e80] [cursor=pointer]:
+        - /url: /admin/users
+      - link "角色管理" [ref=e85] [cursor=pointer]:
+        - /url: /admin/roles
+      - link "菜单管理" [ref=e90] [cursor=pointer]:
+        - /url: /admin/menus
+      - link "审计日志" [ref=e95] [cursor=pointer]:
+        - /url: /admin/audit
+      - link "登录日志" [ref=e100] [cursor=pointer]:
+        - /url: /admin/login-logs
+      - link "SKU配置" [ref=e106] [cursor=pointer]:
+        - /url: /admin/sku-config
+      - link "店铺管理" [ref=e111] [cursor=pointer]:
+        - /url: /admin/shops
+      - link "拍摄工单" [ref=e116] [cursor=pointer]:
+        - /url: /shooting-tickets
+    - generic [ref=e121]: 内部经营系统 · V1.0
+    - button "收起侧栏" [expanded] [ref=e124] [cursor=pointer]
+  - generic [ref=e128]:
+    - banner [ref=e129]:
+      - navigation "面包屑" [ref=e131]:
+        - generic [ref=e132]:
+          - link "工作空间" [ref=e133]
+          - text: /
+        - link "数据看板" [ref=e135]
+      - generic [ref=e136]:
+        - generic [ref=e137]: Q
+        - generic [ref=e138]:
+          - strong [ref=e139]: QA0930专用测试管理员
+          - generic [ref=e140]: 系统管理员
+        - button "退出登录" [ref=e141] [cursor=pointer]
+    - main [ref=e147]:
+      - generic [ref=e148]:
+        - heading "数据看板" [level=1] [ref=e149]
+        - generic [ref=e150]:
+          - generic [ref=e151]:
+            - generic [ref=e152]:
+              - generic [ref=e153]: 业务日期
+              - radiogroup "业务日期快捷选择" [ref=e154]:
+                - generic [ref=e155]:
+                  - radio "业务日期 业务日期快捷选择 2026/09/29 - 2026/09/29 今日" [ref=e156]
+                  - generic [ref=e157] [cursor=pointer]: 今日
+                - generic [ref=e158]:
+                  - radio "昨日" [checked] [ref=e159]
+                  - generic [ref=e160] [cursor=pointer]: 昨日
+                - generic [ref=e161]:
+                  - radio "本周" [ref=e162]
+                  - generic [ref=e163] [cursor=pointer]: 本周
+                - generic [ref=e164]:
+                  - radio "本月" [ref=e165]
+                  - generic [ref=e166] [cursor=pointer]: 本月
+              - generic [ref=e167]:
+                - combobox "开始日期" [ref=e171]: 2026/09/29
+                - generic [ref=e172]: "-"
+                - combobox "结束日期" [ref=e173]: 2026/09/29
+            - generic [ref=e174]:
+              - generic [ref=e175]: 市场
+              - generic [ref=e177] [cursor=pointer]:
+                - generic:
+                  - combobox "市场" [ref=e179]
+                  - generic [ref=e180]: 马来西亚 (MY)
+            - button "查询" [ref=e185] [cursor=pointer]
+          - button "刷新数据" [ref=e187] [cursor=pointer]
+        - alert [ref=e192]:
+          - generic [ref=e193]: 当前范围没有平台流量数据；有效成交仍按订单明细计算。
+        - region "核心经营指标" [ref=e195]:
+          - article [ref=e196]:
+            - generic [ref=e203]:
+              - generic [ref=e204]: GMV
+              - button "有效成交订单金额，每个订单 ID 只计一次" [ref=e205] [cursor=pointer]
+            - generic [ref=e209]:
+              - generic [ref=e210]: RM
+              - text: —
+            - generic [ref=e211]:
+              - generic [ref=e212]: 当前无数据
+              - generic [ref=e213]: 较前日
+            - generic [ref=e214]:
+              - generic [ref=e215]: 当前无数据
+              - generic [ref=e216]: 较前 7 日均值
+            - img "这是一个图表，图表类型是折线图。其数据是——2026-09-16的数据是0，137.61，2026-09-17的数据是1，150.53，2026-09-18的数据是2，31.85，2026-09-19的数据是3，0，2026-09-20的数据是4，230.11，2026-09-21的数据是5，57.78，2026-09-22的数据是6，0，2026-09-23的数据是7，37.05。" [ref=e217]
+          - article [ref=e220]:
+            - generic [ref=e226]:
+              - generic [ref=e227]: 订单数
+              - button "有效 SKU 订单数：Seller SKU 非空且未取消" [ref=e228] [cursor=pointer]
+            - generic [ref=e232]: —
+            - generic [ref=e233]:
+              - generic [ref=e234]: 当前无数据
+              - generic [ref=e235]: 较前日
+            - generic [ref=e236]:
+              - generic [ref=e237]: 当前无数据
+              - generic [ref=e238]: 较前 7 日均值
+            - img "这是一个图表，图表类型是折线图。其数据是——2026-09-16的数据是0，4，2026-09-17的数据是1，4，2026-09-18的数据是2，1，2026-09-19的数据是3，0，2026-09-20的数据是4，5，2026-09-21的数据是5，1，2026-09-22的数据是6，0，2026-09-23的数据是7，1。" [ref=e239]
+          - article [ref=e242]:
+            - generic [ref=e248]:
+              - generic [ref=e249]: 商品成交件数
+              - button "有效 SKU 数量扣除退货数量" [ref=e250] [cursor=pointer]
+            - generic [ref=e254]: —
+            - generic [ref=e255]:
+              - generic [ref=e256]: 当前无数据
+              - generic [ref=e257]: 较前日
+            - generic [ref=e258]:
+              - generic [ref=e259]: 当前无数据
+              - generic [ref=e260]: 较前 7 日均值
+            - img "这是一个图表，图表类型是折线图。其数据是——2026-09-16的数据是0，4，2026-09-17的数据是1，4，2026-09-18的数据是2，1，2026-09-19的数据是3，0，2026-09-20的数据是4，6，2026-09-21的数据是5，1，2026-09-22的数据是6，0，2026-09-23的数据是7，1。" [ref=e261]
+          - article [ref=e264]:
+            - generic [ref=e272]:
+              - generic [ref=e273]: 平均订单金额
+              - button "有效 GMV ÷ 有效 SKU 订单数" [ref=e274] [cursor=pointer]
+            - generic [ref=e278]:
+              - generic [ref=e279]: RM
+              - text: —
+            - generic [ref=e280]:
+              - generic [ref=e281]: 当前无数据
+              - generic [ref=e282]: 较前日
+            - generic [ref=e283]:
+              - generic [ref=e284]: 当前无数据
+              - generic [ref=e285]: 较前 7 日均值
+            - img "这是一个图表，图表类型是折线图。其数据是——2026-09-16的数据是0，34.4025，2026-09-17的数据是1，37.6325，2026-09-18的数据是2，31.85，2026-09-19的数据是3，0，2026-09-20的数据是4，46.022，2026-09-21的数据是5，57.78，2026-09-22的数据是6，0，2026-09-23的数据是7，37.05。" [ref=e286]
+          - article [ref=e289]:
+            - generic [ref=e295]:
+              - generic [ref=e296]: 退款金额
+              - button "有效订单退款金额，按订单业务日期归属" [ref=e297] [cursor=pointer]
+            - generic [ref=e301]:
+              - generic [ref=e302]: RM
+              - text: —
+            - generic [ref=e303]:
+              - generic [ref=e304]: 当前无数据
+              - generic [ref=e305]: 较前日
+            - generic [ref=e306]:
+              - generic [ref=e307]: 当前无数据
+              - generic [ref=e308]: 较前 7 日均值
+            - img "这是一个图表，图表类型是折线图。其数据是——2026-09-16的数据是0，0，2026-09-17的数据是1，0，2026-09-18的数据是2，0，2026-09-19的数据是3，0，2026-09-20的数据是4，0，2026-09-21的数据是5，0，2026-09-22的数据是6，0，2026-09-23的数据是7，0。" [ref=e309]
+          - article [ref=e312]:
+            - generic [ref=e318]:
+              - generic [ref=e319]: 销量分布
+              - button "销量分布计算说明" [ref=e320] [cursor=pointer]
+            - generic [ref=e324]: 订单明细不足，无法计算销量分布
+        - generic [ref=e325]:
+          - article [ref=e326]:
+            - generic [ref=e327]:
+              - heading "销售趋势" [level=2] [ref=e328]
+              - generic [ref=e329]: ■ GMV (RM)
+              - generic [ref=e330]: ● 订单数
+            - paragraph [ref=e350]: 此范围暂无销售趋势
+          - article [ref=e351]:
+            - heading "商品转化漏斗 从曝光到下单的转化表现" [level=2] [ref=e353]
+            - generic [ref=e354]:
+              - generic [ref=e355]:
+                - generic [ref=e357]:
+                  - generic [ref=e358]: 商品曝光次数
+                  - strong [ref=e359]: —
+                - generic [ref=e360]:
+                  - generic [ref=e361]: 去重曝光
+                  - generic [ref=e362]: —
+              - generic [ref=e363]:
+                - generic [ref=e365]:
+                  - generic [ref=e366]: 商品点击量
+                  - strong [ref=e367]: —
+                - generic [ref=e368]:
+                  - generic [ref=e369]: CTR
+                  - generic [ref=e370]: —
+                - generic [ref=e371]:
+                  - generic [ref=e372]: 去重点击
+                  - generic [ref=e373]: —
+              - generic [ref=e374]:
+                - generic [ref=e376]:
+                  - generic [ref=e377]: 加购次数
+                  - strong [ref=e378]: —
+                - generic [ref=e379]:
+                  - generic [ref=e380]: 加购率
+                  - generic [ref=e381]: —
+                - generic [ref=e382]:
+                  - generic [ref=e383]: 加购用户
+                  - generic [ref=e384]: —
+              - generic [ref=e385]:
+                - generic [ref=e387]:
+                  - generic [ref=e388]: 有效 SKU 订单数
+                  - strong [ref=e389]: —
+                - generic [ref=e390]:
+                  - generic [ref=e391]: CTOR
+                  - generic [ref=e392]: —
+                - generic [ref=e393]:
+                  - generic [ref=e394]: 下单客户
+                  - generic [ref=e395]: —
+          - article [ref=e396]:
+            - generic [ref=e397]:
+              - heading "GMV Max 广告效果 广告系列报表口径，不按 Seller SKU 筛选" [level=2] [ref=e398]
+              - generic [ref=e399]: "币种: MYR"
+            - generic [ref=e400]:
+              - button "广告花费 MYR— 当前无数据" [disabled] [pressed] [ref=e401] [cursor=pointer]:
+                - text: 广告花费
+                - strong [ref=e402]: MYR—
+                - generic [ref=e403]: 当前无数据
+              - button "总收入 MYR— 当前无数据" [disabled] [ref=e405] [cursor=pointer]:
+                - text: 总收入
+                - strong [ref=e406]: MYR—
+                - generic [ref=e407]: 当前无数据
+              - button "ROI — 当前无数据" [disabled] [ref=e409] [cursor=pointer]:
+                - text: ROI
+                - strong [ref=e410]: —
+                - generic [ref=e411]: 当前无数据
+              - button "CPO MYR— 当前无数据" [disabled] [ref=e413] [cursor=pointer]:
+                - text: CPO
+                - strong [ref=e414]: MYR—
+                - generic [ref=e415]: 当前无数据
+            - generic [ref=e417]: 此范围暂无广告趋势
+        - generic [ref=e418]:
+          - article [ref=e419]:
+            - heading "SKU销量分布" [level=2] [ref=e421]
+            - generic [ref=e422]:
+              - generic [ref=e423]:
+                - img "这是一个图表，图表类型是饼图。其数据是——暂无销量的数据是1。" [ref=e424]
+                - generic:
+                  - strong: "0"
+                  - generic: 当前暂无销量
+              - generic [ref=e427]: 当前范围暂无有效 SKU 销量
+          - article [ref=e428]:
+            - heading "售后情况 仅统计 Seller SKU 非空的订单，按订单业务日期统计" [level=2] [ref=e430]
+            - generic [ref=e431]:
+              - generic [ref=e432]:
+                - generic [ref=e433]: ×
+                - generic [ref=e434]:
+                  - text: 退款金额
+                  - strong [ref=e435]: RM—
+                  - generic [ref=e436]:
+                    - generic [ref=e437]: 当前无数据
+                    - generic [ref=e438]: 较前日
+              - generic [ref=e439]:
+                - generic [ref=e440]: ×
+                - generic [ref=e441]:
+                  - text: 取消订单数
+                  - strong [ref=e442]: "0"
+                  - generic [ref=e443]:
+                    - generic [ref=e444]: 当前无数据
+                    - generic [ref=e445]: 较前日
+              - generic [ref=e446]:
+                - generic [ref=e447]: ×
+                - generic [ref=e448]:
+                  - text: 已退款商品件数
+                  - strong [ref=e449]: —
+                  - generic [ref=e450]:
+                    - generic [ref=e451]: 当前无数据
+                    - generic [ref=e452]: 较前日
+              - generic [ref=e453]:
+                - generic [ref=e454]: ×
+                - generic [ref=e455]:
+                  - text: 退款订单数
+                  - strong [ref=e456]: —
+                  - generic [ref=e457]:
+                    - generic [ref=e458]: 当前无数据
+                    - generic [ref=e459]: 较前日
+          - article [ref=e460]:
+            - heading "商品访客与转化" [level=2] [ref=e462]
+            - generic [ref=e463]:
+              - generic [ref=e464]:
+                - generic [ref=e469]:
+                  - text: 平台商品访客数
+                  - strong [ref=e470]: —
+                  - generic [ref=e471]:
+                    - generic [ref=e472]: 当前无数据
+                    - generic [ref=e473]: 较前日
+                - img "这是一个图表，图表类型是折线图。其数据是——2026-09-16的数据是0，221，2026-09-17的数据是1，196，2026-09-18的数据是2，208，2026-09-19的数据是3，190，2026-09-20的数据是4，263，2026-09-21的数据是5，227，2026-09-22的数据是6，166，2026-09-23的数据是7，281。" [ref=e474]
+              - generic [ref=e477]:
+                - generic [ref=e482]:
+                  - text: 有效成交转化率
+                  - strong [ref=e483]: —
+                  - generic [ref=e484]:
+                    - generic [ref=e485]: 当前无数据
+                    - generic [ref=e486]: 较前日
+                - img "这是一个图表，图表类型是折线图。其数据是——2026-09-16的数据是0，0.01809955，2026-09-17的数据是1，0.02040816，2026-09-18的数据是2，0.00480769，2026-09-19的数据是3，0，2026-09-20的数据是4，0.01901141，2026-09-21的数据是5，0.00440529，2026-09-22的数据是6，0，2026-09-23的数据是7，0.00355872。" [ref=e487]
+        - generic [ref=e490]:
+          - heading "各 SKU 投流指标 商品投流报表口径" [level=2] [ref=e492]
+          - paragraph [ref=e512]: 暂无 SKU 投流数据
+    - contentinfo [ref=e513]:
+      - text: 跨境电商经营数据平台
+      - generic [ref=e514]: 按业务日期统计 · 金额按市场币种展示

@@ -40,35 +40,53 @@ class DailyReportControllerTest {
         assertEquals(3,((Map<?,?>)((java.util.List<?>)((Map<?,?>)result.data()).get("tasks")).getFirst()).get("plannedCount"));
         org.mockito.Mockito.verify(db).rows(org.mockito.ArgumentMatchers.contains("select max(report_date)"),org.mockito.ArgumentMatchers.argThat(args->LocalDate.of(2026,9,16).equals(args.get("date"))));
     }
-    @Test void marketReportUsesTheCurrentDirectorPlanForDisplayedCounts(){
+    @Test void marketReportKeepsApprovedDirectorPlanSnapshotAfterPlanChanges(){
         var db=org.mockito.Mockito.mock(com.company.ops.common.Db.class);
         var controller=new DailyReportController(db,org.mockito.Mockito.mock(org.springframework.transaction.PlatformTransactionManager.class));
         var req=new org.springframework.mock.web.MockHttpServletRequest();
         req.setAttribute("actor",Map.of("id","9","marketCodes",java.util.List.of("MY"),"roles",java.util.List.of(Map.of("roleCode","DEPT_HEAD"))));
-        var report=new java.util.LinkedHashMap<String,Object>(Map.of("reporterId","42","reportType","DIRECTOR","marketCode","MY","plannedReviewVideos",0,"actualReviewVideos",3));
+        var report=new java.util.LinkedHashMap<String,Object>(Map.of("reporterId","42","reportType","DIRECTOR","marketCode","MY","plannedReviewVideos",5,"actualReviewVideos",3));
         org.mockito.Mockito.when(db.rows(org.mockito.ArgumentMatchers.contains("from daily_metric_report"),org.mockito.ArgumentMatchers.anyMap())).thenReturn(java.util.List.of(report));
         org.mockito.Mockito.when(db.one(org.mockito.ArgumentMatchers.contains("from director_daily_task_plan_setting"),org.mockito.ArgumentMatchers.anyMap())).thenReturn(Map.of("reportDate","2026-09-21"));
-        org.mockito.Mockito.when(db.rows(org.mockito.ArgumentMatchers.contains("from director_daily_task_plan where"),org.mockito.ArgumentMatchers.anyMap())).thenReturn(java.util.List.of(Map.of("taskName","复盘视频","plannedCount",10L,"sortOrder",0)));
+        org.mockito.Mockito.when(db.rows(org.mockito.ArgumentMatchers.contains("from director_daily_task_plan where"),org.mockito.ArgumentMatchers.anyMap())).thenReturn(java.util.List.of(Map.of("taskCode","REVIEW_VIDEOS","taskName","复盘视频","plannedCount",20L,"sortOrder",0)));
 
         var result=(Api.Envelope)controller.market("MY","2026-09-21",req);
         var row=(Map<?,?>)((java.util.List<?>)result.data()).getFirst();
-        assertEquals(10L,row.get("plannedReviewVideos"));
+        assertEquals(5,row.get("plannedReviewVideos"));
         assertEquals(3,row.get("actualReviewVideos"));
+        assertEquals(5,((Map<?,?>)((java.util.List<?>)row.get("directorTasks")).getFirst()).get("plannedCount"));
     }
-    @Test void marketReportUsesTheCurrentEditorPlanForDisplayedCounts(){
+    @Test void marketReportKeepsApprovedEditorPlanSnapshotAfterPlanChanges(){
         var db=org.mockito.Mockito.mock(com.company.ops.common.Db.class);
         var controller=new DailyReportController(db,org.mockito.Mockito.mock(org.springframework.transaction.PlatformTransactionManager.class));
         var req=new org.springframework.mock.web.MockHttpServletRequest();
         req.setAttribute("actor",Map.of("id","9","marketCodes",java.util.List.of("MY"),"roles",java.util.List.of(Map.of("roleCode","DEPT_HEAD"))));
-        var report=new java.util.LinkedHashMap<String,Object>(Map.of("reporterId","42","reportType","EDITOR","marketCode","MY","plannedNewPublish",0,"actualNewPublish",5));
+        var report=new java.util.LinkedHashMap<String,Object>(Map.of("reporterId","42","reportType","EDITOR","marketCode","MY","plannedNewPublish",5,"actualNewPublish",5));
         org.mockito.Mockito.when(db.rows(org.mockito.ArgumentMatchers.contains("from daily_metric_report"),org.mockito.ArgumentMatchers.anyMap())).thenReturn(java.util.List.of(report));
         org.mockito.Mockito.when(db.one(org.mockito.ArgumentMatchers.contains("from editor_daily_task_plan_setting"),org.mockito.ArgumentMatchers.anyMap())).thenReturn(Map.of("reportDate","2026-09-21"));
         org.mockito.Mockito.when(db.rows(org.mockito.ArgumentMatchers.contains("from editor_daily_task_plan where"),org.mockito.ArgumentMatchers.anyMap())).thenReturn(java.util.List.of(Map.of("taskName","新增发布","plannedCount",12L,"sortOrder",0)));
 
         var result=(Api.Envelope)controller.market("MY","2026-09-21",req);
         var row=(Map<?,?>)((java.util.List<?>)result.data()).getFirst();
-        assertEquals(12L,row.get("plannedNewPublish"));
+        assertEquals(5,row.get("plannedNewPublish"));
         assertEquals(5,row.get("actualNewPublish"));
+    }
+    @Test void marketReportShowsSavedCustomDirectorTasksAfterPlanChanges(){
+        var db=org.mockito.Mockito.mock(com.company.ops.common.Db.class);var controller=new DailyReportController(db,org.mockito.Mockito.mock(org.springframework.transaction.PlatformTransactionManager.class));var req=new org.springframework.mock.web.MockHttpServletRequest();
+        req.setAttribute("actor",Map.of("id","9","marketCodes",java.util.List.of("MY"),"roles",java.util.List.of(Map.of("roleCode","DEPT_HEAD"))));
+        var report=new java.util.LinkedHashMap<String,Object>(Map.of("reporterId","42","reportType","DIRECTOR","marketCode","MY","plannedReviewVideos",0,"actualReviewVideos",0,"directorTaskResults",Map.of("old-code",Map.of("taskName","历史自定义任务","plannedCount",5,"sortOrder",0,"actualCount",3,"delivery","交付"))));
+        org.mockito.Mockito.when(db.rows(org.mockito.ArgumentMatchers.contains("from daily_metric_report"),org.mockito.ArgumentMatchers.anyMap())).thenReturn(java.util.List.of(report));
+        org.mockito.Mockito.when(db.one(org.mockito.ArgumentMatchers.contains("from director_daily_task_plan_setting"),org.mockito.ArgumentMatchers.anyMap())).thenReturn(Map.of("reportDate","2026-09-21"));
+        org.mockito.Mockito.when(db.rows(org.mockito.ArgumentMatchers.contains("from director_daily_task_plan where"),org.mockito.ArgumentMatchers.anyMap())).thenReturn(java.util.List.of(Map.of("taskCode","new-code","taskName","新配置任务","plannedCount",20L,"sortOrder",0)));
+        var result=(Api.Envelope)controller.market("MY","2026-09-21",req);var row=(Map<?,?>)((java.util.List<?>)result.data()).getFirst();var task=(Map<?,?>)((java.util.List<?>)row.get("directorTasks")).getFirst();
+        assertEquals("历史自定义任务",task.get("taskName"));assertEquals(5,task.get("plannedCount"));assertEquals(3,task.get("actualCount"));
+    }
+    @Test void editingPendingReportsRequiresResubmission(){
+        assertEquals("DRAFT",DailyReportController.nextContentStatus(false,"EDITOR","PENDING_DEPT"));
+        assertEquals("PENDING_MARKET",DailyReportController.nextContentStatus(true,"EDITOR","PENDING_DEPT"));
+        assertEquals("DRAFT",DailyReportController.nextContentStatus(false,"DIRECTOR","PENDING_DEPT"));
+        assertEquals("PENDING_DEPT",DailyReportController.nextContentStatus(true,"DIRECTOR","DRAFT"));
+        assertEquals("APPROVED",DailyReportController.nextContentStatus(false,"EDITOR","APPROVED"));
     }
     @Test void directorPlanCutoffUsesBeijingTimeAndMovesAtSeventeen(){
         var before=java.time.ZonedDateTime.of(2026,9,22,16,59,59,0,java.time.ZoneId.of("Asia/Shanghai"));
@@ -97,9 +115,22 @@ class DailyReportControllerTest {
 
         controller.directorPlan(tomorrow.toString(),null,req);
         org.mockito.Mockito.verify(db).one(org.mockito.ArgumentMatchers.contains("from director_daily_task_plan_setting"),org.mockito.ArgumentMatchers.argThat(args->tomorrow.equals(args.get("date"))));
-        controller.saveDirectorPlan(tomorrow.toString(),42L,Map.of("tasks",java.util.List.of(Map.of("taskName","明日任务","plannedCount",7))),req);
-        org.mockito.Mockito.verify(db).exec(org.mockito.ArgumentMatchers.startsWith("insert into director_daily_task_plan_setting"),org.mockito.ArgumentMatchers.argThat(args->tomorrow.equals(args.get("date"))));
-        org.mockito.Mockito.verify(db).insert(org.mockito.ArgumentMatchers.startsWith("insert into director_daily_task_plan("),org.mockito.ArgumentMatchers.argThat(args->tomorrow.equals(args.get("date"))));
+        controller.saveDirectorPlan(tomorrow.toString(),42L,Map.of("marketCode","MY","tasks",java.util.List.of(Map.of("taskName","明日任务","plannedCount",7))),req);
+        org.mockito.Mockito.verify(db).exec(org.mockito.ArgumentMatchers.startsWith("insert into director_daily_task_plan_setting"),org.mockito.ArgumentMatchers.argThat(args->tomorrow.equals(args.get("date"))&&"MY".equals(args.get("market"))));
+        org.mockito.Mockito.verify(db).insert(org.mockito.ArgumentMatchers.startsWith("insert into director_daily_task_plan("),org.mockito.ArgumentMatchers.argThat(args->tomorrow.equals(args.get("date"))&&"MY".equals(args.get("market"))));
+    }
+    @Test void multiMarketDirectorPlanSavesToTheSelectedMarket(){
+        var db=org.mockito.Mockito.mock(com.company.ops.common.Db.class);var manager=org.mockito.Mockito.mock(org.springframework.transaction.PlatformTransactionManager.class);
+        org.mockito.Mockito.when(manager.getTransaction(org.mockito.ArgumentMatchers.any())).thenReturn(new org.springframework.transaction.support.SimpleTransactionStatus());
+        var controller=new DailyReportController(db,manager);var req=new org.springframework.mock.web.MockHttpServletRequest();
+        req.setAttribute("actor",Map.of("id","9","roles",java.util.List.of(Map.of("roleCode","DEPT_HEAD"))));var tomorrow=LocalDate.now(java.time.ZoneId.of("Asia/Shanghai")).plusDays(1);
+        org.mockito.Mockito.when(db.rows(org.mockito.ArgumentMatchers.contains("from sys_user u join sys_user_market um"),org.mockito.ArgumentMatchers.anyMap())).thenReturn(java.util.List.of(Map.of("directorId","42","directorName","编导甲","marketCode","MY","marketName","马来西亚"),Map.of("directorId","42","directorName","编导甲","marketCode","UK","marketName","英国")));
+        org.mockito.Mockito.when(db.one(org.mockito.ArgumentMatchers.anyString(),org.mockito.ArgumentMatchers.anyMap())).thenReturn(Map.of());org.mockito.Mockito.when(db.insert(org.mockito.ArgumentMatchers.anyString(),org.mockito.ArgumentMatchers.anyMap())).thenReturn("1");
+        controller.saveDirectorPlan(tomorrow.toString(),42L,Map.of("marketCode","UK","tasks",java.util.List.of(Map.of("taskName","英国任务","plannedCount",7))),req);
+        org.mockito.Mockito.verify(db).exec(org.mockito.ArgumentMatchers.startsWith("insert into director_daily_task_plan_setting"),org.mockito.ArgumentMatchers.argThat(args->"UK".equals(args.get("market"))));
+        org.mockito.Mockito.verify(db).exec(org.mockito.ArgumentMatchers.startsWith("delete from director_daily_task_plan"),org.mockito.ArgumentMatchers.argThat(args->"UK".equals(args.get("market"))));
+        org.mockito.Mockito.verify(db).insert(org.mockito.ArgumentMatchers.startsWith("insert into director_daily_task_plan("),org.mockito.ArgumentMatchers.argThat(args->"UK".equals(args.get("market"))));
+        assertThrows(Api.Problem.class,()->controller.saveDirectorPlan(tomorrow.toString(),42L,Map.of("marketCode","US","tasks",java.util.List.of()),req));
     }
     @Test void summaryUsesDynamicDirectorTaskNamesAndCurrentPlansWithoutChangingActuals(){
         var db=org.mockito.Mockito.mock(com.company.ops.common.Db.class);
@@ -110,14 +141,14 @@ class DailyReportControllerTest {
         org.mockito.Mockito.when(db.rows(org.mockito.ArgumentMatchers.contains("from sys_user u join sys_user_market um"),org.mockito.ArgumentMatchers.anyMap())).thenReturn(java.util.List.of(Map.of("directorId","42","directorName","编导甲","marketCode","MY","marketName","马来西亚"),Map.of("directorId","43","directorName","编导乙","marketCode","MY","marketName","马来西亚")));
         org.mockito.Mockito.when(db.one(org.mockito.ArgumentMatchers.contains("from director_daily_task_plan_setting"),org.mockito.ArgumentMatchers.anyMap())).thenReturn(Map.of("reportDate","2026-09-22"));
         org.mockito.Mockito.when(db.rows(org.mockito.ArgumentMatchers.contains("from director_daily_task_plan where"),org.mockito.ArgumentMatchers.anyMap())).thenAnswer(call->{String director=((Map<?,?>)call.getArgument(1)).get("director").toString();String code="42".equals(director)?"task-42":"task-43";long plan="42".equals(director)?12:8;return java.util.List.of(Map.of("taskCode",code,"taskName","新任务名","plannedCount",plan,"sortOrder",0));});
-        org.mockito.Mockito.when(db.rows(org.mockito.ArgumentMatchers.contains("from daily_metric_report where"),org.mockito.ArgumentMatchers.anyMap())).thenReturn(java.util.List.of(Map.of("reporterId","42","marketCode","MY","directorTaskResults",Map.of("task-42",Map.of("actualCount",5L,"delivery","完成说明"))),Map.of("reporterId","43","marketCode","MY","directorTaskResults",Map.of("task-43",Map.of("actualCount",4L,"delivery","完成说明")))));
+        org.mockito.Mockito.when(db.rows(org.mockito.ArgumentMatchers.contains("from daily_metric_report where"),org.mockito.ArgumentMatchers.anyMap())).thenReturn(java.util.List.of(Map.of("reporterId","42","marketCode","MY","directorTaskResults",Map.of("task-42",Map.of("taskName","新任务名","plannedCount",5L,"sortOrder",0,"actualCount",5L,"delivery","完成说明"))),Map.of("reporterId","43","marketCode","MY","directorTaskResults",Map.of("task-43",Map.of("taskName","新任务名","plannedCount",4L,"sortOrder",0,"actualCount",4L,"delivery","完成说明")))));
 
         var result=(Api.Envelope)controller.summary("2026-09-22",req);
         var market=(Map<?,?>)((java.util.List<?>)result.data()).getFirst();
         var tasks=(java.util.List<?>)market.get("directorTasks");var task=(Map<?,?>)tasks.getFirst();
         assertEquals(1,tasks.size());
         assertEquals("新任务名",task.get("taskName"));
-        assertEquals(20L,task.get("plannedCount"));
+        assertEquals(9L,task.get("plannedCount"));
         assertEquals(9L,task.get("actualCount"));
     }
     @Test void datesAndReviewRolesAreStrict(){

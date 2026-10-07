@@ -20,7 +20,8 @@ public final class ImportMapping {
         if(v.startsWith("(")&&v.endsWith(")"))v="-"+v.substring(1,v.length()-1);
         return new BigDecimal(v);
     }
-    public static BigDecimal ratio(String value){BigDecimal n=amount(value.replace("%",""));if(value.contains("%"))n=n.movePointLeft(2);Api.require(n.signum()>=0&&n.compareTo(BigDecimal.ONE)<=0,"百分比必须在 0–100% 范围内");return n;}
+    public static BigDecimal ratio(String value){return ratio(value,false);}
+    public static BigDecimal ratio(String value,boolean allowAbove100){BigDecimal n=amount(value.replace("%",""));if(value.contains("%"))n=n.movePointLeft(2);Api.require(n.signum()>=0&&(allowAbove100||n.compareTo(BigDecimal.ONE)<=0),allowAbove100?"百分比不能为负":"百分比必须在 0–100% 范围内");return n;}
     public static LocalDate date(String value){
         if(value==null||value.isBlank())throw new IllegalArgumentException("缺少业务日期");String v=value.trim();
         for(String pattern:List.of("yyyy-MM-dd","yyyy/M/d","yyyy年M月d日","yyyyMMdd","dd/MM/yyyy"))try{return LocalDate.parse(v,DateTimeFormatter.ofPattern(pattern));}catch(Exception ignored){}

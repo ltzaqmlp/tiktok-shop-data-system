@@ -1,0 +1,20 @@
+{
+  "scanned": 90,
+  "modified": 6,
+  "fake_paid_orders": 4,
+  "cancelled_fake_orders": 1,
+  "removed_ids": [
+    "586447672408835547",
+    "586448019335644971",
+    "586448087565108957",
+    "586448441980847340",
+    "586451895436608528"
+  ],
+  "gmv_after": "83.27",
+  "orders_after": 2,
+  "qty_after": "2",
+  "ad_spend": "19.34",
+  "ad_orders_after": "2",
+  "ad_revenue_after": "23.71",
+  "removed_ad_revenue": "0.73"
+}

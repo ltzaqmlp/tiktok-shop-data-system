@@ -10,7 +10,6 @@ type Metric = { taskCode?: string; plan: keyof DailyMetricReport; actual: keyof 
 type ReportMetric = { metric: Pick<Metric, 'label'>; plan: number; actual: number; gap: number; rate: number; delivery: string }
 type ReportRow = { report: DailyMetricReport; marketName: string; role: string; metrics: ReportMetric[] }
 type ReportTab = { code: string; label: string; markets: Market[] }
-type SummaryMetric = { plan: keyof DailySummary; actual: keyof DailySummary; label: string }
 const contentMetrics: Metric[] = [
   { taskCode: 'REVIEW_VIDEOS', label: '复盘视频', plan: 'plannedReviewVideos', actual: 'actualReviewVideos' }, { taskCode: 'VALID_BENCHMARK', label: '有效对标', plan: 'plannedValidBenchmark', actual: 'actualValidBenchmark' },
   { taskCode: 'DECONSTRUCTION', label: '完成拆解', plan: 'plannedDeconstruction', actual: 'actualDeconstruction' }, { taskCode: 'COMPLETE_SCRIPT', label: '完整脚本', plan: 'plannedCompleteScript', actual: 'actualCompleteScript' },
@@ -24,7 +23,6 @@ const adFields: { key: keyof DailyMetricReport; label: string; money?: boolean }
   { key: 'roi', label: 'ROI' }, { key: 'impressions', label: '展现量' }, { key: 'clicks', label: '点击量' }, { key: 'ctr', label: 'CTR' },
   { key: 'orders', label: '订单（单）' }, { key: 'expandedMaterial', label: '放大素材（条）' }, { key: 'stoppedMaterial', label: '停止素材（条）' },
 ]
-const summaryMetrics: SummaryMetric[] = editorMetrics.map(metric => ({ label: metric.label, plan: metric.plan as keyof DailySummary, actual: metric.actual as keyof DailySummary }))
 const today = () => new Date().toLocaleDateString('en-CA'), selectedDate = ref(today()), tab = ref('summary'), adMarket = ref('MY'), contentMarket = ref('MY')
 const auth = useAuth(), context = ref<DailyContext>(), rows = ref<DailyMetricReport[]>([]), marketReports = ref<Record<string, DailyMetricReport[]>>({}), summaryReports = ref<DailySummary[]>([]), summaryReview = ref<DailySummaryReview>(summaryBlank()), loading = ref(false), saving = ref(false), error = ref<Error | null>(null)
 const content = reactive<DailyMetricReport>(blank('EDITOR', 'MY')), simpleReport = reactive<DailyMetricReport>(blank('OPS', 'MY')), ads = ref<Record<string, DailyMetricReport>>({})
@@ -61,10 +59,9 @@ function currencyLabel(field: { key: keyof DailyMetricReport; label: string }, m
 function adValue(row: DailyMetricReport, key: keyof DailyMetricReport) { return key === 'roi' ? number(Number(row[key])) : key === 'ctr' ? percent(Number(row[key])) : number(Number(row[key])) }
 function isOwnAd(row: DailyMetricReport) { return row.reporterId === auth.user?.id }
 function adLocked(marketCode: string) { const row = ads.value[marketCode]; return Boolean(row?.id && !isOwnAd(row)) }
-function reportRows(reports: DailyMetricReport[]): ReportRow[] { return reports.map(report => ({ report, marketName: report.marketName ?? report.marketCode, role: report.reportType === 'EDITOR' ? '剪辑' : '编导', metrics: report.reportType === 'DIRECTOR' && report.directorTasks ? report.directorTasks.map(task => { const plan = Number(task.plannedCount ?? 0), actual = Number(task.actualCount ?? 0); return { metric: { label: task.taskName }, plan, actual, gap: Math.max(plan - actual, 0), rate: plan ? actual / plan : 0, delivery: task.delivery ?? '' } }) : (report.reportType === 'EDITOR' ? editorMetrics : leadMetrics).map(metric => { const plan = Number(report[metric.plan] ?? 0), actual = Number(report[metric.actual] ?? 0); return { metric, plan, actual, gap: Math.max(plan - actual, 0), rate: plan ? actual / plan : 0, delivery: report.deliveryResults?.[String(metric.actual)] ?? '' } }) })) }
+function reportRows(reports: DailyMetricReport[]): ReportRow[] { return reports.map(report => { const tasks = report.reportType === 'EDITOR' ? report.editorTasks : report.directorTasks; return ({ report, marketName: report.marketName ?? report.marketCode, role: report.reportType === 'EDITOR' ? '剪辑' : '编导', metrics: tasks ? tasks.map(task => { const plan = Number(task.plannedCount ?? 0), actual = Number(task.actualCount ?? 0); return { metric: { label: task.taskName }, plan, actual, gap: Math.max(plan - actual, 0), rate: plan ? actual / plan : 0, delivery: task.delivery ?? '' } }) : (report.reportType === 'EDITOR' ? editorMetrics : leadMetrics).map(metric => { const plan = Number(report[metric.plan] ?? 0), actual = Number(report[metric.actual] ?? 0); return { metric, plan, actual, gap: Math.max(plan - actual, 0), rate: plan ? actual / plan : 0, delivery: report.deliveryResults?.[String(metric.actual)] ?? '' } }) }) }) }
 const summaryDirectorTasks = computed(() => [...new Set(summaryReports.value.flatMap(row => (row.directorTasks ?? []).map(task => task.taskName)))])
 const summaryDirectorTotal = computed(() => Object.fromEntries(summaryDirectorTasks.value.map(name => { const tasks = summaryReports.value.flatMap(row => row.directorTasks ?? []).filter(task => task.taskName === name); return [name, { planned: tasks.reduce((sum, task) => sum + Number(task.plannedCount ?? 0), 0), actual: tasks.reduce((sum, task) => sum + Number(task.actualCount ?? 0), 0) }] })))
-const summaryTotal = computed(() => summaryMetrics.reduce((total, metric) => { total[metric.plan] = summaryReports.value.reduce((sum, row) => sum + Number(row[metric.plan] ?? 0), 0); total[metric.actual] = summaryReports.value.reduce((sum, row) => sum + Number(row[metric.actual] ?? 0), 0); return total }, {} as Record<string, number>))
 function submittedAt(value?: string | null) { return value ? new Date(value).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—' }
 function deliveryKey(metric: Metric) { return String(metric.actual) }
 function contentFormMetrics() { return leadMetrics }
@@ -128,7 +125,7 @@ watch([selectedDate, tab], () => void load())
   <el-tabs v-model="tab" class="daily-tabs">
     <el-tab-pane v-if="viewer" label="汇总" name="summary">
       <section class="surface table-panel">
-        <div class="sheet-title">五区内容日报汇总 <span>按市场汇总各岗位已通过日报的计划与实际数据</span> <el-tag size="small"
+        <div class="sheet-title">五区内容日报汇总 <span>按市场汇总编导已通过日报的计划与实际数据</span> <el-tag size="small"
             :type="statusType(summaryReview.submissionStatus)">{{ status(summaryReview.submissionStatus) }}</el-tag>
         </div><el-alert v-if="summaryReview.rejectionReason" title="汇总日报已退回"
           :description="reasonText(summaryReview.rejectionReason)" type="error" :closable="false" />
@@ -138,30 +135,18 @@ watch([selectedDate, tab], () => void load())
               <tr>
                 <th rowspan="2">地区</th>
                 <th v-for="task in summaryDirectorTasks" :key="`director-${task}`" colspan="2">{{ task }}</th>
-                <th v-for="metric in summaryMetrics" :key="metric.label" colspan="2">{{ metric.label }}</th>
               </tr>
-              <tr><template v-for="task in summaryDirectorTasks" :key="`${task}-head`"><th>计划</th><th>实际</th></template><template v-for="metric in summaryMetrics" :key="`${metric.label}-head`">
-                  <th>计划</th>
-                  <th>实际</th>
-                </template>
-              </tr>
+              <tr><template v-for="task in summaryDirectorTasks" :key="`${task}-head`"><th>计划</th><th>实际</th></template></tr>
             </thead>
             <tbody>
               <tr v-for="row in summaryReports" :key="row.marketCode">
-                <td>{{ row.marketName }}</td><template v-for="task in summaryDirectorTasks" :key="`${row.marketCode}-${task}`"><td>{{ number(Number(row.directorTasks?.find(item => item.taskName === task)?.plannedCount ?? 0)) }}</td><td>{{ number(Number(row.directorTasks?.find(item => item.taskName === task)?.actualCount ?? 0)) }}</td></template><template v-for="metric in summaryMetrics"
-                  :key="`${row.marketCode}-${metric.label}`">
-                  <td>{{ number(Number(row[metric.plan])) }}</td>
-                  <td>{{ number(Number(row[metric.actual])) }}</td>
-                </template>
+                <td>{{ row.marketName }}</td><template v-for="task in summaryDirectorTasks" :key="`${row.marketCode}-${task}`"><td>{{ number(Number(row.directorTasks?.find(item => item.taskName === task)?.plannedCount ?? 0)) }}</td><td>{{ number(Number(row.directorTasks?.find(item => item.taskName === task)?.actualCount ?? 0)) }}</td></template>
               </tr>
               <tr v-if="!loading && !summaryReports.length">
-                <td :colspan="(summaryDirectorTasks.length + summaryMetrics.length) * 2 + 1" class="empty">该日期暂无已通过日报</td>
+                <td :colspan="summaryDirectorTasks.length * 2 + 1" class="empty">该日期暂无已通过日报</td>
               </tr>
               <tr v-if="!loading && summaryReports.length" class="summary-total">
-                <td>合计</td><template v-for="task in summaryDirectorTasks" :key="`total-${task}`"><td>{{ number(summaryDirectorTotal[task]?.planned ?? 0) }}</td><td>{{ number(summaryDirectorTotal[task]?.actual ?? 0) }}</td></template><template v-for="metric in summaryMetrics" :key="`total-${metric.label}`">
-                  <td>{{ number(summaryTotal[metric.plan]) }}</td>
-                  <td>{{ number(summaryTotal[metric.actual]) }}</td>
-                </template>
+                <td>合计</td><template v-for="task in summaryDirectorTasks" :key="`total-${task}`"><td>{{ number(summaryDirectorTotal[task]?.planned ?? 0) }}</td><td>{{ number(summaryDirectorTotal[task]?.actual ?? 0) }}</td></template>
               </tr>
             </tbody>
           </table>

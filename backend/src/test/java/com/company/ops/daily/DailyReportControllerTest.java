@@ -70,6 +70,35 @@ class DailyReportControllerTest {
         var row=(Map<?,?>)((java.util.List<?>)result.data()).getFirst();
         assertEquals(5,row.get("plannedNewPublish"));
         assertEquals(5,row.get("actualNewPublish"));
+        var task=(Map<?,?>)((java.util.List<?>)row.get("editorTasks")).getFirst();
+        assertEquals("新增发布",task.get("taskName"));assertEquals(5,task.get("plannedCount"));assertEquals(5,task.get("actualCount"));
+    }
+    @Test void editorReviewUsesSubmittedTasksAndOrderEvenAfterAssignmentsChange(){
+        var db=org.mockito.Mockito.mock(com.company.ops.common.Db.class);var controller=new DailyReportController(db,org.mockito.Mockito.mock(org.springframework.transaction.PlatformTransactionManager.class));var req=new org.springframework.mock.web.MockHttpServletRequest();
+        req.setAttribute("actor",Map.of("id","9","marketCodes",java.util.List.of("UK"),"roles",java.util.List.of(Map.of("roleCode","DIRECTOR"))));
+        var snapshots=new java.util.LinkedHashMap<String,Object>();
+        snapshots.put("custom",Map.of("taskName","英国素材混剪","plannedCount",8,"sortOrder",1,"actualCount",6,"delivery","UK-001\nUK-002"));
+        snapshots.put("NEW_PUBLISH",Map.of("taskName","英国新片发布","plannedCount",4,"sortOrder",0,"actualCount",0,"delivery",""));
+        var report=new java.util.LinkedHashMap<String,Object>(Map.of("reporterId","42","reportType","EDITOR","marketCode","UK","plannedNewPublish",4,"actualNewPublish",3,"deliveryResults",Map.of("actualNewPublish","发布-003"),"editorTaskResults",snapshots));
+        org.mockito.Mockito.when(db.rows(org.mockito.ArgumentMatchers.contains("from daily_metric_report"),org.mockito.ArgumentMatchers.anyMap())).thenReturn(java.util.List.of(report));
+        org.mockito.Mockito.when(db.one(org.mockito.ArgumentMatchers.contains("from editor_daily_task_plan_setting"),org.mockito.ArgumentMatchers.anyMap())).thenReturn(Map.of("reportDate","2026-09-21"));
+        org.mockito.Mockito.when(db.rows(org.mockito.ArgumentMatchers.contains("from editor_daily_task_plan where"),org.mockito.ArgumentMatchers.anyMap())).thenReturn(java.util.List.of(Map.of("taskCode","new","taskName","修改后的任务","plannedCount",20,"sortOrder",0)));
+        var result=(Api.Envelope)controller.market("UK","2026-09-21",req);var row=(Map<?,?>)((java.util.List<?>)result.data()).getFirst();var tasks=(java.util.List<?>)row.get("editorTasks");
+        assertEquals(2,tasks.size());var first=(Map<?,?>)tasks.get(0);var second=(Map<?,?>)tasks.get(1);
+        assertEquals("英国新片发布",first.get("taskName"));assertEquals(4,first.get("plannedCount"));assertEquals(3,first.get("actualCount"));assertEquals("发布-003",first.get("delivery"));
+        assertEquals("英国素材混剪",second.get("taskName"));assertEquals(8,second.get("plannedCount"));assertEquals(6,second.get("actualCount"));assertEquals("UK-001\nUK-002",second.get("delivery"));
+        org.mockito.Mockito.verify(db).rows(org.mockito.ArgumentMatchers.contains("from editor_daily_task_plan where"),org.mockito.ArgumentMatchers.argThat(args->"UK".equals(args.get("market"))&&Long.valueOf(42).equals(args.get("editor"))&&LocalDate.of(2026,9,21).equals(args.get("date"))));
+    }
+    @Test void editorReviewUsesEachEditorsMarketPlanForReportsWithoutSnapshots(){
+        var db=org.mockito.Mockito.mock(com.company.ops.common.Db.class);var controller=new DailyReportController(db,org.mockito.Mockito.mock(org.springframework.transaction.PlatformTransactionManager.class));var req=new org.springframework.mock.web.MockHttpServletRequest();
+        req.setAttribute("actor",Map.of("id","9","roles",java.util.List.of(Map.of("roleCode","DEPT_HEAD"))));
+        var first=new java.util.LinkedHashMap<String,Object>(Map.of("reporterId","42","reportType","EDITOR","marketCode","FR","editorTaskResults",Map.of("FR任务",Map.of("actualCount",2,"delivery","FR-002"))));
+        var second=new java.util.LinkedHashMap<String,Object>(Map.of("reporterId","43","reportType","EDITOR","marketCode","FR"));
+        org.mockito.Mockito.when(db.rows(org.mockito.ArgumentMatchers.contains("from daily_metric_report"),org.mockito.ArgumentMatchers.anyMap())).thenReturn(java.util.List.of(first,second));
+        org.mockito.Mockito.when(db.one(org.mockito.ArgumentMatchers.contains("from editor_daily_task_plan_setting"),org.mockito.ArgumentMatchers.anyMap())).thenReturn(Map.of("reportDate","2026-09-21"));
+        org.mockito.Mockito.when(db.rows(org.mockito.ArgumentMatchers.contains("from editor_daily_task_plan where"),org.mockito.ArgumentMatchers.anyMap())).thenAnswer(call->Long.valueOf(42).equals(((Map<?,?>)call.getArgument(1)).get("editor"))?java.util.List.of(Map.of("taskCode","FR任务","taskName","FR任务","plannedCount",3,"sortOrder",0)):java.util.List.of());
+        controller.market("FR","2026-09-21",req);var tasks=(java.util.List<?>)first.get("editorTasks");assertEquals(1,tasks.size());var task=(Map<?,?>)tasks.getFirst();
+        assertEquals("FR任务",task.get("taskName"));assertEquals(3,task.get("plannedCount"));assertEquals(2,task.get("actualCount"));assertEquals("FR-002",task.get("delivery"));assertEquals(java.util.List.of(),second.get("editorTasks"));
     }
     @Test void marketReportShowsSavedCustomDirectorTasksAfterPlanChanges(){
         var db=org.mockito.Mockito.mock(com.company.ops.common.Db.class);var controller=new DailyReportController(db,org.mockito.Mockito.mock(org.springframework.transaction.PlatformTransactionManager.class));var req=new org.springframework.mock.web.MockHttpServletRequest();

@@ -115,7 +115,7 @@ public class DailyReportController {
         else if(Identity.role(actor,"MARKET_MEMBER")&&Identity.hasMarket(actor,market))where+=" and r.reporter_id=#{p.user}";
         else throw forbidden();
         var result=rows(where,args); // ponytail: per-report plan lookup, batch by role if report volume grows
-        for(var report:result)if("DIRECTOR".equals(report.get("reportType"))){long reporter=Long.parseLong(report.get("reporterId").toString());var tasks=(List<Map<String,Object>>)directorPlan(reportDate,market,reporter).get("tasks");report.put("directorTasks",reportTasks(report,tasks,DIRECTOR_TASKS,"directorTaskResults"));}
+        for(var report:result){boolean editor="EDITOR".equals(report.get("reportType"));long reporter=Long.parseLong(report.get("reporterId").toString());var tasks=(List<Map<String,Object>>)(editor?editorPlan(reportDate,market,reporter):directorPlan(reportDate,market,reporter)).get("tasks");report.put(editor?"editorTasks":"directorTasks",reportTasks(report,tasks,editor?EDITOR_TASKS:DIRECTOR_TASKS,editor?"editorTaskResults":"directorTaskResults"));}
         return Api.ok(req,result);
     }
 

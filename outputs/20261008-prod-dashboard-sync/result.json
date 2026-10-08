@@ -1,0 +1,41 @@
+{
+  "source": "shop-test-postgres-1",
+  "target": "shop-prod-postgres-1",
+  "market": "MY",
+  "shop_key": "MY_MAIN",
+  "date_from": "2026-10-01",
+  "date_to": "2026-10-07",
+  "source_rows": {
+    "fact_shop_daily": 7,
+    "fact_product_daily": 42,
+    "fact_product_period": 0,
+    "fact_order": 26,
+    "fact_order_sku": 26,
+    "fact_affiliate_order": 19,
+    "fact_ad_campaign_daily": 7,
+    "fact_ad_product_daily": 21,
+    "fact_refund_detail": 0,
+    "agg_dashboard_daily": 7
+  },
+  "old_production_rows": {
+    "fact_shop_daily": 6,
+    "fact_product_daily": 36,
+    "fact_product_period": 0,
+    "fact_order": 37,
+    "fact_order_sku": 37,
+    "fact_affiliate_order": 17,
+    "fact_ad_campaign_daily": 6,
+    "fact_ad_product_daily": 18,
+    "fact_refund_detail": 0,
+    "agg_dashboard_daily": 6
+  },
+  "metrics": {
+    "gmv": 1273.58,
+    "orders": 23,
+    "quantity": 28,
+    "ad_spend": 237.45,
+    "ad_revenue": 353.43
+  },
+  "backup_created": false,
+  "verified": true
+}

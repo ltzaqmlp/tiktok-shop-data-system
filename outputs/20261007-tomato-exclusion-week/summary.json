@@ -1,0 +1,116 @@
+{
+  "scanned": 971,
+  "modified": 30,
+  "days": [
+    {
+      "folder": "10-01",
+      "date": "30/09/2026",
+      "fake_orders": "0",
+      "gmv_before": "86.04",
+      "gmv_after": "86.04",
+      "orders_after": "2"
+    },
+    {
+      "folder": "10-02",
+      "date": "01/10/2026",
+      "fake_orders": "3",
+      "gmv_before": "169.19",
+      "gmv_after": "155.78",
+      "orders_after": "3"
+    },
+    {
+      "folder": "10-03",
+      "date": "02/10/2026",
+      "fake_orders": "3",
+      "gmv_before": "59.14",
+      "gmv_after": "50.14",
+      "orders_after": "1"
+    },
+    {
+      "folder": "10-04",
+      "date": "03/10/2026",
+      "fake_orders": "0",
+      "gmv_before": "222.69",
+      "gmv_after": "222.69",
+      "orders_after": "5"
+    },
+    {
+      "folder": "10-05",
+      "date": "04/10/2026",
+      "fake_orders": "4",
+      "gmv_before": "503.46",
+      "gmv_after": "491.46",
+      "orders_after": "8"
+    },
+    {
+      "folder": "10-06",
+      "date": "05/10/2026",
+      "fake_orders": "1",
+      "gmv_before": "119.28",
+      "gmv_after": "116.28",
+      "orders_after": "3"
+    },
+    {
+      "folder": "10-07",
+      "date": "06/10/2026",
+      "fake_orders": "0",
+      "gmv_before": "153.96",
+      "gmv_after": "153.96",
+      "orders_after": "1"
+    }
+  ],
+  "deleted_orders": [
+    {
+      "file": "10-02/马来/全部 笔订单-2026-10-07-10_27.xlsx",
+      "id": "586355518068655533",
+      "amount": "3"
+    },
+    {
+      "file": "10-02/马来/全部 笔订单-2026-10-07-10_27.xlsx",
+      "id": "586353793894089924",
+      "amount": "2.71"
+    },
+    {
+      "file": "10-02/马来/全部 笔订单-2026-10-07-10_27.xlsx",
+      "id": "586353625129715129",
+      "amount": "7.7"
+    },
+    {
+      "file": "10-03/马来/全部 笔订单-2026-10-07-10_33.xlsx",
+      "id": "586375520531612738",
+      "amount": "3"
+    },
+    {
+      "file": "10-03/马来/全部 笔订单-2026-10-07-10_33.xlsx",
+      "id": "586373523467043906",
+      "amount": "3"
+    },
+    {
+      "file": "10-03/马来/全部 笔订单-2026-10-07-10_33.xlsx",
+      "id": "586373432884365197",
+      "amount": "3"
+    },
+    {
+      "file": "10-06/马来/全部 笔订单-2026-10-07-16_06.xlsx",
+      "id": "586412474459653302",
+      "amount": "3"
+    }
+  ],
+  "ads": [
+    {
+      "file": "10-02/马来/Campaign overview data 20261001 - 20261001.xlsx",
+      "removed_orders": "1",
+      "removed_revenue": "1.89"
+    },
+    {
+      "file": "10-03/马来/Campaign overview data 20261002 - 20261002.xlsx",
+      "removed_orders": "2",
+      "removed_revenue": "1.47"
+    },
+    {
+      "file": "10-05/马来/Campaign overview data 20261004 - 20261004.xlsx",
+      "removed_orders": "3",
+      "removed_revenue": "2.21"
+    }
+  ]
+}
